@@ -1,130 +1,165 @@
-## :exclamation: Updates may be slow due to war in Ukraine :sunflower: :sunflower: :sunflower:
-
-qimgv | Current version: 1.0.2
+qimgv（个人修改版）
 =====
-Image viewer. Fast, easy to use. Optional video support.
 
-## Screenshots
+> 本项目 fork 自 [easymodo/qimgv](https://github.com/easymodo/qimgv)，遵循原项目的 GPLv3 许可证。
+> 原版功能全部保留，下述内容为本分支在此基础上所做的修改。
 
-Main window & panel        |  Folder view   |  Settings window  
+## 本分支修改了什么
+
+| 改动 | 说明 |
+| --- | --- |
+| **底部悬浮导航条** | 窗口底部一条可自定义的图标栏，每个按钮都是某个快捷键的别名，点击即执行对应动作。支持拖动、自动隐藏（鼠标靠近才滑出，触发范围比条子本身更高），按钮数量、每个按钮的快捷键与图标都可在设置里调整 |
+| **导航条设置页** | 首选项新增「导航条」页：自动隐藏开关、按钮数量（1–16）、逐按钮的快捷键录制与自定义图标、「恢复默认」 |
+| **完整简体中文翻译** | 补齐原版缺失的全部条目（首选项各页、右键菜单、脚本编辑器、侧栏、关于页），并新增导航条相关文案；现在 0 条未翻译 |
+| **MPV 视频支持** | 本分支在 Windows 下启用了视频播放，并修复了上游的构建缺陷：`player_mpv` 插件链接的 `Mpv` 目标只有 Linux 的 pkg-config 分支才会创建，导致 Windows 下无法链接 |
+| **视频缩略图加速** | 优先向 Windows 资源管理器索取已缓存的缩略图（毫秒级），失败才回退到启动 `mpv.exe` 抽帧；回退路径不再 seek 到 30%，并修复了抽帧失败时的空指针崩溃 |
+| **胶片占位图标** | 视频缩略图尚未生成时显示「胶片 + 播放键」图标，不再是一个空方块；所有占位图共用同一张位图 |
+| **线程数优化** | 图片加载线程由硬编码的 2 个改为按核心数计算（2–4），缩略图线程默认值由 4 提高到 6 |
+| **缩放「先快后精」** | 缩放过程中先用最近邻快速出图，交互停下后再用设置里的滤镜重做一次，大图缩放时更跟手 |
+| **边缘翻页** | 默认开启「点击窗口边缘切换图片」，并把这两个选项从「控制」页底部移到「视图」页顶部（原位置容易被裁掉看不到） |
+| **视频控制条抬高** | 播放视频时控制条自动上移，不再被底部导航条遮挡 |
+
+### 本分支的构建提示
+
+视频支持需要 mpv 的头文件与导入库，它们**不在本仓库内**。以 MinGW-w64 为例：
+
+1. 取一份 mpv 开发包，整理成如下结构：
+   ```
+   <MPV_DIR>/
+     include/mpv/client.h
+     include/mpv/render.h ...
+     lib/x86_64/libmpv.dll.a
+   ```
+   （可从 MSYS2 的 `ucrt64/mingw-w64-ucrt-x86_64-mpv` 包中提取，或使用官方 mpv-dev 包）
+2. 运行时需要 `libmpv-2.dll` 与可执行文件同目录。
+3. 配置与构建：
+
+   ```
+   cmake -S . -B build -G Ninja \
+         -DCMAKE_BUILD_TYPE=Release \
+         -DCMAKE_PREFIX_PATH=<你的 Qt 路径> \
+         -DVIDEO_SUPPORT=ON \
+         -DMPV_DIR=<MPV_DIR> \
+         -DEXIV2=OFF -DOPENCV_SUPPORT=OFF
+   ninja -C build
+   ```
+
+## 截图
+
+主窗口与面板        |  文件夹视图   |  设置窗口
 :-------------------------:|:-------------------------:|:-------------------------:|
 [![img1](qimgv/distrib/screenshots/qimgv0.9_1_thumb.jpg)](qimgv/distrib/screenshots/qimgv0.9_1.jpg?raw=true)  |  [![img2](qimgv/distrib/screenshots/qimgv0.9_2_thumb.jpg)](qimgv/distrib/screenshots/qimgv0.9_2.jpg?raw=true) | [![img3](qimgv/distrib/screenshots/qimgv_3_thumb.jpg)](qimgv/distrib/screenshots/qimgv_3.jpg?raw=true)
 
-## Key features:
+## 主要特性
 
-- Simple UI
+- 简洁的界面
+- 速度快
+- 易于使用
+- 高度可配置，包括主题与快捷键
+- 高质量缩放
+- 基础图片编辑：裁剪、旋转、调整尺寸
+- 快速把图片复制 / 移动到其他文件夹
+- 通过 libmpv 播放视频（实验性）
+- 文件夹视图模式
+- 支持运行 shell 脚本
 
-- Fast
+## 默认操作
 
-- Easy to use
-
-- Fully configurable, including themes, shortcuts
-
-- High quality scaling
-
-- Basic image editing: Crop, Rotate and Resize
-
-- Ability to quickly copy / move images to different folders
-
-- Experimental video playback via libmpv
-
-- Folder view mode
-
-- Ability to run shell scripts
-
-## Default control scheme:
-
-| Action  | Shortcut |
+| 操作 | 快捷键 |
 | ------------- | ------------- |
-| Next image  | Right arrow / MouseWheel |
-| Previous image  | Left arrow / MouseWheel |
-| Goto first image  | Home |
-| Goto last image  | End |
-| Zoom in  | Ctrl+MouseWheel / Crtl+Up |
-| Zoom out  | Ctrl+MouseWheel / Crtl+Down |
-| Zoom (alt. method) | Hold right mouse button & move up / down |
-| Fit mode: window | 1 |
-| Fit mode: width | 2 |
-| Fit mode: 1:1 (no scaling) | 3 |
-| Switch fit modes  | Space |
-| Toggle fullscreen mode  | DoubleClick / F / F11 |
-| Exit fullscreen mode | Esc |
-| Show EXIF panel  | I |
-| Crop image  | X |
-| Resize image  | R |
-| Rotate left  | Ctrl+L |
-| Rotate Right  | Ctrl+R |
-| Open containing directory | Ctrl+D |
-| Slideshow mode | ~ |
-| Shuffle mode | Ctrl+~ |
-| Quick copy  | C |
-| Quick move  | M |
-| Move to trash | Delete |
-| Delete file  | Shift+Delete |
-| Save  | Ctrl+S |
-| Save As  | Ctrl+Shift+S |
-| Folder view | Enter / Backspace |
-| Open | Ctrl+O |
-| Print / Export PDF | Ctrl+P |
-| Settings  | P |
-| Exit application | Esc / Ctrl+Q / Alt+X / MiddleClick |
+| 下一张图片 | 右方向键 / 鼠标滚轮 |
+| 上一张图片 | 左方向键 / 鼠标滚轮 |
+| 跳到第一张 | Home |
+| 跳到最后一张 | End |
+| 放大 | Ctrl+滚轮 / Ctrl+上 |
+| 缩小 | Ctrl+滚轮 / Ctrl+下 |
+| 缩放（另一种方式） | 按住鼠标右键上下移动 |
+| 适应模式：适应窗口 | 1 |
+| 适应模式：适应宽度 | 2 |
+| 适应模式：1:1（不缩放） | 3 |
+| 切换适应模式 | 空格 |
+| 切换全屏 | 双击 / F / F11 |
+| 退出全屏 | Esc |
+| 显示 EXIF 面板 | I |
+| 裁剪图片 | X |
+| 调整图片尺寸 | R |
+| 向左旋转 | Ctrl+L |
+| 向右旋转 | Ctrl+R |
+| 打开所在目录 | Ctrl+D |
+| 幻灯片模式 | ~ |
+| 随机播放模式 | Ctrl+~ |
+| 快速复制 | C |
+| 快速移动 | M |
+| 移到回收站 | Delete |
+| 删除文件 | Shift+Delete |
+| 保存 | Ctrl+S |
+| 另存为 | Ctrl+Shift+S |
+| 文件夹视图 | Enter / Backspace |
+| 打开 | Ctrl+O |
+| 打印 / 导出 PDF | Ctrl+P |
+| 设置 | P |
+| 退出程序 | Esc / Ctrl+Q / Alt+X / 中键单击 |
 
-... and more.
+……以及更多。
 
-Note: you can configure every shortcut by going to __Settings > Controls__
+提示：所有快捷键都可以在 __设置 > 控制__ 中自行配置。
 
-# User interface
+# 用户界面
 
-The idea is to have a uncluttered, simple and easy to use UI. You can see UI elements only when you need them.
+设计目标是界面整洁、简单易用：只有在你需要的时候才会看到对应的界面元素。
 
-There is a pull-down panel with thumbnails, as well as folder view. You can also bring up a context menu via right click.
+底部有一个可拉出的缩略图面板，另外还有文件夹视图。右键也可以唤出上下文菜单。
 
-## Using quick copy / quick move panels
+## 使用快速复制 / 快速移动面板
 
-Bring up the panel with C or M shortcut. You will see 9 destination directories, click on the folder icon to change them.
+用 `C`（复制）或 `M`（移动）唤出面板。面板里有 9 个目标目录，点击文件夹图标可以修改。
 
-With panel visible, use 1 - 9 keys to copy/move current image to corresponding directory.
+面板显示时，按 `1`–`9` 即可把当前图片复制 / 移动到对应目录。
 
-When you are done press C or M again to hide the panel.
+操作完成后再次按 `C` 或 `M` 隐藏面板。
 
-## Running scripts
+## 运行脚本
 
-You can run custom scripts on a current image.
+你可以对当前图片运行自定义脚本。
 
-Open __Settings > Scripts__. Press Add. Here you can choose between a shell command and a shell script. 
+打开 __设置 > 脚本__，点击「添加」。这里可以选择「shell 命令」或「shell 脚本文件」。
 
-Example of a command: 
+命令示例：
 
 `convert %file% %file%_.pdf`
 
-Example of a shell script file (`$1` will be image path): 
+脚本文件示例（`$1` 为图片路径）：
+
 ```
 #!/bin/bash
 gimp "$1"
 ```
-_Note: The script file must be an executable. Also, "shebang" (`#!/bin/bash`) needs to be present._
 
-When you've created your script go to __Settings > Controls > Add__, then select it and assign a shortcut like for any regular action.
+_注意：脚本文件必须具有可执行权限，且必须包含 shebang（`#!/bin/bash`）。_
 
-## HiDPI (Linux / MacOS only)
+创建好脚本后，进入 __设置 > 控制 > 添加__，选中它并像普通动作一样分配快捷键。
 
-If qimgv appears too small / too big on your display, you can override the scale factor. Example:
+## HiDPI（仅 Linux / macOS）
+
+如果 qimgv 在你的显示器上过大 / 过小，可以覆盖缩放系数，例如：
+
 ```
 QT_SCALE_FACTOR="1.5" qimgv /path/to/image.png
 ```
-You can put it in `qimgv.desktop` file to make it permanent. Using values less than `1.0` is not supported.
 
-qimgv should also obey the global scale factor set in KDE's systemsettings.
+把它写进 `qimgv.desktop` 可以永久生效。不支持小于 `1.0` 的值。
 
-## High quality scaling
+qimgv 也会遵循 KDE 系统设置里的全局缩放系数。
 
-qimgv supports nicer scaling filters when compiled with `opencv` support (ON by default, but might vary depending on your linux distribution). Filter options are available in __Settings > Scaling__. `Bicubic` or `bilinear+sharpen` is recommended.
+## 高质量缩放
 
-# Additional image formats
+如果在编译时启用了 `opencv` 支持，qimgv 可以使用更好的缩放滤镜（默认开启，但不同 Linux 发行版可能不同）。滤镜选项位于 __设置 > 缩放__，推荐 `Bicubic` 或 `bilinear+sharpen`。
 
-qimgv can open some extra formats via third-party image plugins. All of them are included with windows package.
+# 额外图片格式
 
-| Format  | Plugin |
+qimgv 可以通过第三方图片插件打开一些额外格式，Windows 安装包内均已包含。
+
+| 格式 | 插件 |
 | ------- | ------------- |
 | JPEG-XL | [github.com/novomesk/qt-jpegxl-image-plugin](https://github.com/novomesk/qt-jpegxl-image-plugin) |
 | AVIF | [github.com/novomesk/qt-avif-image-plugin](https://github.com/novomesk/qt-avif-image-plugin) |
@@ -132,39 +167,41 @@ qimgv can open some extra formats via third-party image plugins. All of them are
 | HEIF / HEIC | [github.com/jakar/qt-heif-image-plugin](https://github.com/jakar/qt-heif-image-plugin) |
 | RAW | [https://gitlab.com/mardy/qtraw](https://gitlab.com/mardy/qtraw) |
 
-# Installation
+# 安装
+
+本分支目前没有发布编译好的安装包，请参考上文的「本分支的构建提示」自行编译，或使用上游的发行版：
 
 ## Windows
-  
-  Windows builds are portable (everything is contained within the install folder). The installer also sets up file associations.
-  
-  _NOTE: `-video` variants include mpv for video support_
-  
-  Grab the latest version from the [releases page](https://github.com/easymodo/qimgv/releases)
 
-  Alternatively you can install it with Chocolatey:
-  
+  Windows 版本为便携版（所有文件都在安装目录内），安装程序还会注册文件关联。
+
+  _注意：`-video` 变体包含 mpv，用于支持视频播放_
+
+  从[发行页](https://github.com/easymodo/qimgv/releases)获取最新版本。
+
+  也可以用 Chocolatey 安装：
+
   ```
   choco install qimgv
   ```
-  
-  Or WinGet:
-  
+
+  或者 WinGet：
+
   ```
   winget install --id easymodo.qimgv
   ```
 
 ## GNU+Linux
 
-### Arch Linux / Manjaro / etc.
+### Arch Linux / Manjaro 等
 
-AUR package: 
+AUR 包：
 
 ```
 qimgv-git
 ```
-  
-### Ubuntu / Linux Mint / Pop!\_OS / etc.
+
+### Ubuntu / Linux Mint / Pop!\_OS 等
 
 ```
 sudo apt install qimgv
@@ -188,7 +225,7 @@ zypper install qimgv
 emerge qimgv
 ```
 
-### Void linux
+### Void Linux
 
 ```
 xbps-install -S qimgv
@@ -208,18 +245,13 @@ apk add qimgv
 pkg install qimgv
 ```
 
-This list may be incomplete. 
+以上列表可能并不完整。
 
-## Compiling from source
+## 从源码编译
 
-See [Compiling qimgv from source](https://github.com/easymodo/qimgv/wiki/Compiling-qimgv-from-source) on the wiki
+参见上游 wiki：[Compiling qimgv from source](https://github.com/easymodo/qimgv/wiki/Compiling-qimgv-from-source)。Windows 下的补充说明见上文「本分支的构建提示」。
 
-# Donate
+# 许可证与致谢
 
-If you wish to give me a few bucks, please consider donating to the Ukrainian Army instead:
-
-[https://savelife.in.ua/en/donate-en/#donate-army-card-once](https://savelife.in.ua/en/donate-en/#donate-army-card-once)
-
-[https://u24.gov.ua/](https://u24.gov.ua/)
-
-This directly increases the chances of me being able to work on this in future
+- 原项目：[easymodo/qimgv](https://github.com/easymodo/qimgv)，作者 easymodo 及所有贡献者
+- 许可证：GNU GPLv3
