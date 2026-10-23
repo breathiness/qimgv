@@ -133,6 +133,9 @@ private:
     std::shared_ptr<QMovie> movie;
     QGraphicsPixmapItem pixmapItem, pixmapItemScaled;
     QTimer *animationTimer, *scaleTimer;
+    // fires once the zoom level stops changing, to redo the scale with the
+    // user's filter after a cheap nearest-neighbour pass
+    QTimer *scaleRefineTimer;
     QScrollBar *hs, *vs;
     QPoint mouseMoveStartPos, mousePressPos, drawPos;
     bool transparencyGrid, expandImage,    smoothAnimatedImages,

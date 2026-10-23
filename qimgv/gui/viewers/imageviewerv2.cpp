@@ -93,6 +93,16 @@ ImageViewerV2::ImageViewerV2(QWidget *parent) : QGraphicsView(parent),
         this->requestScaling();
     });
 
+    scaleRefineTimer = new QTimer(this);
+    scaleRefineTimer->setSingleShot(true);
+    scaleRefineTimer->setInterval(160);
+    connect(scaleRefineTimer, &QTimer::timeout, [this]() {
+        // the interaction settled: redo the scale with the user's filter
+        if(!pixmap || movie || currentScale() >= FAST_SCALE_THRESHOLD)
+            return;
+        emit scalingRequested(scaledSizeR() * dpr, mScalingFilter);
+    });
+
     readSettings();
     connect(settings, &Settings::settingsChanged, this, &ImageViewerV2::readSettings);
 }
@@ -472,8 +482,15 @@ void ImageViewerV2::requestScaling() {
         scaleTimer->stop();
     // request "real" scaling when graphicsscene scaling is insufficient
     // (it uses a single pass bilinear which is sharp but produces artifacts on low zoom levels)
-    if(currentScale() < FAST_SCALE_THRESHOLD)
-        emit scalingRequested(scaledSizeR() * dpr, mScalingFilter);
+    if(currentScale() < FAST_SCALE_THRESHOLD) {
+        // While the zoom level is still changing, a nearest-neighbour pass is
+        // far cheaper and looks fine in motion; the high quality pass is queued
+        // for the moment the interaction settles (scaleRefineTimer).
+        emit scalingRequested(scaledSizeR() * dpr, QI_FILTER_NEAREST);
+        // nothing to refine when the user's filter already is nearest-neighbour
+        if(mScalingFilter != QI_FILTER_NEAREST)
+            scaleRefineTimer->start();
+    }
 }
 
 bool ImageViewerV2::imageFits() const {
