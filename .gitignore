@@ -10,6 +10,7 @@
 .dir*
 *.orig
 build
+dist
 qrc_resources.cpp
 debug/
 release/
