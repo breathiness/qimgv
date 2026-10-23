@@ -1,5 +1,7 @@
 #include "mainwindow.h"
 
+#include <QScreen>
+
 // TODO: nuke this and rewrite
 
 MW::MW(QWidget *parent)
@@ -13,6 +15,7 @@ MW::MW(QWidget *parent)
       infoBarFullscreen(nullptr),
       imageInfoOverlay(nullptr),
       floatingMessage(nullptr),
+      navBar(nullptr),
       cropPanel(nullptr),
       cropOverlay(nullptr)
 {
@@ -99,6 +102,16 @@ void MW::setupUi() {
     connect(this, &MW::volumeDown,  viewerWidget.get(), &ViewerWidget::volumeDown);
     connect(this, &MW::toggleTransparencyGrid, viewerWidget.get(), &ViewerWidget::toggleTransparencyGrid);
     connect(this, &MW::setLoopPlayback,  viewerWidget.get(), &ViewerWidget::setLoopPlayback);
+
+    // Floating navigation bar. Deliberately kept out of "layout" so it can be
+    // positioned freely on top of everything else and dragged around.
+    // It is configured from Preferences -> "Navigation bar".
+    navBar = new FloatingNavBar(this);
+    // add / remove / edit: the bar already rebuilt itself, just persist the list
+    connect(navBar, &FloatingNavBar::shortcutsChanged, this, [this]() {
+        settings->saveNavBar(navBar->shortcuts(), navBar->icons());
+    });
+    connect(this, &FloatingWidgetContainer::resized, navBar, &FloatingNavBar::onContainerResized);
 }
 
 void MW::setupFullUi() {
@@ -405,7 +418,21 @@ void MW::saveWindowGeometry() {
 
 // does not apply fullscreen; window size / maximized state only
 void MW::restoreWindowGeometry() {
-    this->setGeometry(settings->windowGeometry());
+    QRect geom = settings->windowGeometry();
+    // Never restore a window bigger than the usable screen area (e.g. after the
+    // resolution changed or the config was copied from another machine).
+    // Otherwise the bottom of the window - and anything docked to it, like the
+    // navigation bar - ends up off-screen.
+    QRect avail;
+    if(QScreen *scr = qApp->primaryScreen())
+        avail = scr->availableGeometry();
+    if(avail.isValid()) {
+        geom.setWidth(qMin(geom.width(), avail.width()));
+        geom.setHeight(qMin(geom.height(), avail.height()));
+        geom.moveLeft(qBound(avail.left(), geom.left(), avail.right() - geom.width() + 1));
+        geom.moveTop(qBound(avail.top(), geom.top(), avail.bottom() - geom.height() + 1));
+    }
+    this->setGeometry(geom);
     if(settings->maximizedWindow())
         this->setWindowState(Qt::WindowMaximized);
     updateCurrentDisplay();
@@ -623,7 +650,8 @@ void MW::showSettings() {
 void MW::showScriptSettings() {
     docWidget->hideFloatingPanel();
     SettingsDialog settingsDialog(this);
-    settingsDialog.switchToPage(4);
+    // "Scripts" moved to index 5 after the navigation bar page was inserted
+    settingsDialog.switchToPage(5);
     settingsDialog.exec();
 }
 
@@ -654,6 +682,10 @@ void MW::showFullScreen() {
     QWidget::showFullScreen();
     // try to repaint sooner
     qApp->processEvents();
+    if(navBar) {
+        navBar->show();
+        navBar->raise();
+    }
     emit fullscreenStateChanged(true);
 }
 
@@ -664,6 +696,10 @@ void MW::showWindowed() {
     QWidget::show();
     // try to repaint sooner
     qApp->processEvents();
+    if(navBar) {
+        navBar->show();
+        navBar->raise();
+    }
     emit fullscreenStateChanged(false);
 }
 
@@ -930,6 +966,12 @@ void MW::readSettings() {
     showInfoBarFullscreen = settings->infoBarFullscreen();
     showInfoBarWindowed = settings->infoBarWindowed();
     adaptToWindowState();
+
+    if(navBar) {
+        navBar->setAutoHide(settings->navBarAutoHide());
+        navBar->setButtons(settings->navBarShortcuts(), settings->navBarIcons());
+        navBar->raise();
+    }
 }
 
 // todo: remove/rename?

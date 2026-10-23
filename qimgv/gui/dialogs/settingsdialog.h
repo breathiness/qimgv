@@ -22,6 +22,9 @@ namespace Ui {
 class SettingsDialog;
 }
 
+class NavBarSettingsPage;
+class QCheckBox;
+
 class SettingsDialog : public QDialog
 {
     Q_OBJECT
@@ -42,6 +45,12 @@ private:
     void readShortcuts();
     void readScripts();
     Ui::SettingsDialog *ui;
+
+    // page created at runtime (not part of settingsdialog.ui)
+    NavBarSettingsPage *navBarPage = nullptr;
+    // "Viewer" page controls, also built at runtime
+    QCheckBox *edgeClickCheckBox = nullptr;
+    QCheckBox *edgeVisibleCheckBox = nullptr;
 
     void saveShortcuts();
     void addShortcutToTable(const QString &action, const QString &shortcut);

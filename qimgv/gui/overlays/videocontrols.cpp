@@ -1,5 +1,6 @@
 #include "videocontrols.h"
 #include "ui_videocontrols.h"
+#include "gui/customwidgets/floatingnavbar.h"
 
 VideoControls::VideoControls(FloatingWidgetContainer *parent) :
     OverlayWidget(parent),
@@ -29,10 +30,17 @@ VideoControls::VideoControls(FloatingWidgetContainer *parent) :
 }
 
 void VideoControls::readSettings() {
-    if(settings->panelEnabled() && settings->panelPosition() == PanelPosition::PANEL_BOTTOM)
+    // The floating navigation bar sits on top of the bottom edge of the window,
+    // so the controls have to stay above it even when the bar is fully expanded.
+    const int navBarClearance = FloatingNavBar::kBarHeight + 8;
+
+    if(settings->panelEnabled() && settings->panelPosition() == PanelPosition::PANEL_BOTTOM) {
+        setVerticalMargin(35);
         setPosition(FloatingWidgetPosition::TOP);
-    else
+    } else {
+        setVerticalMargin(navBarClearance);
         setPosition(FloatingWidgetPosition::BOTTOM);
+    }
 }
 
 VideoControls::~VideoControls() {

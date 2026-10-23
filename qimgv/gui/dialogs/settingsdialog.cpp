@@ -1,5 +1,10 @@
 #include "settingsdialog.h"
 #include "ui_settingsdialog.h"
+#include "gui/dialogs/navbarsettingspage.h"
+
+#include <QCheckBox>
+#include <QLabel>
+#include <QVBoxLayout>
 
 SettingsDialog::SettingsDialog(QWidget *parent) :
     QDialog(parent),
@@ -165,7 +170,27 @@ void SettingsDialog::resetToDesktopTheme() {
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::setupSidebar() {
+    // The edge-click options live at the top of the "View" page. They used to
+    // sit at the bottom of the "Controls" page, which has no scroll area, so
+    // they were easy to miss there.
+    edgeClickCheckBox = new QCheckBox(tr("Switch image by clicking window edges"), this);
+    ui->verticalLayout_27->insertWidget(2, edgeClickCheckBox);
 
+    edgeVisibleCheckBox = new QCheckBox(tr("Visible edges"), this);
+    edgeVisibleCheckBox->setEnabled(false);
+    connect(edgeClickCheckBox, &QCheckBox::toggled, edgeVisibleCheckBox, &QCheckBox::setEnabled);
+    ui->verticalLayout_27->insertWidget(3, edgeVisibleCheckBox);
+
+    // superseded by the checkboxes above, hide the old ones on the Controls page
+    ui->clickableEdgesCheckBox->hide();
+    ui->clickableEdgesVisibleCheckBox->hide();
+
+    // The navigation bar page is built in code instead of the .ui file; it is
+    // inserted right after "Controls" so the stacked widget and the sidebar
+    // stay index-aligned (SSideBar adds its "Navigation bar" entry in the same
+    // position).
+    navBarPage = new NavBarSettingsPage(ui->stackedWidget);
+    ui->stackedWidget->insertWidget(4, navBarPage);
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::readSettings() {
@@ -193,9 +218,11 @@ void SettingsDialog::readSettings() {
     ui->unlockMinZoomCheckBox->setChecked(settings->unlockMinZoom());
     ui->sortFoldersCheckBox->setChecked(settings->sortFolders());
     ui->trackpadDetectionCheckBox->setChecked(settings->trackpadDetection());
-    ui->clickableEdgesCheckBox->setChecked(settings->clickableEdges());
-    ui->clickableEdgesVisibleCheckBox->setChecked(settings->clickableEdgesVisible());
-    ui->clickableEdgesVisibleCheckBox->setEnabled(settings->clickableEdges());
+    if(edgeClickCheckBox) {
+        edgeClickCheckBox->setChecked(settings->clickableEdges());
+        edgeVisibleCheckBox->setChecked(settings->clickableEdgesVisible());
+        edgeVisibleCheckBox->setEnabled(settings->clickableEdges());
+    }
     ui->showHiddenFilesCheckBox->setChecked(settings->showHiddenFiles());
 
     if(settings->zoomIndicatorMode() == INDICATOR_ENABLED)
@@ -298,6 +325,8 @@ void SettingsDialog::readSettings() {
     readColorScheme();
     readShortcuts();
     readScripts();
+    if(navBarPage)
+        navBarPage->readSettings();
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::saveSettings() {
@@ -341,8 +370,10 @@ void SettingsDialog::saveSettings() {
     settings->setUnlockMinZoom(ui->unlockMinZoomCheckBox->isChecked());
     settings->setSortFolders(ui->sortFoldersCheckBox->isChecked());
     settings->setTrackpadDetection(ui->trackpadDetectionCheckBox->isChecked());
-    settings->setClickableEdges(ui->clickableEdgesCheckBox->isChecked());
-    settings->setClickableEdgesVisible(ui->clickableEdgesVisibleCheckBox->isChecked());
+    if(edgeClickCheckBox) {
+        settings->setClickableEdges(edgeClickCheckBox->isChecked());
+        settings->setClickableEdgesVisible(edgeVisibleCheckBox->isChecked());
+    }
 
     if(ui->zoomIndicatorOn->isChecked())
         settings->setZoomIndicatorMode(INDICATOR_ENABLED);
@@ -409,6 +440,8 @@ void SettingsDialog::saveSettings() {
 
     saveColorScheme();
     saveShortcuts();
+    if(navBarPage)
+        navBarPage->saveSettings();
 
     scriptManager->saveScripts();
     actionManager->saveShortcuts();

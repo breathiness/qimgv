@@ -14,6 +14,7 @@
 #include <QDesktopWidget>
 #endif
 
+#include "gui/customwidgets/floatingnavbar.h"
 #include "gui/customwidgets/floatingwidgetcontainer.h"
 #include "gui/viewers/viewerwidget.h"
 #include "gui/overlays/controlsoverlay.h"
@@ -109,6 +110,8 @@ private:
     FullscreenInfoOverlayProxy *infoBarFullscreen;
     std::shared_ptr<InfoBarProxy> infoBarWindowed;
     FloatingMessageProxy *floatingMessage;
+
+    FloatingNavBar *navBar;
 
     PanelPosition panelPosition;
     CurrentInfo info;

@@ -12,6 +12,7 @@ target_sources(qimgv PRIVATE
     customwidgets/contextmenuitem.cpp
     customwidgets/floatingwidget.cpp
     customwidgets/floatingwidgetcontainer.cpp
+    customwidgets/floatingnavbar.cpp
     customwidgets/iconbutton.cpp
     customwidgets/iconwidget.cpp
     customwidgets/keysequenceedit.cpp
@@ -31,6 +32,7 @@ target_sources(qimgv PRIVATE
     customwidgets/ssidebar.cpp
 
     dialogs/filereplacedialog.cpp
+    dialogs/navbarsettingspage.cpp
     dialogs/resizedialog.cpp
     dialogs/scripteditordialog.cpp
     dialogs/settingsdialog.cpp
