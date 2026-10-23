@@ -1,4 +1,97 @@
-﻿#include "directorypresenter.h"
+#include "directorypresenter.h"
+
+#include <QApplication>
+#include <QFileInfo>
+#include <QHash>
+#include <QPainter>
+#include <QPolygonF>
+#include <QSet>
+
+#include "settings.h"
+#include "sourcecontainers/thumbnail.h"
+
+namespace {
+
+bool isVideoFilePath(const QString &filePath) {
+    // The list of video extensions is static, build it once instead of copying
+    // it out of the settings for every file in the directory.
+    static const QSet<QString> videoSuffixes = []() {
+        QSet<QString> suffixes;
+        const QList<QByteArray> formats = settings->videoFormats().values();
+        for(const QByteArray &format : formats)
+            suffixes.insert(QString::fromLatin1(format).toLower());
+        return suffixes;
+    }();
+
+    const QString suffix = QFileInfo(filePath).suffix().toLower();
+    return !suffix.isEmpty() && videoSuffixes.contains(suffix);
+}
+
+// Small film-strip glyph shown while the real frame is being extracted. Video
+// thumbnails spawn an mpv process, which takes a while, so without this the
+// tile looks like an empty slot for several seconds.
+QPixmap makeFilmGlyph(int size) {
+    if(size <= 0)
+        size = 100;
+    const qreal dpr = qApp->devicePixelRatio();
+    QPixmap pixmap(QSize(size, size) * dpr);
+    pixmap.setDevicePixelRatio(dpr);
+    pixmap.fill(Qt::transparent);
+
+    QPainter p(&pixmap);
+    p.setRenderHint(QPainter::Antialiasing, true);
+
+    const QColor color = settings->colorScheme().folderview_hc2;
+    const qreal side = size * 0.46;
+    const QRectF film((size - side) / 2.0, (size - side) / 2.0, side, side);
+    const qreal stroke = qMax(1.0, size * 0.035);
+
+    p.setPen(QPen(color, stroke));
+    p.setBrush(Qt::NoBrush);
+    p.drawRoundedRect(film, side * 0.10, side * 0.10);
+
+    // sprocket holes along the top and bottom edges
+    p.setPen(Qt::NoPen);
+    p.setBrush(color);
+    const qreal holeW = side * 0.11;
+    const qreal holeH = side * 0.09;
+    for(int i = 0; i < 3; i++) {
+        const qreal x = film.left() + side * (0.15 + i * 0.26);
+        p.drawRoundedRect(QRectF(x, film.top() + side * 0.075, holeW, holeH), 1.0, 1.0);
+        p.drawRoundedRect(QRectF(x, film.bottom() - side * 0.075 - holeH, holeW, holeH), 1.0, 1.0);
+    }
+
+    // play triangle in the middle
+    const qreal cx = film.center().x() + side * 0.03;
+    const qreal cy = film.center().y();
+    const qreal t = side * 0.13;
+    QPolygonF triangle;
+    triangle << QPointF(cx - t, cy - t) << QPointF(cx - t, cy + t) << QPointF(cx + t * 1.15, cy);
+    p.drawPolygon(triangle);
+
+    p.end();
+    return pixmap;
+}
+
+// One shared pixmap for every video placeholder: a folder can hold hundreds of
+// videos and each placeholder thumbnail points at the same image.
+std::shared_ptr<QPixmap> filmGlyphPixmap(int size) {
+    static QHash<int, std::shared_ptr<QPixmap>> cache;
+    auto it = cache.constFind(size);
+    if(it != cache.constEnd())
+        return it.value();
+    auto pixmap = std::make_shared<QPixmap>(makeFilmGlyph(size));
+    cache.insert(size, pixmap);
+    return pixmap;
+}
+
+std::shared_ptr<Thumbnail> videoPlaceholderThumbnail(const QString &filePath) {
+    const int size = settings->folderViewIconSize();
+    return std::make_shared<Thumbnail>(QFileInfo(filePath).fileName(), " [v]", size,
+                                       filmGlyphPixmap(size));
+}
+
+} // namespace
 
 DirectoryPresenter::DirectoryPresenter(QObject *parent) : QObject(parent), mShowDirs(false) {
     connect(&thumbnailer, &Thumbnailer::thumbnailReady, this, &DirectoryPresenter::onThumbnailReady);
@@ -60,6 +153,13 @@ void DirectoryPresenter::populateView() {
     if(!model || !view)
         return;
     view->populate(mShowDirs ? model->totalCount() : model->fileCount());
+    // put a film glyph on video items right away; the real frame takes a while
+    const int offset = mShowDirs ? model->dirCount() : 0;
+    for(int i = 0; i < model->fileCount(); i++) {
+        const QString path = model->filePathAt(i);
+        if(isVideoFilePath(path))
+            view->setThumbnail(offset + i, videoPlaceholderThumbnail(path));
+    }
     selectAndFocus(0);
 }
 
@@ -103,7 +203,10 @@ void DirectoryPresenter::onFileAdded(QString filePath) {
     if(!view)
         return;
     int index = model->indexOfFile(filePath);
-    view->insertItem(mShowDirs ? model->dirCount() + index : index);
+    const int pos = mShowDirs ? model->dirCount() + index : index;
+    view->insertItem(pos);
+    if(isVideoFilePath(filePath))
+        view->setThumbnail(pos, videoPlaceholderThumbnail(filePath));
 }
 
 void DirectoryPresenter::onFileModified(QString filePath) {

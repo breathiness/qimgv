@@ -1,8 +1,14 @@
 #include "loader.h"
 
+#include <QThread>
+
 Loader::Loader() {
     pool = new QThreadPool(this);
-    pool->setMaxThreadCount(2);
+    // 2 was very conservative for preloading adjacent images: the work is I/O
+    // plus decode bound and benefits from a couple more workers, while staying
+    // low enough not to spike memory on large files
+    const int idealThreads = QThread::idealThreadCount();
+    pool->setMaxThreadCount(qBound(2, idealThreads / 2, 4));
 }
 
 void Loader::clearTasks() {

@@ -24,6 +24,11 @@ private:
     static QString generateIdString(QString path, int size, bool crop);
     static std::pair<QImage*, QSize> createThumbnail(QString path, const char* format, int size, bool crop);
     static std::pair<QImage*, QSize> createVideoThumbnail(QString path, int size, bool crop);
+#ifdef _WIN32
+    // asks the Explorer shell for its cached thumbnail; much cheaper than
+    // decoding the video ourselves
+    static std::pair<QImage*, QSize> createShellThumbnail(QString path, int size, bool crop);
+#endif
     QString path;
     int size;
     bool crop, force;
