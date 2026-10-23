@@ -285,6 +285,21 @@ void Settings::fillVideoFormats() {
     mVideoFormatsMap.insert("video/x-msvideo",  "avi");
     mVideoFormatsMap.insert("video/quicktime",  "mov");
     mVideoFormatsMap.insert("video/x-flv",      "flv");
+    // additional containers mpv handles fine, common in downloaded media
+    mVideoFormatsMap.insert("video/mp2t",         "ts");
+    mVideoFormatsMap.insert("video/mp2t",         "m2ts");
+    mVideoFormatsMap.insert("video/mp2t",         "mts");
+    mVideoFormatsMap.insert("application/vnd.rn-realmedia", "rm");
+    mVideoFormatsMap.insert("application/vnd.rn-realmedia", "rmvb");
+    mVideoFormatsMap.insert("video/x-f4v",        "f4v");
+    mVideoFormatsMap.insert("video/3gpp",         "3gp");
+    mVideoFormatsMap.insert("video/ogg",          "ogv");
+    mVideoFormatsMap.insert("video/ogg",          "ogg");
+    mVideoFormatsMap.insert("video/dvd",          "vob");
+    mVideoFormatsMap.insert("video/x-ms-asf",     "asf");
+    mVideoFormatsMap.insert("video/divx",         "divx");
+    mVideoFormatsMap.insert("video/x-dv",         "dv");
+    mVideoFormatsMap.insert("video/mp2v",         "m2v");
 }
 //------------------------------------------------------------------------------
 QString Settings::mpvBinary() {
@@ -666,6 +681,84 @@ void Settings::saveShortcuts(const QMap<QString, QString> &shortcuts) {
     settings->settingsConf->endGroup();
 }
 //------------------------------------------------------------------------------
+// Default button set, mirrors the 2345 viewer toolbar: prev/next, zoom in/out,
+// 1:1, rotate left/right, image info, delete, print, folder view.
+// Note: the zoom in shortcut is "+", not "=" - "=" is not bound to any action.
+QStringList Settings::defaultNavBarShortcuts() {
+    return QStringList() << "Left" << "Right"
+                         << "+" << "-"
+                         << "3"
+                         << "Ctrl+L" << "Ctrl+R"
+                         << "I"
+                         << "Del"
+                         << "Ctrl+P"
+                         << "Enter";
+}
+//------------------------------------------------------------------------------
+// Buttons of the bottom navigation bar. Stored as an array so both the count
+// and the per-button shortcut survive restarts.
+QStringList Settings::navBarShortcuts() {
+    if(!settings->settingsConf->value("NavBar/configured", false).toBool()) {
+        return defaultNavBarShortcuts();
+    }
+    QStringList list;
+    settings->settingsConf->beginGroup("NavBar");
+    int size = settings->settingsConf->beginReadArray("buttons");
+    for(int i = 0; i < size; i++) {
+        settings->settingsConf->setArrayIndex(i);
+        QString shortcut = settings->settingsConf->value("shortcut", "").toString();
+        // The ini writer quotes values containing '=' or ',', so a shortcut
+        // like "=" comes back wrapped in double quotes. Strip them, otherwise
+        // no action matches and the button ends up blank.
+        if(shortcut.size() >= 2 && shortcut.startsWith('"') && shortcut.endsWith('"'))
+            shortcut = shortcut.mid(1, shortcut.size() - 2);
+        list << shortcut;
+    }
+    settings->settingsConf->endArray();
+    settings->settingsConf->endGroup();
+    return list;
+}
+
+QStringList Settings::navBarIcons() {
+    QStringList list;
+    if(!settings->settingsConf->value("NavBar/configured", false).toBool())
+        return list;
+    settings->settingsConf->beginGroup("NavBar");
+    int size = settings->settingsConf->beginReadArray("buttons");
+    for(int i = 0; i < size; i++) {
+        settings->settingsConf->setArrayIndex(i);
+        list << settings->settingsConf->value("icon", "").toString();
+    }
+    settings->settingsConf->endArray();
+    settings->settingsConf->endGroup();
+    return list;
+}
+
+void Settings::saveNavBar(const QStringList &shortcuts, const QStringList &icons) {
+    settings->settingsConf->beginGroup("NavBar");
+    // marks the bar as configured so an explicitly empty list is not mistaken
+    // for "never configured" by navBarShortcuts()
+    settings->settingsConf->setValue("configured", true);
+    settings->settingsConf->beginWriteArray("buttons");
+    for(int i = 0; i < shortcuts.size(); i++) {
+        settings->settingsConf->setArrayIndex(i);
+        settings->settingsConf->setValue("shortcut", shortcuts.at(i));
+        settings->settingsConf->setValue("icon", icons.value(i, QString()));
+    }
+    settings->settingsConf->endArray();
+    settings->settingsConf->endGroup();
+}
+//------------------------------------------------------------------------------
+bool Settings::navBarAutoHide() {
+    return settings->settingsConf->value("NavBar/autoHide", true).toBool();
+}
+
+void Settings::setNavBarAutoHide(bool mode) {
+    settings->settingsConf->beginGroup("NavBar");
+    settings->settingsConf->setValue("autoHide", mode);
+    settings->settingsConf->endGroup();
+}
+//------------------------------------------------------------------------------
 void Settings::readScripts(QMap<QString, Script> &scripts) {
     scripts.clear();
     settings->settingsConf->beginGroup("Scripts");
@@ -789,9 +882,9 @@ int Settings::slideshowInterval() {
 }
 //------------------------------------------------------------------------------
 int Settings::thumbnailerThreadCount() {
-    int count = settings->settingsConf->value("thumbnailerThreads", 4).toInt();
+    int count = settings->settingsConf->value("thumbnailerThreads", 6).toInt();
     if(count < 1)
-        count = 4;
+        count = 6;
     return count;
 }
 
@@ -1175,7 +1268,8 @@ void Settings::setTrackpadDetection(bool mode) {
 }
 //------------------------------------------------------------------------------
 bool Settings::clickableEdges() {
-    return settings->settingsConf->value("clickableEdges", false).toBool();
+    // enabled by default: the left/right edge buttons are part of the default UI
+    return settings->settingsConf->value("clickableEdges", true).toBool();
 }
 
 void Settings::setClickableEdges(bool mode) {

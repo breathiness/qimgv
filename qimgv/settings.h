@@ -129,6 +129,16 @@ public:
     void setLoopSlideshow(bool mode);
     void readShortcuts(QMap<QString, QString> &shortcuts);
     void saveShortcuts(const QMap<QString, QString> &shortcuts);
+    // floating navigation bar: one shortcut per button, empty string = unassigned
+    QStringList navBarShortcuts();
+    // per-button custom icon path (empty string = use the automatic icon)
+    QStringList navBarIcons();
+    void saveNavBar(const QStringList &shortcuts, const QStringList &icons);
+    // expands only when the mouse gets close to the bottom edge
+    bool navBarAutoHide();
+    void setNavBarAutoHide(bool mode);
+    // the built-in button set used when nothing was configured yet
+    static QStringList defaultNavBarShortcuts();
     bool panelEnabled();
     void setPanelEnabled(bool mode);
     int lastDisplay();
