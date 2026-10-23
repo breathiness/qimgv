@@ -14,6 +14,16 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets)
 if(NOT WIN32)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(Mpv REQUIRED IMPORTED_TARGET mpv)
+else()
+    # Upstream links against a "Mpv" target that only the pkg-config branch
+    # defines. Build one on Windows from MPV_DIR, which follows the layout of
+    # the mpv-dev archive: include/ and lib/x86_64/libmpv.dll.a
+    if(NOT TARGET Mpv)
+        add_library(Mpv STATIC IMPORTED)
+        set_target_properties(Mpv PROPERTIES
+            IMPORTED_LOCATION "${MPV_DIR}/lib/x86_64/libmpv.dll.a"
+            INTERFACE_INCLUDE_DIRECTORIES "${MPV_DIR}/include")
+    endif()
 endif()
 
 include(GNUInstallDirs)
