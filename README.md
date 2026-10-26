@@ -8,41 +8,9 @@ qimgv（个人修改版）
 
 | 改动 | 说明 |
 | --- | --- |
-| **底部悬浮导航条** | 窗口底部一条可自定义的图标栏，每个按钮都是某个快捷键的别名，点击即执行对应动作。支持拖动、自动隐藏（鼠标靠近才滑出，触发范围比条子本身更高），按钮数量、每个按钮的快捷键与图标都可在设置里调整 |
-| **导航条设置页** | 首选项新增「导航条」页：自动隐藏开关、按钮数量（1–16）、逐按钮的快捷键录制与自定义图标、「恢复默认」 |
-| **完整简体中文翻译** | 补齐原版缺失的全部条目（首选项各页、右键菜单、脚本编辑器、侧栏、关于页），并新增导航条相关文案；现在 0 条未翻译 |
-| **MPV 视频支持** | 本分支在 Windows 下启用了视频播放，并修复了上游的构建缺陷：`player_mpv` 插件链接的 `Mpv` 目标只有 Linux 的 pkg-config 分支才会创建，导致 Windows 下无法链接 |
-| **视频缩略图加速** | 优先向 Windows 资源管理器索取已缓存的缩略图（毫秒级），失败才回退到启动 `mpv.exe` 抽帧；回退路径不再 seek 到 30%，并修复了抽帧失败时的空指针崩溃 |
-| **胶片占位图标** | 视频缩略图尚未生成时显示「胶片 + 播放键」图标，不再是一个空方块；所有占位图共用同一张位图 |
-| **线程数优化** | 图片加载线程由硬编码的 2 个改为按核心数计算（2–4），缩略图线程默认值由 4 提高到 6 |
-| **缩放「先快后精」** | 缩放过程中先用最近邻快速出图，交互停下后再用设置里的滤镜重做一次，大图缩放时更跟手 |
-| **边缘翻页** | 默认开启「点击窗口边缘切换图片」，并把这两个选项从「控制」页底部移到「视图」页顶部（原位置容易被裁掉看不到） |
-| **视频控制条抬高** | 播放视频时控制条自动上移，不再被底部导航条遮挡 |
-
-### 本分支的构建提示
-
-视频支持需要 mpv 的头文件与导入库，它们**不在本仓库内**。以 MinGW-w64 为例：
-
-1. 取一份 mpv 开发包，整理成如下结构：
-   ```
-   <MPV_DIR>/
-     include/mpv/client.h
-     include/mpv/render.h ...
-     lib/x86_64/libmpv.dll.a
-   ```
-   （可从 MSYS2 的 `ucrt64/mingw-w64-ucrt-x86_64-mpv` 包中提取，或使用官方 mpv-dev 包）
-2. 运行时需要 `libmpv-2.dll` 与可执行文件同目录。
-3. 配置与构建：
-
-   ```
-   cmake -S . -B build -G Ninja \
-         -DCMAKE_BUILD_TYPE=Release \
-         -DCMAKE_PREFIX_PATH=<你的 Qt 路径> \
-         -DVIDEO_SUPPORT=ON \
-         -DMPV_DIR=<MPV_DIR> \
-         -DEXIV2=OFF -DOPENCV_SUPPORT=OFF
-   ninja -C build
-   ```
+| **底部悬浮导航条** | 窗口底部一条可自定义的图标栏，每个按钮都是某个快捷键的别名，点击即执行对应动作。 |
+| **导航条设置页** | 首选项新增「导航条」页：自动隐藏开关、按钮数量（1–16）、逐按钮的快捷键录制与自定义图标|
+| **完整简体中文翻译** | 补齐原版缺失的全部条目（首选项各页、右键菜单、脚本编辑器、侧栏、关于页）|
 
 ## 截图
 
@@ -170,82 +138,6 @@ qimgv 可以通过第三方图片插件打开一些额外格式，Windows 安装
 # 安装
 
 本分支目前没有发布编译好的安装包，请参考上文的「本分支的构建提示」自行编译，或使用上游的发行版：
-
-## Windows
-
-  Windows 版本为便携版（所有文件都在安装目录内），安装程序还会注册文件关联。
-
-  _注意：`-video` 变体包含 mpv，用于支持视频播放_
-
-  从[发行页](https://github.com/easymodo/qimgv/releases)获取最新版本。
-
-  也可以用 Chocolatey 安装：
-
-  ```
-  choco install qimgv
-  ```
-
-  或者 WinGet：
-
-  ```
-  winget install --id easymodo.qimgv
-  ```
-
-## GNU+Linux
-
-### Arch Linux / Manjaro 等
-
-AUR 包：
-
-```
-qimgv-git
-```
-
-### Ubuntu / Linux Mint / Pop!\_OS 等
-
-```
-sudo apt install qimgv
-```
-
-### Fedora
-
-```
-sudo dnf install qimgv
-```
-
-### OpenSUSE
-
-```
-zypper install qimgv
-```
-
-### Gentoo
-
-```
-emerge qimgv
-```
-
-### Void Linux
-
-```
-xbps-install -S qimgv
-```
-
-### Alpine Linux
-
-```
-apk add qimgv
-```
-
-## BSD
-
-### FreeBSD
-
-```
-pkg install qimgv
-```
-
-以上列表可能并不完整。
 
 ## 从源码编译
 
