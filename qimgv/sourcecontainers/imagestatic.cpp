@@ -249,9 +249,11 @@ bool ImageStatic::save(QString destPath) {
             QFile file(tmpPath);
             file.remove();
         } else if(originalExists) {
-            // revert on fail
-            QFile::remove(mDocInfo->filePath());
-            QFile::copy(tmpPath, mDocInfo->filePath());
+            // revert on fail: restore the destination from the backup taken of
+            // it above. destPath is not necessarily the file being displayed
+            // ("save as"), and the source must never be touched in that case.
+            QFile::remove(destPath);
+            QFile::copy(tmpPath, destPath);
             QFile::remove(tmpPath);
         }
     }
