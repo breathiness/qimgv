@@ -28,6 +28,7 @@ public:
     bool interactionEnabled();
 
     bool showImage(std::unique_ptr<QPixmap> pixmap);
+    void refreshImage(std::unique_ptr<QPixmap> pixmap);
     bool showAnimation(std::shared_ptr<QMovie> movie);
     void onScalingFinished(std::unique_ptr<QPixmap> scaled);
     bool isDisplaying();
@@ -67,6 +68,7 @@ private slots:
 
 signals:
     void scalingRequested(QSize, ScalingFilter);
+    void fullResolutionNeeded();
     void zoomIn();
     void zoomOut();
     void zoomInCursor();

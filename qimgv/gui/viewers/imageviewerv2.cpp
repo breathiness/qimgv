@@ -128,7 +128,7 @@ void ImageViewerV2::onDPRChanged() {
     dpr = this->devicePixelRatioF();
     zoomThreshold = static_cast<int>(dpr * 4.);
     if(pixmap) {
-        pixmap->setDevicePixelRatio(dpr);
+        pixmap->setDevicePixelRatio(dpr * imageDprFactor);
         pixmapItem.setPixmap(*pixmap);
         pixmapItem.show();
         pixmapItem.update();
@@ -286,7 +286,7 @@ bool ImageViewerV2::showAnimationFrame(int frame) {
 
 void ImageViewerV2::updatePixmap(std::unique_ptr<QPixmap> newPixmap) {
     pixmap = std::move(newPixmap);
-    pixmap->setDevicePixelRatio(dpr);
+    pixmap->setDevicePixelRatio(dpr * imageDprFactor);
     pixmapItem.setPixmap(*pixmap);
     pixmapItem.show();
     pixmapItem.update();
@@ -327,7 +327,10 @@ void ImageViewerV2::showImage(std::unique_ptr<QPixmap> _pixmap) {
     if(_pixmap) {
         pixmapItemScaled.hide();
         pixmap = std::move(_pixmap);
-        pixmap->setDevicePixelRatio(dpr);
+        // a preview carries a fraction of the screen's dpr; remember it so the
+        // scene keeps the same logical geometry as the full image would have
+        imageDprFactor = pixmap->devicePixelRatio() > 0.0 ? (float)pixmap->devicePixelRatio() : 1.0f;
+        pixmap->setDevicePixelRatio(dpr * imageDprFactor);
         pixmapItem.setPixmap(*pixmap);
         Qt::TransformationMode mode = Qt::SmoothTransformation;
         if(mScalingFilter == QI_FILTER_NEAREST)
@@ -352,9 +355,47 @@ void ImageViewerV2::showImage(std::unique_ptr<QPixmap> _pixmap) {
     }
 }
 
+// replaces the pixmap that is already on screen without touching zoom or
+// scroll position; used when the full resolution pass of an image finishes
+// while its preview is being displayed
+void ImageViewerV2::refreshImage(std::unique_ptr<QPixmap> newPixmap) {
+    if(!newPixmap || newPixmap->isNull() || !pixmap) {
+        showImage(std::move(newPixmap));
+        return;
+    }
+    const float oldWidth = pixmapLogicalSize().width();
+    const float oldScale = pixmapItem.scale();
+    imageDprFactor = newPixmap->devicePixelRatio() > 0.0 ? (float)newPixmap->devicePixelRatio() : 1.0f;
+    saveViewportPos();
+    updatePixmap(std::move(newPixmap));
+    updateMinScale();
+    if(imageFitMode == FIT_FREE) {
+        // if the new pixmap covers the same image area the scale is already
+        // right; otherwise keep the image the same size on screen
+        const float newWidth = pixmapLogicalSize().width();
+        float adjust = 1.0f;
+        if(newWidth > 0.0f && oldWidth > 0.0f)
+            adjust = oldWidth / newWidth;
+        fitFree(qBound(minScale, oldScale * adjust, maxScale));
+    } else {
+        applyFitMode();
+    }
+    requestScaling();
+    update();
+}
+
+// size of the pixmap in logical pixels (what the scene actually lays out)
+QSizeF ImageViewerV2::pixmapLogicalSize() const {
+    if(!pixmap)
+        return QSizeF(0, 0);
+    const qreal ratio = pixmap->devicePixelRatio();
+    return QSizeF(pixmap->width(), pixmap->height()) / (ratio > 0.0 ? ratio : 1.0);
+}
+
 // reset state, remove image & stop animation
 void ImageViewerV2::reset() {
     stopPosAnimation();
+    imageDprFactor = 1.0f;
     pixmapItemScaled.setPixmap(QPixmap());
     pixmapScaled.reset(nullptr);
     pixmapItem.setPixmap(QPixmap());
@@ -496,8 +537,9 @@ void ImageViewerV2::requestScaling() {
 bool ImageViewerV2::imageFits() const {
     if(!pixmap)
         return true;
-    return (pixmap->width()  <= (viewport()->width()  * dpr) &&
-            pixmap->height() <= (viewport()->height() * dpr));
+    const QSizeF logical = pixmapLogicalSize();
+    return (logical.width()  <= viewport()->width() &&
+            logical.height() <= viewport()->height());
 }
 
 bool ImageViewerV2::scaledImageFits() const {
@@ -758,8 +800,9 @@ void ImageViewerV2::mouseMoveZoom(QMouseEvent *event) {
 
 // scale at which current image fills the window
 void ImageViewerV2::updateFitWindowScale() {
-    float scaleFitX = (float) viewport()->width()  * dpr / pixmap->width();
-    float scaleFitY = (float) viewport()->height() * dpr / pixmap->height();
+    const QSizeF logical = pixmapLogicalSize();
+    float scaleFitX = (float) viewport()->width()  / logical.width();
+    float scaleFitY = (float) viewport()->height() / logical.height();
     if(scaleFitX < scaleFitY) {
         fitWindowScale = scaleFitX;
     } else {
@@ -773,7 +816,7 @@ void ImageViewerV2::updateFitWindowStretchScale() {
     if(!pixmap)
         return;
 
-    float scaleFitY = (float) viewport()->height() * dpr / pixmap->height();
+    float scaleFitY = (float) viewport()->height() / pixmapLogicalSize().height();
 
     // For "Fit in window (stretch)", we always use height-based scaling
     // This ensures the full image is always visible while stretching to fill the window height
@@ -790,7 +833,7 @@ void ImageViewerV2::updateMinScale() {
     updateFitWindowStretchScale();
     if(settings->unlockMinZoom()) {
         if(!pixmap->isNull())
-            minScale = qMax(10./pixmap->width(), 10./pixmap->height());
+            minScale = qMax(10. / pixmapLogicalSize().width(), 10. / pixmapLogicalSize().height());
         else
             minScale = 1.0f;
     } else {
@@ -806,7 +849,7 @@ void ImageViewerV2::updateMinScale() {
 void ImageViewerV2::fitWidth() {
     if(!pixmap)
         return;
-    float scaleX = (float)viewport()->width() * dpr / pixmap->width();
+    float scaleX = (float)viewport()->width() / pixmapLogicalSize().width();
     if(!expandImage && scaleX > 1.0f)
         scaleX = 1.0f;
     if(scaleX > expandLimit)
@@ -1281,6 +1324,16 @@ void ImageViewerV2::doZoom(float newScale) {
     pixmapItem.setTransformationMode(selectTransformationMode());
     swapToOriginalPixmap();
     emit scaleChanged(newScale);
+    maybeRequestFullResolution();
+}
+
+// a preview is only good enough while one of its pixels covers at least one
+// screen pixel; past that point the real image has to be decoded
+void ImageViewerV2::maybeRequestFullResolution() {
+    if(!pixmap || imageDprFactor >= 1.0f)
+        return;
+    if(pixmapItem.scale() > imageDprFactor)
+        emit fullResolutionNeeded();
 }
 
 ImageFitMode ImageViewerV2::fitMode() const {
@@ -1321,5 +1374,9 @@ float ImageViewerV2::currentScale() const {
 QSize ImageViewerV2::sourceSize() const {
     if(!pixmap)
         return QSize(0,0);
-    return pixmap->size();
+    // the pixmap may be a downscaled preview that lies about its own logical
+    // size through devicePixelRatio; the real image size is the logical size
+    // mapped back to device pixels
+    const QSizeF logical = pixmapLogicalSize();
+    return QSize(qRound(logical.width() * dpr), qRound(logical.height() * dpr));
 }

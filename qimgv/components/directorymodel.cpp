@@ -16,6 +16,8 @@ DirectoryModel::DirectoryModel(QObject *parent) :
 
     connect(&dirManager, &DirectoryManager::loaded, this, &DirectoryModel::loaded);
     connect(&dirManager, &DirectoryManager::sortingChanged, this, &DirectoryModel::onSortingChanged);
+    connect(&loader, &Loader::previewReady, this, &DirectoryModel::onImagePreviewReady);
+    connect(&loader, &Loader::fullImageReady, this, &DirectoryModel::fullImageReady);
     connect(&loader, &Loader::loadFinished, this, &DirectoryModel::onImageReady);
     connect(&loader, &Loader::loadFailed, this, &DirectoryModel::loadFailed);
 }
@@ -199,6 +201,18 @@ void DirectoryModel::unloadExcept(QString filePath, bool keepNearby) {
 
 bool DirectoryModel::loaderBusy() const {
     return loader.isBusy();
+}
+
+void DirectoryModel::requestFullImage(std::shared_ptr<Image> img) {
+    loader.requestFullResolution(img);
+}
+
+void DirectoryModel::onImagePreviewReady(std::shared_ptr<Image> img, const QString &path) {
+    if(!img)
+        return;
+    // not inserted into the cache: the object is still being decoded and will
+    // arrive again through onImageReady()
+    emit imagePreviewReady(img, path);
 }
 
 void DirectoryModel::onImageReady(std::shared_ptr<Image> img, const QString &path) {

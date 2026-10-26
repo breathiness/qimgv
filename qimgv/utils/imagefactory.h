@@ -9,5 +9,7 @@
 
 class ImageFactory {
 public:
-    static std::shared_ptr<Image> createImage(QString path);
+    // previewTarget: decode only a downscaled copy first (see ImageStatic);
+    // empty means load everything in one go
+    static std::shared_ptr<Image> createImage(QString path, QSize previewTarget = QSize());
 };

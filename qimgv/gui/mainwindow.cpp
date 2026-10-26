@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 
 #include <QScreen>
+#include "sourcecontainers/imagestatic.h"
 
 // TODO: nuke this and rewrite
 
@@ -80,6 +81,7 @@ void MW::setupUi() {
     imageInfoOverlay = new ImageInfoOverlayProxy(viewerWidget.get());
     floatingMessage = new FloatingMessageProxy(viewerWidget.get()); // todo: use additional one for folderview?
     connect(viewerWidget.get(), &ViewerWidget::scalingRequested, this, &MW::scalingRequested);
+    connect(viewerWidget.get(), &ViewerWidget::fullResolutionNeeded, this, &MW::fullResolutionNeeded);
     connect(viewerWidget.get(), &ViewerWidget::draggedOut, this, qOverload<>(&MW::draggedOut));
     connect(viewerWidget.get(), &ViewerWidget::playbackFinished, this, &MW::playbackFinished);
     connect(viewerWidget.get(), &ViewerWidget::showScriptSettings, this, &MW::showScriptSettings);
@@ -261,11 +263,15 @@ void MW::preShowResize(QSize sz) {
     qApp->processEvents(); // not needed anymore with patched qt?
 }
 
-void MW::showImage(std::unique_ptr<QPixmap> pixmap) {
+void MW::showImage(std::unique_ptr<QPixmap> pixmap, QSize imageSize) {
     if(settings->autoResizeWindow())
-        preShowResize(pixmap->size());
+        preShowResize(imageSize.isEmpty() ? pixmap->size() : imageSize);
     viewerWidget->showImage(std::move(pixmap));
     updateCropPanelData();
+}
+
+void MW::refreshImage(std::unique_ptr<QPixmap> pixmap) {
+    viewerWidget->refreshImage(std::move(pixmap));
 }
 
 void MW::showAnimation(std::shared_ptr<QMovie> movie) {
@@ -546,6 +552,9 @@ void MW::resizeEvent(QResizeEvent *event) {
         cropOverlay->setImageScale(viewerWidget->currentScale());
         cropOverlay->setImageDrawRect(viewerWidget->imageRect());
     }
+    // keep the loader's preview size in step with the window, so that a preview
+    // is never smaller than what is on screen
+    ImageStatic::setPreviewSizeHint(viewerWidget->size() * devicePixelRatioF());
     FloatingWidgetContainer::resizeEvent(event);
 }
 

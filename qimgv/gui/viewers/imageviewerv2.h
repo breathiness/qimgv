@@ -41,6 +41,8 @@ public:
     virtual float currentScale() const;
     virtual QSize sourceSize() const;
     virtual void showImage(std::unique_ptr<QPixmap> _pixmap);
+    // swap in a new pixmap for the image already on screen, keeping the view
+    virtual void refreshImage(std::unique_ptr<QPixmap> newPixmap);
     virtual void showAnimation(std::shared_ptr<QMovie> _animation);
     virtual void setScaledPixmap(std::unique_ptr<QPixmap> newFrame);
     virtual bool isDisplaying() const;
@@ -59,6 +61,9 @@ public:
 
 signals:
     void scalingRequested(QSize, ScalingFilter);
+    // the displayed pixmap is a downscaled preview and the current zoom level
+    // needs the real pixels now
+    void fullResolutionNeeded();
     void scaleChanged(qreal);
     void sourceSizeChanged(QSize);
     void imageAreaChanged(QRect);
@@ -159,6 +164,10 @@ private:
     bool wayland = false;
 
     float zoomStep = 0.1, dpr;
+    // devicePixelRatio the pixmap arrived with, relative to a normal 1:1 image;
+    // a downscaled preview claims a smaller one so that it covers the same
+    // logical area as the full resolution image would
+    float imageDprFactor = 1.0f;
     float minScale, maxScale, fitWindowScale, fitWindowStretchScale, expandLimit, lockedScale;
     QPointF savedViewportPos;
     ViewLockMode mViewLock;
@@ -195,6 +204,7 @@ private:
     void swapToOriginalPixmap();
     void setZoomAnchor(QPoint viewportPos);
     void updatePixmap(std::unique_ptr<QPixmap> newPixmap);
+    QSizeF pixmapLogicalSize() const;
     Qt::TransformationMode selectTransformationMode();
     void centerIfNecessary();
     void snapToEdges();
@@ -203,6 +213,7 @@ private:
     void updateFitWindowScale();
     void updateFitWindowStretchScale();
     void updateMinScale();
+    void maybeRequestFullResolution();
     void fitFree(float scale);
     void applySavedViewportPos();
     void saveViewportPos();

@@ -33,6 +33,7 @@ ViewerWidget::ViewerWidget(QWidget *parent)
     imageViewer->hide();
 
     connect(imageViewer.get(), &ImageViewerV2::scalingRequested, this, &ViewerWidget::scalingRequested);
+    connect(imageViewer.get(), &ImageViewerV2::fullResolutionNeeded, this, &ViewerWidget::fullResolutionNeeded);
     connect(imageViewer.get(), &ImageViewerV2::scaleChanged, this, &ViewerWidget::onScaleChanged);
     connect(imageViewer.get(), &ImageViewerV2::playbackFinished, this, &ViewerWidget::onAnimationPlaybackFinished);
     connect(this, &ViewerWidget::toggleTransparencyGrid, imageViewer.get(), &ImageViewerV2::toggleTransparencyGrid);
@@ -218,6 +219,12 @@ bool ViewerWidget::showImage(std::unique_ptr<QPixmap> pixmap) {
     imageViewer->showImage(std::move(pixmap));
     hideCursorTimed(false);
     return true;
+}
+
+void ViewerWidget::refreshImage(std::unique_ptr<QPixmap> pixmap) {
+    if(!pixmap || currentWidget != IMAGEVIEWER)
+        return;
+    imageViewer->refreshImage(std::move(pixmap));
 }
 
 bool ViewerWidget::showAnimation(std::shared_ptr<QMovie> movie) {

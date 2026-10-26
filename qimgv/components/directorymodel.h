@@ -46,8 +46,9 @@ public:
 
     std::shared_ptr<Image> getImageAt(int index);
     std::shared_ptr<Image> getImage(QString filePath);
-
     void updateImage(QString filePath, std::shared_ptr<Image> img);
+    // asks the loader to decode the full resolution data of a preview image
+    void requestFullImage(std::shared_ptr<Image> img);
 
     void setSortingMode(SortingMode mode);
     SortingMode sortingMode() const;
@@ -85,6 +86,9 @@ signals:
     void sortingChanged(SortingMode);
     void indexChanged(int oldIndex, int index);
     void imageReady(std::shared_ptr<Image> img, const QString&);
+    // downscaled copy of an image that is still being decoded in full
+    void imagePreviewReady(std::shared_ptr<Image> img, const QString&);
+    void fullImageReady(std::shared_ptr<Image> img);
     void imageUpdated(QString filePath);
 
 private:
@@ -95,6 +99,7 @@ private:
 
 private slots:
     void onImageReady(std::shared_ptr<Image> img, const QString &path);
+    void onImagePreviewReady(std::shared_ptr<Image> img, const QString &path);
     void onSortingChanged();
     void onFileAdded(QString filePath);
     void onFileRemoved(QString filePath, int index);

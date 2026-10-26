@@ -11,6 +11,8 @@ public:
     std::shared_ptr<Image> load(QString path);
     void loadAsyncPriority(QString path);
     void loadAsync(QString path);
+    // decodes the full resolution data of a preview-only image in the background
+    void requestFullResolution(std::shared_ptr<Image> img);
 
     void clearTasks();
     bool isBusy() const;
@@ -22,8 +24,11 @@ private:
     void doLoadAsync(QString path, int priority);
 
 signals:
+    // a downscaled copy is ready; the full image will follow as loadFinished()
+    void previewReady(std::shared_ptr<Image>, const QString &path);
     void loadFinished(std::shared_ptr<Image>, const QString &path);
     void loadFailed(const QString &path);
+    void fullImageReady(std::shared_ptr<Image>);
 
 private slots:
     void onLoadFinished(std::shared_ptr<Image>, const QString&);

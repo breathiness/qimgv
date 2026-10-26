@@ -27,6 +27,9 @@ struct State {
     QString currentFilePath = "";
     QString directoryPath = "";
     std::shared_ptr<Image> currentImg;
+    // path for which only a downscaled preview is on screen; the full image
+    // is still being decoded and will arrive as onModelItemReady()
+    QString previewPath = "";
 };
 
 enum MimeDataTarget {
@@ -107,6 +110,9 @@ private slots:
     void jumpToFirst();
     void jumpToLast();
     void onModelItemReady(std::shared_ptr<Image>, const QString&);
+    void onModelPreviewReady(std::shared_ptr<Image>, const QString&);
+    void onModelFullImageReady(std::shared_ptr<Image>);
+    void onFullResolutionNeeded();
     void onModelItemUpdated(QString fileName);
     void onModelSortingChanged(SortingMode mode);
     void onLoadFailed(const QString &path);

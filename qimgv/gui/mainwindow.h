@@ -69,7 +69,9 @@ public:
     explicit MW(QWidget *parent = nullptr);
     bool isCropPanelActive();
     void onScalingFinished(std::unique_ptr<QPixmap>scaled);
-    void showImage(std::unique_ptr<QPixmap> pixmap);
+    void showImage(std::unique_ptr<QPixmap> pixmap, QSize imageSize = QSize());
+    // replaces the pixmap of the image currently on screen, keeping the view
+    void refreshImage(std::unique_ptr<QPixmap> pixmap);
     void showAnimation(std::shared_ptr<QMovie> movie);
     void showVideo(QString file);
 
@@ -179,6 +181,7 @@ signals:
 
     // viewerWidget
     void scalingRequested(QSize, ScalingFilter);
+    void fullResolutionNeeded();
     void zoomIn();
     void zoomOut();
     void zoomInCursor();

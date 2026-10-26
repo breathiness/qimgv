@@ -117,6 +117,7 @@ void Core::connectComponents() {
     connect(mw, &MW::playbackFinished, this, &Core::onPlaybackFinished);
 
     connect(mw, &MW::scalingRequested, this, &Core::scalingRequest);
+    connect(mw, &MW::fullResolutionNeeded, this, &Core::onFullResolutionNeeded);
     connect(model->scaler, &Scaler::scalingFinished, this, &Core::onScalingFinished);
 
     connect(model.get(), &DirectoryModel::fileAdded,      this, &Core::onFileAdded);
@@ -125,6 +126,8 @@ void Core::connectComponents() {
     connect(model.get(), &DirectoryModel::fileModified,   this, &Core::onFileModified);
     connect(model.get(), &DirectoryModel::loaded,         this, &Core::onModelLoaded);
     connect(model.get(), &DirectoryModel::imageReady,     this, &Core::onModelItemReady);
+    connect(model.get(), &DirectoryModel::imagePreviewReady, this, &Core::onModelPreviewReady);
+    connect(model.get(), &DirectoryModel::fullImageReady, this, &Core::onModelFullImageReady);
     connect(model.get(), &DirectoryModel::imageUpdated,   this, &Core::onModelItemUpdated);
     connect(model.get(), &DirectoryModel::sortingChanged, this, &Core::onModelSortingChanged);
     connect(model.get(), &DirectoryModel::loadFailed,     this, &Core::onLoadFailed);
@@ -1455,18 +1458,63 @@ void Core::onLoadFailed(const QString &path) {
         mw->closeImage();
 }
 
+void Core::onModelPreviewReady(std::shared_ptr<Image> img, const QString &path) {
+    if(!img || path != state.currentFilePath)
+        return;
+    // never downgrade an image that is already on screen in full resolution
+    if(state.hasActiveImage && state.currentImg == img)
+        return;
+    state.currentImg = img;
+    guiSetImage(img);
+    state.previewPath = path;
+    updateInfoString();
+}
+
+void Core::onModelFullImageReady(std::shared_ptr<Image> img) {
+    if(!img || img != state.currentImg)
+        return;
+    // the image the user is looking at just got its real pixels
+    state.previewPath.clear();
+    mw->refreshImage(img->getPixmap());
+    updateInfoString();
+}
+
+void Core::onFullResolutionNeeded() {
+    if(!state.currentImg || !state.hasActiveImage)
+        return;
+    if(!state.currentImg->isPreviewOnly())
+        return;
+    model->requestFullImage(state.currentImg);
+}
+
 void Core::onModelItemReady(std::shared_ptr<Image> img, const QString &path) {
-    if(path == state.currentFilePath) {
+    if(!img || path != state.currentFilePath)
+        return;
+    const bool previewOnScreen = !state.previewPath.isEmpty()
+                                 && state.previewPath == path
+                                 && state.currentImg == img;
+    if(previewOnScreen && !img->isPreviewOnly()) {
+        // the full resolution pass finished before we asked for it: swap the
+        // pixmap in place so zoom and scroll position survive
+        state.previewPath.clear();
+        mw->refreshImage(img->getPixmap());
+        updateInfoString();
+        return;
+    }
+    if(!previewOnScreen) {
+        state.previewPath.clear();
         state.currentImg = img;
         guiSetImage(img);
         updateInfoString();
-        if(state.delayModel) {
-            this->showGui();
-            state.delayModel = false;
-            QTimer::singleShot(40, this, SLOT(modelDelayLoad()));
-        }
-        model->unloadExcept(state.currentFilePath, settings->usePreloader());
     }
+    // otherwise the preview is already on screen and we keep showing it until
+    // the full image is actually needed
+    if(state.delayModel) {
+        this->showGui();
+        state.delayModel = false;
+        QTimer::singleShot(40, this, SLOT(modelDelayLoad()));
+    }
+    model->unloadExcept(state.currentFilePath, settings->usePreloader());
 }
 
 void Core::modelDelayLoad() {
@@ -1499,7 +1547,7 @@ void Core::guiSetImage(std::shared_ptr<Image> img) {
     }
     DocumentType type = img->type();
     if(type == STATIC) {
-        mw->showImage(img->getPixmap());
+        mw->showImage(img->getPixmap(), img->size());
     } else if(type == ANIMATED) {
         auto animated = dynamic_cast<ImageAnimated *>(img.get());
         mw->showAnimation(animated->getMovie());
@@ -1524,6 +1572,11 @@ void Core::updateInfoString() {
         imageSize = img->size();
         fileSize  = img->fileSize();
         edited = img->isEdited();
+    } else if(state.currentImg && state.currentImg->filePath() == state.currentFilePath) {
+        // already on screen but not cached yet (the full image is still loading)
+        imageSize = state.currentImg->size();
+        fileSize  = state.currentImg->fileSize();
+        edited = state.currentImg->isEdited();
     }
     int index = model->indexOfFile(state.currentFilePath);
     mw->setCurrentInfo(index,

@@ -38,14 +38,27 @@ void Loader::loadAsync(QString path) {
     doLoadAsync(path, 0);
 }
 
+void Loader::requestFullResolution(std::shared_ptr<Image> img) {
+    if(!img || !img->isPreviewOnly())
+        return;
+    auto runnable = new FullImageRunnable(img);
+    runnable->setAutoDelete(false);
+    connect(runnable, &FullImageRunnable::finished, this, [this, runnable](std::shared_ptr<Image> image) {
+        runnable->deleteLater();
+        emit fullImageReady(image);
+    });
+    pool->start(runnable, 1);
+}
+
 void Loader::doLoadAsync(QString path, int priority) {
     if(tasks.contains(path)) {
         return;
     }
 
-    auto runnable = new LoaderRunnable(path);
+    auto runnable = new LoaderRunnable(path, priority > 0);
     runnable->setAutoDelete(false);
     tasks.insert(path, runnable);
+    connect(runnable, &LoaderRunnable::previewReady, this, &Loader::previewReady, Qt::UniqueConnection);
     connect(runnable, &LoaderRunnable::finished, this, &Loader::onLoadFinished, Qt::UniqueConnection);
     pool->start(runnable, priority);
 }
