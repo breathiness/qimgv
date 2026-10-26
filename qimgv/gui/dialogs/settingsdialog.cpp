@@ -185,6 +185,18 @@ void SettingsDialog::setupSidebar() {
     ui->clickableEdgesCheckBox->hide();
     ui->clickableEdgesVisibleCheckBox->hide();
 
+    // large image decoding: preview first, remaining pixels on demand
+    twoPassCheckBox = new QCheckBox(tr("Decode large images at display size"), this);
+    twoPassCheckBox->setToolTip(tr("Large images are decoded at the size they are shown at first. The rest of the pixels are decoded when you zoom in, crop or save. Makes opening big files much cheaper."));
+    // created after readSettings() runs, so pick the current value up here
+    twoPassCheckBox->setChecked(settings->twoPassLoading());
+    ui->verticalLayout_34->insertWidget(2, twoPassCheckBox);
+
+    twoPassNote = new QLabel(tr("Only visible pixels are decoded up front"), this);
+    twoPassNote->setAccessibleName("SNoteText");
+    twoPassNote->setWordWrap(true);
+    ui->verticalLayout_34->insertWidget(3, twoPassNote);
+
     // The navigation bar page is built in code instead of the .ui file; it is
     // inserted right after "Controls" so the stacked widget and the sidebar
     // stay index-aligned (SSideBar adds its "Navigation bar" entry in the same
@@ -357,6 +369,8 @@ void SettingsDialog::saveSettings() {
     settings->setShowHiddenFiles(ui->showHiddenFilesCheckBox->isChecked());
     settings->setEnableSmoothScroll(ui->enableSmoothScrollCheckBox->isChecked());
     settings->setUsePreloader(ui->usePreloaderCheckBox->isChecked());
+    if(twoPassCheckBox)
+        settings->setTwoPassLoading(twoPassCheckBox->isChecked());
     settings->setUseThumbnailCache(ui->useThumbnailCacheCheckBox->isChecked());
     settings->setSmoothUpscaling(ui->smoothUpscalingCheckBox->isChecked());
     settings->setExpandImage(ui->expandImageCheckBox->isChecked());

@@ -515,6 +515,14 @@ bool Settings::usePreloader() {
 void Settings::setUsePreloader(bool mode) {
     settings->settingsConf->setValue("usePreloader", mode);
 }
+
+bool Settings::twoPassLoading() {
+    return settings->settingsConf->value("twoPassLoading", true).toBool();
+}
+
+void Settings::setTwoPassLoading(bool mode) {
+    settings->settingsConf->setValue("twoPassLoading", mode);
+}
 //------------------------------------------------------------------------------
 bool Settings::keepFitMode() {
     return settings->settingsConf->value("keepFitMode", false).toBool();

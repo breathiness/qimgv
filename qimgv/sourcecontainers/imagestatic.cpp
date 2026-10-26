@@ -34,6 +34,8 @@ ImageStatic::~ImageStatic() {
 }
 
 QSize ImageStatic::suggestPreviewTarget(QString path) {
+    if(!settings->twoPassLoading())
+        return QSize();
     QImageReader r(path);
     if(!r.canRead())
         return QSize();

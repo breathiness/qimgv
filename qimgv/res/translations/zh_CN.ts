@@ -2214,6 +2214,18 @@ li.checked::marker { content: "\2612"; }
         <source>Navigate to mpv binary</source>
         <translation>定位mpv文件路径</translation>
     </message>
+    <message>
+        <source>Decode large images at display size</source>
+        <translation>按显示尺寸解码大图</translation>
+    </message>
+    <message>
+        <source>Large images are decoded at the size they are shown at first. The rest of the pixels are decoded when you zoom in, crop or save. Makes opening big files much cheaper.</source>
+        <translation>大图先按实际显示大小解码，放大、裁剪或保存时再解码剩余像素。可大幅降低打开大图的开销。</translation>
+    </message>
+    <message>
+        <source>Only visible pixels are decoded up front</source>
+        <translation>仅先解码可见像素</translation>
+    </message>
 </context>
 <context>
     <name>ShortcutCreatorDialog</name>

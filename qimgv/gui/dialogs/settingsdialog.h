@@ -24,6 +24,7 @@ class SettingsDialog;
 
 class NavBarSettingsPage;
 class QCheckBox;
+class QLabel;
 
 class SettingsDialog : public QDialog
 {
@@ -51,6 +52,9 @@ private:
     // "Viewer" page controls, also built at runtime
     QCheckBox *edgeClickCheckBox = nullptr;
     QCheckBox *edgeVisibleCheckBox = nullptr;
+    // "Advanced" page: large image decoding mode
+    QCheckBox *twoPassCheckBox = nullptr;
+    QLabel *twoPassNote = nullptr;
 
     void saveShortcuts();
     void addShortcutToTable(const QString &action, const QString &shortcut);

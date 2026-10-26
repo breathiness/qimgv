@@ -31,11 +31,11 @@ std::shared_ptr<Image> Loader::load(QString path) {
 // clears all buffered tasks before loading
 void Loader::loadAsyncPriority(QString path) {
     clearPool();
-    doLoadAsync(path, 1);
+    doLoadAsync(path, 1, true);
 }
 
-void Loader::loadAsync(QString path) {
-    doLoadAsync(path, 0);
+void Loader::loadAsync(QString path, bool previewOnly) {
+    doLoadAsync(path, 0, previewOnly);
 }
 
 void Loader::requestFullResolution(std::shared_ptr<Image> img) {
@@ -50,12 +50,12 @@ void Loader::requestFullResolution(std::shared_ptr<Image> img) {
     pool->start(runnable, 1);
 }
 
-void Loader::doLoadAsync(QString path, int priority) {
+void Loader::doLoadAsync(QString path, int priority, bool previewPass) {
     if(tasks.contains(path)) {
         return;
     }
 
-    auto runnable = new LoaderRunnable(path, priority > 0);
+    auto runnable = new LoaderRunnable(path, previewPass);
     runnable->setAutoDelete(false);
     tasks.insert(path, runnable);
     connect(runnable, &LoaderRunnable::previewReady, this, &Loader::previewReady, Qt::UniqueConnection);

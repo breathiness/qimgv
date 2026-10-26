@@ -348,5 +348,5 @@ void DirectoryModel::reload(QString filePath) {
 
 void DirectoryModel::preload(QString filePath) {
     if(containsFile(filePath) && !cache.contains(filePath))
-        loader.loadAsync(filePath);
+        loader.loadAsync(filePath, settings->twoPassLoading());
 }

@@ -110,6 +110,10 @@ public:
     void setPanelPreviewsSize(int size);
     bool usePreloader();
     void setUsePreloader(bool mode);
+    // decode large images at the size they are displayed at first, and the
+    // rest of the pixels only when they are actually needed
+    bool twoPassLoading();
+    void setTwoPassLoading(bool mode);
     bool fullscreenMode();
     void setFullscreenMode(bool mode);
     ImageFitMode imageFitMode();
