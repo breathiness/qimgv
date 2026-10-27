@@ -364,7 +364,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QWidget" name="generalGroup" native="true">
+                <widget class="GroupPanel" name="generalGroup" native="true">
                  <property name="accessibleName">
                   <string notr="true">SGroup</string>
                  </property>
@@ -503,7 +503,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QWidget" name="UIOptionsGroup" native="true">
+                <widget class="GroupPanel" name="UIOptionsGroup" native="true">
                  <property name="accessibleName">
                   <string notr="true">SGroup</string>
                  </property>
@@ -905,7 +905,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QWidget" name="thumbnailPanelGroup" native="true">
+                <widget class="GroupPanel" name="thumbnailPanelGroup" native="true">
                  <property name="accessibleName">
                   <string notr="true">SGroup</string>
                  </property>
@@ -1321,7 +1321,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QWidget" name="folderNavGroup" native="true">
+                <widget class="GroupPanel" name="folderNavGroup" native="true">
                  <property name="accessibleName">
                   <string notr="true">SGroup</string>
                  </property>
@@ -1578,7 +1578,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QWidget" name="videoPlaybackGroup" native="true">
+                <widget class="GroupPanel" name="videoPlaybackGroup" native="true">
                  <property name="accessibleName">
                   <string notr="true">SGroup</string>
                  </property>
@@ -1689,7 +1689,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QWidget" name="slideshowGroup" native="true">
+                <widget class="GroupPanel" name="slideshowGroup" native="true">
                  <property name="accessibleName">
                   <string notr="true">SGroup</string>
                  </property>
@@ -1939,7 +1939,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QWidget" name="displayGroup" native="true">
+                <widget class="GroupPanel" name="displayGroup" native="true">
                  <property name="accessibleName">
                   <string notr="true">SGroup</string>
                  </property>
@@ -2313,7 +2313,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QWidget" name="zoomGroup" native="true">
+                <widget class="GroupPanel" name="zoomGroup" native="true">
                  <property name="accessibleName">
                   <string notr="true">SGroup</string>
                  </property>
@@ -2564,7 +2564,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QWidget" name="scalingGroup" native="true">
+                <widget class="GroupPanel" name="scalingGroup" native="true">
                  <property name="accessibleName">
                   <string notr="true">SGroup</string>
                  </property>
@@ -2827,7 +2827,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QWidget" name="colorsPresetGroup" native="true">
+                <widget class="GroupPanel" name="colorsPresetGroup" native="true">
                  <property name="accessibleName">
                   <string notr="true">SGroup</string>
                  </property>
@@ -2966,7 +2966,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QWidget" name="colorsGroup" native="true">
+                <widget class="GroupPanel" name="colorsGroup" native="true">
                  <property name="accessibleName">
                   <string notr="true">SGroup</string>
                  </property>
@@ -3515,7 +3515,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QWidget" name="windowTweaksGroup" native="true">
+                <widget class="GroupPanel" name="windowTweaksGroup" native="true">
                  <property name="accessibleName">
                   <string notr="true">SGroup</string>
                  </property>
@@ -3864,7 +3864,7 @@
             </spacer>
            </item>
            <item>
-            <widget class="QWidget" name="widget_12" native="true">
+            <widget class="GroupPanel" name="widget_12" native="true">
              <property name="accessibleName">
               <string notr="true">SGroup</string>
              </property>
@@ -4322,7 +4322,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QWidget" name="advancedGroup" native="true">
+                <widget class="GroupPanel" name="advancedGroup" native="true">
                  <property name="accessibleName">
                   <string notr="true">SGroup</string>
                  </property>
@@ -5014,6 +5014,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <class>ColorSelectorButton</class>
    <extends>QLabel</extends>
    <header>gui/customwidgets/colorselectorbutton.h</header>
+  </customwidget>
+  <customwidget>
+   <class>GroupPanel</class>
+   <extends>QFrame</extends>
+   <header>gui/customwidgets/grouppanel.h</header>
   </customwidget>
   <customwidget>
    <class>SSideBar</class>

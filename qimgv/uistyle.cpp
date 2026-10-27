@@ -49,6 +49,38 @@ bool paintBackground(QWidget *widget, QPainter &painter, bool card) {
     return true;
 }
 
+bool chromePalette(ChromePalette &palette) {
+#ifdef USE_QLEMENTINE
+    if(!g_useQlementine)
+        return false;
+    auto *style = qobject_cast<oclero::qlementine::QlementineStyle*>(qApp->style());
+    if(!style)
+        return false;
+    const auto &theme = style->theme();
+    // The values Qlementine itself uses for these states, see
+    // QlementineStyle::buttonBackgroundColor() and ::listItemBackgroundColor().
+    palette.resting = theme.neutralColor;
+    palette.hover = theme.neutralColorHovered;
+    palette.pressed = theme.neutralColorPressed;
+    palette.menuHover = theme.neutralColor;
+    palette.surface = theme.backgroundColorMain1;
+    palette.surfaceLine = theme.borderColor;
+    // QElementineStyle::groupBoxBackgroundColor() / groupBoxBorderColor()
+    palette.groupFill = QColor::fromRgbF(
+        theme.backgroundColorMain2.redF() * 0.25f + theme.backgroundColorMain3.redF() * 0.75f,
+        theme.backgroundColorMain2.greenF() * 0.25f + theme.backgroundColorMain3.greenF() * 0.75f,
+        theme.backgroundColorMain2.blueF() * 0.25f + theme.backgroundColorMain3.blueF() * 0.75f);
+    palette.groupLine = theme.borderColor;
+    palette.bar = theme.backgroundColorMain2;
+    palette.seam = theme.backgroundColorMain1;
+    palette.radius = theme.borderRadius;
+    return true;
+#else
+    Q_UNUSED(palette)
+    return false;
+#endif
+}
+
 QString themedIconName(const QString &resourcePath) {
 #ifdef USE_QLEMENTINE
     if(!g_useQlementine || resourcePath.isEmpty())

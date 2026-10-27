@@ -213,6 +213,8 @@ public slots:
     void toggleFolderView();
     void enableFolderView();
     void enableDocumentView();
+    // the navigation bar belongs to the image viewer; keep it off the folder view
+    void updateNavBarVisibility();
     void showOpenDialog(QString path);
     void showSaveDialog(QString filePath);
     QString getSaveFileName(QString fileName);

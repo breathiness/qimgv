@@ -17,10 +17,8 @@ namespace {
 struct ButtonChrome {
     bool visible = false;
     QColor fillColor;
-    bool border = false;
-    QColor borderColor;
     bool leftDivider = false;
-    QMargins inset;
+    QColor borderColor;
     qreal radiusTL = 0.0;
     qreal radiusTR = 0.0;
     qreal radiusBR = 0.0;
@@ -28,10 +26,10 @@ struct ButtonChrome {
 };
 
 ButtonChrome chromeFor(const QString &name, bool hovered, bool pressed, bool checked,
-                       const ColorScheme &c)
+                       const UiStyle::ChromePalette &pal)
 {
     ButtonChrome ch;
-    // "[pressed=true]" and "[checked=true]" share one fill in every rule
+    // a checked toggle looks like a pressed button
     const bool active = pressed || checked;
     const auto uniformRadius = [&ch](qreal r) {
         ch.radiusTL = ch.radiusTR = ch.radiusBR = ch.radiusBL = r;
@@ -40,78 +38,35 @@ ButtonChrome chromeFor(const QString &name, bool hovered, bool pressed, bool che
         ch.visible = true;
         ch.fillColor = color;
     };
-    const auto solidWithBorder = [&ch](const QColor &color) {
-        ch.visible = true;
-        ch.border = true;
-        ch.fillColor = color;
-        ch.borderColor = color;
-    };
 
-    if(name == QLatin1String("Button")) {
-        // overlay buttons: always filled
-        solid(active ? c.button_pressed : (hovered ? c.button_hover : c.button));
-        uniformRadius(3);
-    } else if(name == QLatin1String("ButtonSetLeft")) {
-        solid(active ? c.button_pressed : (hovered ? c.button_hover : c.button));
-        ch.radiusTL = ch.radiusBL = 3;
-    } else if(name == QLatin1String("ButtonSetRight")) {
-        solid(active ? c.button_pressed : (hovered ? c.button_hover : c.button));
-        ch.radiusTR = ch.radiusBR = 3;
-        ch.leftDivider = true;
-        ch.borderColor = c.button_pressed;
-    } else if(name == QLatin1String("ButtonSmall")) {
-        uniformRadius(1);
-        if(checked)
-            solidWithBorder(c.folderview_hc);
-        else if(hovered)
-            solidWithBorder(c.folderview_hc2);
-    } else if(name == QLatin1String("PanelButton") || name == QLatin1String("CheckableButton")) {
-        uniformRadius(3);
-        ch.inset = QMargins(2, 4, 2, 4);
-        if(active)
-            solidWithBorder(c.panel_button);
-        else if(hovered)
-            solidWithBorder(c.panel_button_hover);
-    } else if(name == QLatin1String("PanelButtonRE")) {
-        uniformRadius(3);
-        ch.inset = QMargins(2, 4, 4, 4);
-        if(active)
-            solidWithBorder(c.panel_button);
-        else if(hovered)
-            solidWithBorder(c.panel_button_hover);
-    } else if(name == QLatin1String("CheckableButtonLE")) {
-        uniformRadius(3);
-        ch.inset = QMargins(4, 4, 2, 4);
-        if(active)
-            solidWithBorder(c.panel_button);
-        else if(hovered)
-            solidWithBorder(c.panel_button_hover);
-    } else if(name == QLatin1String("PathBarButton")) {
-        ch.radiusTL = ch.radiusBL = 3;
-        ch.inset = QMargins(2, 4, 2, 4);
-        if(active)
-            solidWithBorder(c.panel_button_pressed);
-        else if(hovered)
-            solidWithBorder(c.panel_button_hover);
-    } else if(name == QLatin1String("PlacesPanelButton")) {
-        uniformRadius(3);
-        if(active)
-            solid(c.folderview_button_pressed);
-        else if(hovered)
-            solid(c.folderview_button_hover);
-    } else if(name == QLatin1String("OverlayHeaderButton")) {
-        uniformRadius(3);
-        ch.inset = QMargins(3, 3, 3, 3);
-        if(active)
-            solid(c.button_pressed);
-        else if(hovered)
-            solid(c.button_hover);
-    } else if(name == QLatin1String("ContextMenuButton")) {
-        if(hovered) {
-            QColor accent = c.accent;
-            accent.setAlphaF(0.65f);
-            solid(accent);
+    if(name == QLatin1String("Button") || name == QLatin1String("ButtonSetLeft")
+       || name == QLatin1String("ButtonSetRight")) {
+        // overlay buttons are filled even at rest: they sit on the image
+        solid(active ? pal.pressed : (hovered ? pal.hover : pal.resting));
+        uniformRadius(pal.radius);
+        if(name == QLatin1String("ButtonSetLeft")) {
+            ch.radiusTR = ch.radiusBR = 0;
+        } else if(name == QLatin1String("ButtonSetRight")) {
+            ch.radiusTL = ch.radiusBL = 0;
+            ch.leftDivider = true;
+            ch.borderColor = pal.pressed;
         }
+    } else if(name == QLatin1String("ContextMenuButton")) {
+        // matches the menu rows next to it
+        uniformRadius(pal.radius);
+        if(hovered)
+            solid(pal.menuHover);
+    } else if(name == QLatin1String("ButtonSmall") || name == QLatin1String("PanelButton")
+              || name == QLatin1String("PanelButtonRE") || name == QLatin1String("CheckableButton")
+              || name == QLatin1String("CheckableButtonLE") || name == QLatin1String("PathBarButton")
+              || name == QLatin1String("PlacesPanelButton")
+              || name == QLatin1String("OverlayHeaderButton")) {
+        // flat buttons in the toolbar, the panels and the overlay headers
+        uniformRadius(pal.radius);
+        if(active)
+            solid(pal.pressed);
+        else if(hovered)
+            solid(pal.hover);
     }
     return ch;
 }
@@ -319,7 +274,8 @@ void IconWidget::applyChromeMetrics() {
 
 void IconWidget::paintChrome(QPainter &painter) {
     // In classic mode the stylesheet paints these widgets, see style-template.qss
-    if(!UiStyle::useQlementine())
+    UiStyle::ChromePalette pal;
+    if(!UiStyle::chromePalette(pal))
         return;
     const QString name = accessibleName();
     if(name.isEmpty())
@@ -328,24 +284,17 @@ void IconWidget::paintChrome(QPainter &painter) {
                                           mHovered,
                                           property("pressed").toBool(),
                                           property("checked").toBool(),
-                                          settings->colorScheme());
+                                          pal);
     if(!chrome.visible)
         return;
-    QRectF r = QRectF(rect()).adjusted(chrome.inset.left(), chrome.inset.top(),
-                                       -chrome.inset.right(), -chrome.inset.bottom());
+    QRectF r = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
     if(r.width() < 2.0 || r.height() < 2.0)
         return;
-    r.adjust(0.5, 0.5, -0.5, -0.5);
     painter.save();
     painter.setRenderHint(QPainter::Antialiasing, true);
     const QPainterPath path = roundedPath(r, chrome.radiusTL, chrome.radiusTR,
                                           chrome.radiusBR, chrome.radiusBL);
     painter.fillPath(path, chrome.fillColor);
-    if(chrome.border) {
-        painter.setPen(QPen(chrome.borderColor, 1.0));
-        painter.setBrush(Qt::NoBrush);
-        painter.drawPath(path);
-    }
     if(chrome.leftDivider) {
         painter.setPen(QPen(chrome.borderColor, 1.0));
         painter.drawLine(QPointF(r.left(), r.top()), QPointF(r.left(), r.bottom()));

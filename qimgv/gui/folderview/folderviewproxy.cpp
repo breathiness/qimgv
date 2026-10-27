@@ -19,6 +19,11 @@ void FolderViewProxy::init() {
     layout.addWidget(folderView.get());
     this->setFocusProxy(folderView.get());
     this->setLayout(&layout);
+    // The panel is built from showEvent(), at a point where the window already
+    // has its final size, so no resize follows that would trigger the first
+    // layout pass - without this the folder view keeps its design-time size in
+    // the corner of the window.
+    layout.activate();
 
     connect(folderView.get(), &FolderView::itemActivated, this, &FolderViewProxy::itemActivated);
     connect(folderView.get(), &FolderView::thumbnailsRequested, this, &FolderViewProxy::thumbnailsRequested);

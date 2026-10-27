@@ -64,12 +64,11 @@ void MenuItem::paintEvent(QPaintEvent *event) {
     opt.initFrom(this);
     QPainter p(this);
     if(UiStyle::useQlementine()) {
-        // the stylesheet used to draw the hover highlight
-        if(mHovered && isEnabled()) {
-            QColor accent = settings->colorScheme().accent;
-            accent.setAlphaF(0.65f);
-            p.fillRect(rect(), accent);
-        }
+        // the stylesheet used to draw the hover highlight; use the colour the
+        // style gives its own list rows
+        UiStyle::ChromePalette pal;
+        if(mHovered && isEnabled() && UiStyle::chromePalette(pal))
+            p.fillRect(rect(), pal.menuHover);
         return;
     }
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);

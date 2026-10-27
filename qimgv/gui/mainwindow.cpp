@@ -164,6 +164,7 @@ void MW::toggleFolderView() {
     docWidget->hideFloatingPanel();
     imageInfoOverlay->hide();
     centralWidget->toggleViewMode();
+    updateNavBarVisibility();
     onInfoUpdated();
 }
 
@@ -176,12 +177,28 @@ void MW::enableFolderView() {
     docWidget->hideFloatingPanel();
     imageInfoOverlay->hide();
     centralWidget->showFolderView();
+    updateNavBarVisibility();
     onInfoUpdated();
 }
 
 void MW::enableDocumentView() {
     centralWidget->showDocumentView();
+    updateNavBarVisibility();
     onInfoUpdated();
+}
+
+// The navigation bar is part of the image viewer. In the folder view it would
+// float on top of the thumbnail grid, so it is hidden for as long as that view
+// is active.
+void MW::updateNavBarVisibility() {
+    if(!navBar)
+        return;
+    if(currentViewMode() == MODE_FOLDERVIEW) {
+        navBar->hide();
+        return;
+    }
+    navBar->show();
+    navBar->raise();
 }
 
 ViewMode MW::currentViewMode() {
@@ -691,10 +708,7 @@ void MW::showFullScreen() {
     QWidget::showFullScreen();
     // try to repaint sooner
     qApp->processEvents();
-    if(navBar) {
-        navBar->show();
-        navBar->raise();
-    }
+    updateNavBarVisibility();
     emit fullscreenStateChanged(true);
 }
 
@@ -705,10 +719,7 @@ void MW::showWindowed() {
     QWidget::show();
     // try to repaint sooner
     qApp->processEvents();
-    if(navBar) {
-        navBar->show();
-        navBar->raise();
-    }
+    updateNavBarVisibility();
     emit fullscreenStateChanged(false);
 }
 
@@ -979,7 +990,8 @@ void MW::readSettings() {
     if(navBar) {
         navBar->setAutoHide(settings->navBarAutoHide());
         navBar->setButtons(settings->navBarShortcuts(), settings->navBarIcons());
-        navBar->raise();
+        // stays hidden when the folder view is the active one
+        updateNavBarVisibility();
     }
 }
 
