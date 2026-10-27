@@ -1,4 +1,10 @@
 #include "settings.h"
+#include "uistyle.h"
+#include <QPalette>
+
+#ifdef USE_QLEMENTINE
+#include <oclero/qlementine/style/QlementineStyle.hpp>
+#endif
 
 Settings *settings = nullptr;
 
@@ -79,7 +85,13 @@ QString Settings::tmpDir() {
 //------------------------------------------------------------------------------
 // this here is temporarily, will be moved to some sort of theme manager class
 void Settings::loadStylesheet() {
-    // stylesheet template file
+    // stylesheet template file. A real QStyle (Qlementine) cannot coexist with
+    // an application-wide stylesheet here: setting one makes Qt wrap the style
+    // in QStyleSheetStyle, which recurses into itself and overflows the stack
+    // (verified with both the full and the reduced stylesheet). Qlementine mode
+    // therefore applies no stylesheet; widgets qimgv paints itself take their
+    // colours from the palette instead (see UiStyle / ColorScheme).
+    const bool qlementineMode = UiStyle::useQlementine();
     QFile file(":/res/styles/style-template.qss");
     if(file.open(QFile::ReadOnly)) {
         QString styleSheet = QLatin1String(file.readAll());
@@ -214,7 +226,8 @@ void Settings::loadStylesheet() {
             styleSheet.replace("%topbar_border_rgba%", colors.folderview.name());
 
         // --- apply -------------------------------------------------
-        qApp->setStyleSheet(styleSheet);
+        if(!qlementineMode)
+            qApp->setStyleSheet(styleSheet);
     }
 }
 //------------------------------------------------------------------------------
@@ -265,7 +278,42 @@ const ColorScheme& Settings::colorScheme() {
     return mColorScheme;
 }
 //------------------------------------------------------------------------------
+#ifdef USE_QLEMENTINE
+// Qlementine paints the standard widgets, qimgv paints the navigation bar,
+// overlays and thumbnail strip itself. Take the colours from Qlementine's
+// theme, otherwise the two halves would not match.
+static void adoptQlementineColors(ColorScheme &scheme) {
+    auto *style = qobject_cast<oclero::qlementine::QlementineStyle*>(qApp->style());
+    if(!style)
+        return;
+    const auto &t = style->theme();
+    const QPalette pal = style->standardPalette();
+    BaseColorScheme base;
+    base.tid                   = scheme.tid;
+    base.background            = t.backgroundColorMain1;
+    base.background_fullscreen = t.backgroundColorWorkspace;
+    base.text                  = pal.color(QPalette::WindowText);
+    base.icons                 = pal.color(QPalette::WindowText);
+    base.widget                = t.neutralColor;
+    base.widget_border         = t.borderColor;
+    base.accent                = t.primaryColor;
+    base.folderview            = t.backgroundColorMain3;
+    base.folderview_topbar     = t.backgroundColorMain2;
+    base.scrollbar             = t.neutralColor;
+    // overlays float above the image, so keep them slightly translucent
+    QColor overlay = t.backgroundColorMain1;
+    overlay.setAlpha(230);
+    base.overlay               = overlay;
+    base.overlay_text          = pal.color(QPalette::WindowText);
+    scheme.setBaseColors(base);
+}
+#endif
+
 void Settings::setColorScheme(ColorScheme scheme) {
+#ifdef USE_QLEMENTINE
+    if(UiStyle::useQlementine())
+        adoptQlementineColors(scheme);
+#endif
     mColorScheme = scheme;
     loadStylesheet();
 }

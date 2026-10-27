@@ -1,4 +1,5 @@
 #include "floatingwidget.h"
+#include "uistyle.h"
 
 FloatingWidget::FloatingWidget(FloatingWidgetContainer *parent) : QWidget(parent), mAcceptKeyboardFocus(false) {
     this->setAccessibleName("OverlayWidget");
@@ -21,9 +22,13 @@ void FloatingWidget::onContainerResized(QSize size) {
 
 void FloatingWidget::paintEvent(QPaintEvent *event) {
     Q_UNUSED(event)
+    // Qlementine mode has no stylesheet, so the card is drawn from the palette.
+    // Subclasses that paint their own content override this anyway.
+    QPainter p(this);
+    if(UiStyle::paintBackground(this, p, true))
+        return;
     QStyleOption opt;
     opt.initFrom(this);
-    QPainter p(this);
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }
 

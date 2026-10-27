@@ -52,6 +52,9 @@ protected:
     void paintEvent(QPaintEvent *) override;
     void resizeEvent(QResizeEvent *event) override;
 
+private:
+    void paintChrome(QPainter &painter);
+
 protected slots:
     void onThumbnailSizeChanged(int newSize);
     void onZoomSliderValueChanged(int value);

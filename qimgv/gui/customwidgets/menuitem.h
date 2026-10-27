@@ -29,8 +29,10 @@ protected:
     QHBoxLayout mLayout;
     bool passthroughClicks = true;
     void paintEvent(QPaintEvent *event);
+    bool event(QEvent *event);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
+    bool mHovered = false;
 
     virtual void onClick();
     virtual void onPress();

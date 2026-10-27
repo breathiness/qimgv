@@ -1,5 +1,6 @@
 #include "sidepanel.h"
 #include "ui_sidepanel.h"
+#include "uistyle.h"
 
 SidePanel::SidePanel(QWidget *parent) :
     QWidget(parent),
@@ -46,5 +47,7 @@ void SidePanel::paintEvent(QPaintEvent *) {
     QStyleOption opt;
     opt.initFrom(this);
     QPainter p(this);
+    if(UiStyle::paintBackground(this, p, false))
+        return;
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }

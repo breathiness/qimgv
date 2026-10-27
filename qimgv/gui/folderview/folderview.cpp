@@ -1,5 +1,6 @@
 #include "folderview.h"
 #include "ui_folderview.h"
+#include "uistyle.h"
 
 FolderView::FolderView(QWidget *parent) :
     FloatingWidgetContainer(parent),
@@ -363,7 +364,36 @@ void FolderView::paintEvent(QPaintEvent *) {
     QStyleOption opt;
     opt.initFrom(this);
     QPainter p(this);
+    if(UiStyle::paintBackground(this, p, false)) {
+        paintChrome(p);
+        return;
+    }
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+}
+
+// Parts of the folder view that only the stylesheet used to paint. Drawn here,
+// from the colour scheme, before the children (they keep drawing on top).
+void FolderView::paintChrome(QPainter &p) {
+    const ColorScheme &c = settings->colorScheme();
+    const QRect topBarRect = ui->topBar->geometry();
+    p.fillRect(topBarRect, c.folderview_topbar);
+
+    // the path bar groups the up button and the path into one rounded pill
+    const QRect barRect(ui->pathBar->mapTo(this, QPoint(0, 0)), ui->pathBar->size());
+    const QRectF pill = QRectF(barRect).adjusted(2.5, 4.5, -2.5, -4.5);
+    if(pill.width() > 2 && pill.height() > 2) {
+        p.setRenderHint(QPainter::Antialiasing, true);
+        p.setPen(Qt::NoPen);
+        p.setBrush(c.panel_button);
+        p.drawRoundedRect(pill, 3, 3);
+    }
+
+    // 1px separator under the top bar, as the stylesheet had on the contents
+    const QRect contentsRect = ui->contentsWidget->geometry();
+    p.setRenderHint(QPainter::Antialiasing, false);
+    p.setPen(QPen(QColor(0, 0, 0, 36), 1));
+    p.drawLine(contentsRect.topLeft(), contentsRect.topRight());
+    p.setBrush(Qt::NoBrush);
 }
 
 void FolderView::resizeEvent(QResizeEvent *event) {

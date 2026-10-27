@@ -1,4 +1,5 @@
 #include "styledcombobox.h"
+#include "uistyle.h"
 
 StyledComboBox::StyledComboBox(QWidget *parent) : QComboBox(parent), hiResPixmap(false)
 {
@@ -29,6 +30,9 @@ void StyledComboBox::setIconPath(QString path) {
 
 void StyledComboBox::paintEvent(QPaintEvent *e) {
     QComboBox::paintEvent(e);
+    // Qlementine draws its own indicator arrow; adding ours would show two
+    if(UiStyle::useQlementine())
+        return;
     QPainter p(this);
     QPointF pos(0,0);
 

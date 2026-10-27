@@ -328,7 +328,9 @@ void DirectoryManager::addEntriesFromDirectory(std::vector<FSEntry> &entryVec, Q
         if(!settings->showHiddenFiles() && name.startsWith("."))
             continue;
 #else
-        DWORD attributes = GetFileAttributes(entry.path().generic_string().c_str());
+        // explicit W variant: Qt6 builds define UNICODE, which turns
+        // GetFileAttributes into the wide-char version that rejects std::string
+        DWORD attributes = GetFileAttributesW(entry.path().generic_wstring().c_str());
         if(!settings->showHiddenFiles() && attributes & FILE_ATTRIBUTE_HIDDEN)
             continue;
 #endif

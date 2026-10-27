@@ -1,5 +1,7 @@
 #include "floatingnavbar.h"
 
+#include "uistyle.h"
+
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QMouseEvent>
@@ -29,6 +31,45 @@ QString actionForShortcut(const QString &shortcut) {
     if(shortcut.isEmpty() || !actionManager)
         return QString();
     return actionManager->actionForShortcut(shortcut);
+}
+
+// action name -> icon in the themed set (qlementine-icons), used when the
+// Qlementine style is active. Missing entries fall back to the PNG resources.
+const QMap<QString, QString> &actionThemeIcons() {
+    static const QMap<QString, QString> icons = {
+        {"prevImage",         "navigation/arrow-left"},
+        {"nextImage",         "navigation/arrow-right"},
+        {"prevDirectory",     "navigation/arrow-left"},
+        {"nextDirectory",     "navigation/arrow-right"},
+        {"zoomIn",            "action/zoom-in"},
+        {"zoomOut",           "action/zoom-out"},
+        {"zoomInCursor",      "action/zoom-in"},
+        {"zoomOutCursor",     "action/zoom-out"},
+        {"fitNormal",         "action/zoom-original"},
+        {"fitWindow",         "action/zoom-fit"},
+        {"fitWidth",          "page/zoom-fit-page"},
+        {"fitWindowStretch",  "page/zoom-fit-screen"},
+        {"rotateLeft",        "action/rotate-anticlockwise"},
+        {"rotateRight",       "action/rotate-clockwise"},
+        {"flipH",             "action/flip-horizontal"},
+        {"flipV",             "action/flip-vertical"},
+        {"moveToTrash",       "action/trash"},
+        {"removeFile",        "action/trash"},
+        {"print",             "action/print"},
+        {"toggleImageInfo",   "misc/info"},
+        {"folderView",        "file/folder"},
+        {"documentView",      "document/open"},
+        {"toggleFolderView",  "file/folder"},
+        {"openSettings",      "navigation/settings"},
+        {"copyFileClipboard", "action/copy"},
+        {"copyPathClipboard", "action/copy"},
+        {"open",              "document/open"},
+        {"crop",              "action/crop"},
+        {"resize",            "action/resize-bigger"},
+        {"showInDirectory",   "file/folder-open"},
+        {"goUp",              "navigation/arrow-up"},
+    };
+    return icons;
 }
 
 // action name -> icon resource. Anything not listed falls back to a text button
@@ -231,7 +272,7 @@ void FloatingNavBar::applyTheme() {
         "#FloatingNavBar QPushButton {"
         "  background: transparent;"
         "  border: none;"
-        "  border-radius: 7px;"
+        "  border-radius: %7px;"
         "  padding: 6px 13px;"
         "  color: %1;"
         "}"
@@ -242,7 +283,8 @@ void FloatingNavBar::applyTheme() {
      .arg(colors.accent.green())
      .arg(colors.accent.blue())
      .arg(hover.alpha())
-     .arg(pressed.alpha()));
+     .arg(pressed.alpha())
+     .arg(UiStyle::controlRadius()));
 }
 
 void FloatingNavBar::updateFromShortcuts() {
@@ -306,9 +348,16 @@ void FloatingNavBar::rebuildButtons() {
 
         bool custom = !mIcons.value(i).isEmpty();
         QString iconPath = custom ? mIcons.at(i) : defaultIconPath(shortcut);
+        // themed vector icons, when that set is available
+        const bool themed = !custom && UiStyle::useQlementine()
+                            && actionThemeIcons().contains(action);
         QPixmap pixmap;
 
-        if(!iconPath.isEmpty()) {
+        if(themed) {
+            iconPath = QStringLiteral(":/qlementine/icons/16/%1.svg")
+                           .arg(actionThemeIcons().value(action));
+            pixmap = QIcon(iconPath).pixmap(iconPx * 2, iconPx * 2);
+        } else if(!iconPath.isEmpty()) {
             // built-in icons ship an @2x variant which stays crisp at this size
             if(!custom) {
                 QString hiRes = iconPath;
@@ -334,7 +383,7 @@ void FloatingNavBar::rebuildButtons() {
             if(!custom) {
                 // built-in icon: "next" reuses the "previous" arrow turned
                 // 180 degrees, and everything is tinted with the theme
-                if(action == QLatin1String("nextImage") || action == QLatin1String("nextDirectory"))
+                if(!themed && (action == QLatin1String("nextImage") || action == QLatin1String("nextDirectory")))
                     pixmap = pixmap.transformed(QTransform().rotate(180));
                 ImageLib::recolor(pixmap, iconColor);
             }

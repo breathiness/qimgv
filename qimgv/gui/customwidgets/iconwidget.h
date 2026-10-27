@@ -26,6 +26,7 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *event);
+    bool event(QEvent *event);
 
 private slots:
     void onSettingsChanged();
@@ -33,6 +34,11 @@ private slots:
 private:
     void loadIcon();
     void applyColor();
+    void paintChrome(QPainter &painter);
+    void applyChromeMetrics();
+
+    bool mHovered = false;
+    bool mChromeMetricsDone = false;
 
     QString iconPath;
     QColor color;

@@ -44,6 +44,7 @@ add_executable(qimgv
     sharedresources.cpp
     shortcutbuilder.cpp
     proxystyle.cpp
+    uistyle.cpp
     macosapplication.cpp
     resources.qrc
     qimgv.rc
@@ -77,6 +78,13 @@ if(QT_VERSION_MAJOR GREATER_EQUAL 6)
 endif()
 
 # OPTION DEFINITIONS, LINKING
+if(QLEMENTINE AND TARGET qlementine)
+    target_link_libraries(qimgv PRIVATE qlementine)
+    target_compile_definitions(qimgv PRIVATE USE_QLEMENTINE)
+    if(TARGET qlementine-icons)
+        target_link_libraries(qimgv PRIVATE qlementine-icons)
+    endif()
+endif()
 if(EXIV2)
     target_link_libraries(qimgv PRIVATE PkgConfig::Exiv2)
     target_compile_definitions(qimgv PRIVATE USE_EXIV2)

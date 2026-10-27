@@ -24,6 +24,8 @@ void IconButton::setChecked(bool mode) {
         setProperty("checked", mChecked);
         style()->unpolish(this);
         style()->polish(this);
+        // the stylesheet used to repaint on repolish, the painted chrome does not
+        update();
     }
 }
 
@@ -38,6 +40,7 @@ void IconButton::mousePressEvent(QMouseEvent *event) {
     }
     style()->unpolish(this);
     style()->polish(this);
+    update();
 }
 
 void IconButton::mouseReleaseEvent(QMouseEvent *event) {
@@ -50,6 +53,8 @@ void IconButton::mouseReleaseEvent(QMouseEvent *event) {
         setProperty("pressed", false);
         style()->unpolish(this);
         style()->polish(this);
+        // the stylesheet used to repaint on repolish, the painted chrome does not
+        update();
     }
 }
 
@@ -61,12 +66,14 @@ void IconButton::mouseMoveEvent(QMouseEvent *event) {
             setProperty("pressed", true);
             style()->unpolish(this);
             style()->polish(this);
+            update();
         }
     } else {
         if(property("pressed").toBool()) {
             setProperty("pressed", false);
             style()->unpolish(this);
             style()->polish(this);
+            update();
         }
     }
 }
