@@ -350,28 +350,6 @@ void Settings::fillVideoFormats() {
     mVideoFormatsMap.insert("video/mp2v",         "m2v");
 }
 //------------------------------------------------------------------------------
-QString Settings::mpvBinary() {
-    QString mpvPath = settings->settingsConf->value("mpvBinary", "").toString();
-    if(!QFile::exists(mpvPath)) {
-    #ifdef _WIN32
-        mpvPath = QCoreApplication::applicationDirPath() + "/mpv.exe";
-    #elif defined __linux__
-        mpvPath = "/usr/bin/mpv";
-    #elif defined __FreeBSD__
-        mpvPath = "/usr/local/bin/mpv";
-    #endif
-        if(!QFile::exists(mpvPath))
-            mpvPath = "";
-    }
-    return mpvPath;
-}
-
-void Settings::setMpvBinary(QString path) {
-    if(QFile::exists(path)) {
-        settings->settingsConf->setValue("mpvBinary", path);
-    }
-}
-//------------------------------------------------------------------------------
 QList<QByteArray> Settings::supportedFormats() {
     auto formats = QImageReader::supportedImageFormats();
     formats << "jfif";

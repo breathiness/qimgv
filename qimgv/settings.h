@@ -132,8 +132,6 @@ public:
     void setVolume(int vol);
     int volume();
     QString thumbnailCacheDir();
-    QString mpvBinary();
-    void setMpvBinary(QString path);
     PanelPosition panelPosition();
     void setPanelPosition(PanelPosition);
     bool loopSlideshow();

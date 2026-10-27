@@ -13,35 +13,8 @@ void Video::load() {
     if(isLoaded())
         return;
 
-    /*
-    auto mpvBinary = settings->mpvBinary();
-    if(mpvBinary.isEmpty())
-        return;
-    // Get resolution from ffmpeg (so we don't have to ask videoplayer)
-    QString command = "\"" + mpvBinary + "\"" + " -i " + "\"" + mDocInfo->filePath() + "\"";
-    QString filePathEsc = mDocInfo->filePath();
-    filePathEsc.replace("%", "%%");
-    QProcess process;
-    process.setProcessChannelMode(QProcess::MergedChannels);
-    process.start(settings->mpvBinary(), QStringList() << "-i" << filePathEsc);
-    process.waitForFinished(100);
-    QByteArray out = process.readAllStandardOutput();
-
-    QRegExp expResolution("[0-9]+x[0-9]+");
-    QRegExp expWidth("[0-9]+\\B");
-    QRegExp expHeight("\\B+[0-9]+$");
-    expResolution.indexIn(out);
-    QString res = expResolution.cap();
-    expWidth.indexIn(res);
-    expHeight.indexIn(res);
-    QString wt = expWidth.cap();
-    QString ht = expHeight.cap();
-
-    srcWidth = wt.toUInt();
-    srcHeight = ht.toUInt();
-
-    qDebug() << "zzzz" << wt << ht << filePathEsc << settings->mpvBinary();
-    */
+    // The resolution comes from the video player once it is up; probing it here
+    // used to shell out to an external mpv, which is not needed any more.
     mLoaded = true;
 }
 

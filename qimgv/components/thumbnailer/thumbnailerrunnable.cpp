@@ -1,5 +1,9 @@
 #include "thumbnailerrunnable.h"
 
+#ifdef USE_MPV
+#include "mpvframegrabber.h"
+#endif
+
 #ifdef _WIN32
 #include <windows.h>
 #include <shobjidl.h>
@@ -256,22 +260,19 @@ std::pair<QImage*, QSize> ThumbnailerRunnable::createVideoThumbnail(QString path
     QFileInfo fi(path);
     QImageReader reader;
     QString tmpFilePath = settings->tmpDir() + fi.fileName() + ".png";
-    QString tmpFilePathEsc = tmpFilePath;
-    tmpFilePathEsc.replace("%", "%%");
-    QProcess process;
-    process.setProcessChannelMode(QProcess::MergedChannels);
-    process.start(settings->mpvBinary(),
-                  QStringList() << "--frames=1"
-                                << "--aid=no"
-                                << "--sid=no"
-                                << "--no-config"
-                                << "--load-scripts=no"
-                                << "--no-terminal"
-                                << "--o=" + tmpFilePathEsc
-                                << path
-                  );
-    process.waitForFinished(8000);
-    process.close();
+
+    // One second in, so the frame shows something instead of a fade-in or a
+    // black lead-in. Clips shorter than that have no frame there, so fall back
+    // to the very beginning.
+#ifdef USE_MPV
+    if(!MpvFrameGrabber::grabFrame(path, 1.0, tmpFilePath)
+       && !MpvFrameGrabber::grabFrame(path, 0.0, tmpFilePath)) {
+        return std::make_pair(nullptr, QSize());
+    }
+#else
+    // built without video support: there is no libmpv to grab a frame with
+    return std::make_pair(nullptr, QSize());
+#endif
 
     reader.setFileName(tmpFilePath);
     reader.setFormat("png");

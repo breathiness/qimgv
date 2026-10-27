@@ -280,8 +280,6 @@ void SettingsDialog::readSettings() {
     else
         ui->folderEndSwitchFolder->setChecked(true);
 
-    ui->mpvLineEdit->setText(settings->mpvBinary());
-
     ui->zoomStepSlider->setValue(static_cast<int>(settings->zoomStep() * 100.f));
     onZoomStepSliderChanged(ui->zoomStepSlider->value());
 
@@ -421,7 +419,6 @@ void SettingsDialog::saveSettings() {
     else
         settings->setFolderEndAction(FOLDER_END_GOTO_ADJACENT);
 
-    settings->setMpvBinary(ui->mpvLineEdit->text());
     settings->setScalingFilter(static_cast<ScalingFilter>(ui->scalingQualityComboBox->currentIndex()));
     settings->setImageScrolling(static_cast<ImageScrolling>(ui->imageScrollingComboBox->currentIndex()));
     settings->setShowSaveOverlay(ui->saveOverlayCheckBox->isChecked());
@@ -682,14 +679,6 @@ void SettingsDialog::resetZoomLevels() {
     ui->zoomLevels->setText(settings->defaultZoomLevels());
 }
 //------------------------------------------------------------------------------
-void SettingsDialog::selectMpvPath() {
-    QFileDialog dialog;
-    QString file;
-    file = dialog.getOpenFileName(this, tr("Navigate to mpv binary"), "", "mpv*");
-    if(!file.isEmpty()) {
-        ui->mpvLineEdit->setText(file);
-    }
-}
 //------------------------------------------------------------------------------
 void SettingsDialog::onExpandLimitSliderChanged(int value) {
     if(value == 0)
