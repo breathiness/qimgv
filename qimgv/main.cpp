@@ -182,10 +182,13 @@ int main(int argc, char *argv[]) {
     QObject::connect(&a, &MacOSApplication::fileOpened, &core, &Core::loadPath);
 #endif
 
-    if(parser.positionalArguments().count())
+    if(parser.positionalArguments().count()) {
         core.loadPath(parser.positionalArguments().at(0));
-    else if(settings->defaultViewMode() == MODE_FOLDERVIEW)
+    } else {
+        // started without a file: open the folder view instead of an empty
+        // viewer, at the home directory
         core.loadPath(QDir::homePath());
+    }
 
     // wait for event queue to catch up before showing window
     // this avoids white background flicker on windows (or not?)

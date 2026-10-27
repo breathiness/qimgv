@@ -1188,7 +1188,12 @@ void Core::print() {
 void Core::scalingRequest(QSize size, ScalingFilter filter) {
     // filter out an unnecessary scale request at statup
     if(mw->isVisible() && state.hasActiveImage) {
-        std::shared_ptr<Image> forScale = model->getImage(state.currentFilePath);
+        // prefer the object that is already on screen: while an image is still
+        // loading, model->getImage() would decode the whole file synchronously
+        // just to produce a downscaled pixmap
+        std::shared_ptr<Image> forScale = state.currentImg;
+        if(!forScale || forScale->filePath() != state.currentFilePath)
+            forScale = model->getImage(state.currentFilePath);
         if(forScale) {
             model->scaler->requestScaled(ScalerRequest(forScale, size, state.currentFilePath, filter));
         }
@@ -1250,7 +1255,9 @@ bool Core::loadPath(QString path) {
             }
         }
         mw->enableDocumentView();
-        return loadFileIndex(index, false, settings->usePreloader());
+        // load asynchronously: for large images the two-pass loader shows a
+        // preview almost immediately, and the window is up by then anyway
+        return loadFileIndex(index, true, settings->usePreloader());
     } else {
         mw->enableFolderView();
         return true;
