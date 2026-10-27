@@ -735,13 +735,24 @@
     <name>NavBarSettingsPage</name>
     <message>
         <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="43" />
-        <source>Auto-hide (expand when the mouse gets close)</source>
-        <translation>自动隐藏（鼠标靠近时展开）</translation>
+        <source>Show the bar:</source>
+        <translation>显示方式：</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="44" />
-        <source>Only a thin strip stays visible; the bar slides up when the mouse reaches the bottom edge.</source>
-        <translation>平时只留一条细边，鼠标到达屏幕底部时自动滑出。</translation>
+        <source>Always</source>
+        <translation>常开</translation>
+    </message>
+    <message>
+        <source>Auto-hide</source>
+        <translation>自动</translation>
+    </message>
+    <message>
+        <source>Never</source>
+        <translation>常关</translation>
+    </message>
+    <message>
+        <source>Always keeps the bar docked at the bottom, auto-hide slides it in when the mouse reaches the bottom edge, never leaves it out.</source>
+        <translation>常开：固定在底部；自动：平时完全隐藏，鼠标靠近底部时滑出；常关：完全不显示。</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="48" />
@@ -755,38 +766,24 @@
     </message>
     <message>
         <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="56" />
-        <source>Click a field and press the shortcut you want the button to run. Click the icon on the left to choose a custom image.</source>
-        <translation>点击输入框后按下希望该按钮执行的快捷键；点击左侧图标可自定义图标图片。</translation>
+        <source>Drag a row by its grip to change the order. Click a field and press the shortcut this button should run. Pick the icon of a button from the list on the left.</source>
+        <translation>拖动行首的抓手可调整顺序；点击输入框后按下希望该按钮执行的快捷键；左侧下拉框用于选择该按钮的图标。</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="162" />
-        <source>x</source>
-        <translation>×</translation>
+        <source>Automatic</source>
+        <translation>自动</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="164" />
-        <source>Use the automatic icon again</source>
-        <translation>恢复自动图标</translation>
+        <source>Choose a file...</source>
+        <translation>从文件选择…</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="188" />
-        <source>Custom icon: %1</source>
-        <translation>自定义图标：%1</translation>
+        <source>Icon of this button</source>
+        <translation>该按钮的图标</translation>
     </message>
     <message>
-        <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="194" />
-        <source>Automatic icon - click to choose your own</source>
-        <translation>自动图标 — 点击可自定义</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="197" />
-        <source>none</source>
-        <translation>无</translation>
-    </message>
-    <message>
-        <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="198" />
-        <source>No automatic icon - click to choose one</source>
-        <translation>无自动图标 — 点击选择</translation>
+        <source>Drag to change the order</source>
+        <translation>拖动可调整顺序</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="206" />

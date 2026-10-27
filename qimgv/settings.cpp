@@ -805,13 +805,25 @@ void Settings::saveNavBar(const QStringList &shortcuts, const QStringList &icons
     settings->settingsConf->endGroup();
 }
 //------------------------------------------------------------------------------
-bool Settings::navBarAutoHide() {
-    return settings->settingsConf->value("NavBar/autoHide", true).toBool();
+NavBarMode Settings::navBarMode() {
+    settings->settingsConf->beginGroup("NavBar");
+    int mode;
+    if(settings->settingsConf->contains("mode")) {
+        mode = settings->settingsConf->value("mode").toInt();
+    } else {
+        // migrate the old on/off option: auto-hide on -> auto, off -> always
+        const bool autoHide = settings->settingsConf->value("autoHide", true).toBool();
+        mode = autoHide ? NAVBAR_AUTO : NAVBAR_ALWAYS;
+    }
+    settings->settingsConf->endGroup();
+    if(mode < NAVBAR_ALWAYS || mode > NAVBAR_NEVER)
+        mode = NAVBAR_AUTO;
+    return static_cast<NavBarMode>(mode);
 }
 
-void Settings::setNavBarAutoHide(bool mode) {
+void Settings::setNavBarMode(NavBarMode mode) {
     settings->settingsConf->beginGroup("NavBar");
-    settings->settingsConf->setValue("autoHide", mode);
+    settings->settingsConf->setValue("mode", static_cast<int>(mode));
     settings->settingsConf->endGroup();
 }
 //------------------------------------------------------------------------------

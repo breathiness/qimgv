@@ -7,10 +7,12 @@
  *
  * Configuration lives in Preferences -> "Navigation bar".
  *
- * Auto-hide: with the option enabled the bar slides away leaving a thin strip
- * and comes back as soon as the mouse enters the bottom hover zone. The zone is
- * bigger than the bar itself and is detected from global cursor position, so it
- * never swallows clicks meant for the image.
+ * Modes: "always" keeps it docked and visible, "auto" hides it completely and
+ * slides it up as soon as the mouse enters the bottom hover zone, "never"
+ * leaves it out. The zone is bigger than the bar itself and is detected from
+ * the global cursor position, so it never swallows clicks meant for the image.
+ * The bar exists for the image viewer only; setViewActive(false) takes it off
+ * the folder view instead of leaving a strip behind.
  *
  * Just set the parent and call setButtons(); do not put it into a layout.
  */
@@ -22,6 +24,8 @@
 #include <QList>
 #include <QPoint>
 #include <QSize>
+
+#include "settings.h"
 
 class QHBoxLayout;
 class QPushButton;
@@ -48,11 +52,18 @@ public:
 
     // icon that would be used automatically for a shortcut (empty = none)
     static QString defaultIconPath(const QString &shortcut);
+    // name in the vector icon set that the shortcut resolves to (empty = none)
+    static QString defaultThemedIconName(const QString &shortcut);
+    // every icon name in the vector set a button can be given
+    static QStringList themedIconNames();
 
-    // when enabled only a thin strip stays visible and the bar slides up as
-    // soon as the mouse enters the bottom hover zone
-    void setAutoHide(bool mode);
-    bool autoHide() const;
+    // how the bar behaves: always visible, hidden until the mouse reaches the
+    // bottom edge, or not shown at all
+    void setMode(NavBarMode mode);
+    NavBarMode mode() const;
+    // the bar belongs to the image viewer; the folder view turns this off and
+    // the bar disappears from that page entirely
+    void setViewActive(bool active);
 
 public slots:
     // keeps the bar sized/positioned after the parent got resized
@@ -86,8 +97,10 @@ private:
     void clampToParent();
     void dockToBottom();
     void expandBar();
-    void collapseBar();
+    void collapseBar(bool instant = false);
     void animateTo(int y);
+    // shows/hides and positions the bar for the current mode and page
+    void applyState();
     // true when the cursor sits inside the bottom hover zone of the parent
     bool withinHoverZone() const;
 
@@ -100,9 +113,9 @@ private:
     // true while the bar sits flush at the bottom of its parent
     bool docked;
     int barHeight;
-    // auto-hide state
-    bool mAutoHide;
-    int peekHeight;
+    NavBarMode mMode;
+    // false while a page without the bar (the folder view) is active
+    bool mViewActive;
     // extra height above the bar that still counts as "close to the bar"
     int hoverMargin;
     QPropertyAnimation *posAnim;

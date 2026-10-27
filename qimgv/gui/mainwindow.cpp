@@ -187,18 +187,12 @@ void MW::enableDocumentView() {
     onInfoUpdated();
 }
 
-// The navigation bar is part of the image viewer. In the folder view it would
-// float on top of the thumbnail grid, so it is hidden for as long as that view
-// is active.
+// The navigation bar is part of the image viewer. On the other pages it is taken
+// off rather than left hidden, so nothing of it can appear there.
 void MW::updateNavBarVisibility() {
     if(!navBar)
         return;
-    if(currentViewMode() == MODE_FOLDERVIEW) {
-        navBar->hide();
-        return;
-    }
-    navBar->show();
-    navBar->raise();
+    navBar->setViewActive(currentViewMode() != MODE_FOLDERVIEW);
 }
 
 ViewMode MW::currentViewMode() {
@@ -988,9 +982,9 @@ void MW::readSettings() {
     adaptToWindowState();
 
     if(navBar) {
-        navBar->setAutoHide(settings->navBarAutoHide());
+        navBar->setMode(settings->navBarMode());
         navBar->setButtons(settings->navBarShortcuts(), settings->navBarIcons());
-        // stays hidden when the folder view is the active one
+        // takes the current page into account as well
         updateNavBarVisibility();
     }
 }
