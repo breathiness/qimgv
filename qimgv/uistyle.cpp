@@ -88,6 +88,7 @@ QString themedIconName(const QString &resourcePath) {
     // matched on the tail of the resource path, so the theme folder does not matter
     static const QHash<QString, QString> map = {
         {"menuitem/back16.png",               "navigation/arrow-left"},
+        {"menuitem/next16.png",               "navigation/arrow-right"},
         {"menuitem/folder16.png",             "file/folder"},
         {"menuitem/folderview16.png",         "file/folder"},
         {"menuitem/document-view16.png",      "document/open"},

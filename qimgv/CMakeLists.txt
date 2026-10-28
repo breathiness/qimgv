@@ -52,6 +52,12 @@ add_executable(qimgv
     ${QM_FILES}
 )
 
+# The resource file names the icon the executable carries, but the generate step
+# only looks at the .rc itself: without this the exe keeps an old icon after the
+# .ico is replaced.
+set_property(SOURCE qimgv.rc PROPERTY OBJECT_DEPENDS
+             "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/common/logo/app/qimgv.ico")
+
 # update .ts, compile .qm (qt6 case)
 if(${QT_VERSION_MAJOR} EQUAL 6)
     qt_add_lupdate(qimgv TS_FILES ${TS_FILES})
