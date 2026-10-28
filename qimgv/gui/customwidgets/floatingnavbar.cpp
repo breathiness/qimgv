@@ -12,7 +12,6 @@
 #include <QIcon>
 #include <QPixmap>
 #include <QMap>
-#include <QTransform>
 #include <QPropertyAnimation>
 #include <QTimer>
 #include <QEnterEvent>
@@ -77,10 +76,9 @@ const QMap<QString, QString> &actionThemeIcons() {
 const QMap<QString, QString> &actionIcons() {
     static const QMap<QString, QString> icons = {
         {"prevImage",         ":/res/icons/common/menuitem/back16.png"},
-        // "next" is the SAME left arrow, turned 180 degrees in rebuildButtons()
-        {"nextImage",         ":/res/icons/common/menuitem/back16.png"},
+        {"nextImage",         ":/res/icons/common/menuitem/next16.png"},
         {"prevDirectory",     ":/res/icons/common/menuitem/back16.png"},
-        {"nextDirectory",     ":/res/icons/common/menuitem/back16.png"},
+        {"nextDirectory",     ":/res/icons/common/menuitem/next16.png"},
         {"zoomIn",            ":/res/icons/common/buttons/contextmenu/zoom-in18.png"},
         {"zoomOut",           ":/res/icons/common/buttons/contextmenu/zoom-out18.png"},
         {"zoomInCursor",      ":/res/icons/common/buttons/contextmenu/zoom-in18.png"},
@@ -404,9 +402,9 @@ void FloatingNavBar::rebuildButtons() {
         const QString customPath = userThemed ? QString() : configured;
         QString iconPath = custom ? customPath : defaultIconPath(shortcut);
         // themed vector icons, when that set is available
-        const bool themed = userThemed
-                            || (!custom && UiStyle::useQlementine()
-                                && actionThemeIcons().contains(action));
+        bool themed = userThemed
+                      || (!custom && UiStyle::useQlementine()
+                          && actionThemeIcons().contains(action));
         QPixmap pixmap;
 
         if(themed) {
@@ -428,6 +426,9 @@ void FloatingNavBar::rebuildButtons() {
         // a configured icon that no longer exists falls back to the automatic one
         if(pixmap.isNull() && custom) {
             custom = false;
+            // the replacement is a PNG mask, not a vector icon: it needs the
+            // same rotation/tint treatment the built-in icons get
+            themed = false;
             iconPath = defaultIconPath(shortcut);
             QString hiRes = iconPath;
             hiRes.replace(QLatin1String(".png"), QLatin1String("@2x.png"));
@@ -438,10 +439,7 @@ void FloatingNavBar::rebuildButtons() {
 
         if(!iconPath.isEmpty() && !pixmap.isNull()) {
             if(!custom || userThemed) {
-                // built-in and vector icons are masks: "next" reuses the
-                // "previous" arrow turned 180 degrees, and everything is tinted
-                if(!themed && (action == QLatin1String("nextImage") || action == QLatin1String("nextDirectory")))
-                    pixmap = pixmap.transformed(QTransform().rotate(180));
+                // built-in and vector icons are masks, so they take the theme colour
                 ImageLib::recolor(pixmap, iconColor);
             }
             // custom image files keep the colours the user picked

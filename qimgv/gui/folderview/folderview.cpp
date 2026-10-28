@@ -22,9 +22,15 @@ FolderView::FolderView(QWidget *parent) :
     }
 
     // ------- filesystem view --------
-    QString style = "font: %1pt;";
-    style = style.arg(QApplication::font().pointSize());
-    ui->dirTreeView->setStyleSheet(style);
+    // The font has to be restated for the tree: the stylesheet used to do it. It
+    // is defined in points by default and in pixels by Qlementine, where
+    // pointSize() is -1 - a "-1pt" rule makes Qt warn for every row and leaves
+    // the view with no usable font.
+    const QFont appFont = QApplication::font();
+    if(appFont.pointSize() > 0)
+        ui->dirTreeView->setStyleSheet(QString("font: %1pt;").arg(appFont.pointSize()));
+    else if(appFont.pixelSize() > 0)
+        ui->dirTreeView->setStyleSheet(QString("font: %1px;").arg(appFont.pixelSize()));
 
     optionsPopup = new FVOptionsPopup();
     popupTimerClutch.start();

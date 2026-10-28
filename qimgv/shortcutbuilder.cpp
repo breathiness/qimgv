@@ -105,8 +105,12 @@ QString ShortcutBuilder::fromEventNativeScanCode(QKeyEvent *event) {
     // You can always just add the same keybind using your alt. layout if it doesnt work.
     QString sequence = inputMap->keys().value(event->nativeScanCode());
 
+    // No scan code in the map: the key was injected without one (SendInput with
+    // wScan = 0, some remote-control stacks) or the table has no entry for it.
+    // Fall back to the key itself instead of reporting "no shortcut", which
+    // silently swallows the press.
     if(sequence.isEmpty())
-        return sequence;
+        return fromEventText(event);
 
     QString eventText = event->text();
 
@@ -133,12 +137,8 @@ QString ShortcutBuilder::fromEventText(QKeyEvent *event) {
     if(!sequence.isEmpty()) {
         // remove "Key_" at the beginning
         sequence.remove(0,4);
-        // rename some keys to match the ones from inputmap
-        // just a bandaid
-        if(sequence == "Return")
-            sequence = "Enter";
-        else if(sequence == "Escape")
-            sequence = "Esc";
+        // rename the keys whose Qt names differ from the names used by inputmap
+        sequence = normalisedKeyName(sequence);
     } else {
         // got an unknown key (usually something from non-eng layout)
         // use it's text value instead
@@ -147,4 +147,18 @@ QString ShortcutBuilder::fromEventText(QKeyEvent *event) {
     if(!sequence.isEmpty())
         sequence.prepend(modifierKeys(event));
     return sequence;
+}
+//------------------------------------------------------------------------------
+// Maps a Qt::Key name onto the name used for the same key in the input map, so
+// that a shortcut written as "Del" also matches the Qt name "Delete".
+QString ShortcutBuilder::normalisedKeyName(const QString &keyName) {
+    static const QMap<QString, QString> aliases = {
+        { "Return",     "Enter" },
+        { "Escape",     "Esc" },
+        { "Delete",     "Del" },
+        { "Insert",     "Ins" },
+        { "PageUp",     "PgUp" },
+        { "PageDown",   "PgDown" },
+    };
+    return aliases.value(keyName, keyName);
 }

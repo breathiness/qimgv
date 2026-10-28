@@ -18,4 +18,5 @@ private:
     static bool isModifier(Qt::Key key);
     static QString fromEventText(QKeyEvent *event);
     static QString fromEventNativeScanCode(QKeyEvent *event);
+    static QString normalisedKeyName(const QString &keyName);
 };

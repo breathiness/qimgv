@@ -792,6 +792,8 @@ NavBarMode Settings::navBarMode() {
         // migrate the old on/off option: auto-hide on -> auto, off -> always
         const bool autoHide = settings->settingsConf->value("autoHide", true).toBool();
         mode = autoHide ? NAVBAR_AUTO : NAVBAR_ALWAYS;
+        // write the new key so the old one is only looked at once
+        settings->settingsConf->setValue("mode", mode);
     }
     settings->settingsConf->endGroup();
     if(mode < NAVBAR_ALWAYS || mode > NAVBAR_NEVER)
