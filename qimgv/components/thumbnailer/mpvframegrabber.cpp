@@ -48,15 +48,26 @@ bool MpvFrameGrabber::grabFrame(const QString &videoPath, double positionSec, co
         mpv_set_option_string(mpv, "start", start.constData());
     }
 
-    if(mpv_initialize(mpv) < 0) {
+    const int initResult = mpv_initialize(mpv);
+    if(initResult < 0) {
+        qWarning() << "MpvFrameGrabber: mpv_initialize failed:" << mpv_error_string(initResult);
         mpv_destroy(mpv);
         return false;
     }
 
     const QByteArray input = videoPath.toUtf8();
     const char *command[] = {"loadfile", input.constData(), nullptr};
-    const bool started = mpv_command(mpv, command) >= 0;
-    const bool finished = started && waitForEnd(mpv, 8000);
+    const int loadResult = mpv_command(mpv, command);
+    if(loadResult < 0) {
+        // the code says why (file missing, unsupported container, ...); without it
+        // a broken thumbnail is indistinguishable from a slow one
+        qWarning() << "MpvFrameGrabber: loadfile failed on" << videoPath << "-" << mpv_error_string(loadResult);
+        mpv_destroy(mpv);
+        return false;
+    }
+    const bool finished = waitForEnd(mpv, 8000);
+    if(!finished)
+        qWarning() << "MpvFrameGrabber: no frame within 8s for" << videoPath;
     mpv_destroy(mpv);
 
     const QFileInfo written(outPath);

@@ -33,11 +33,15 @@ QString ThumbnailerRunnable::generateIdString(QString path, int size, bool crop)
 }
 
 std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, QString path, int size, bool crop, bool force) {
-    DocumentInfo imgInfo(path);
-    QString thumbnailId = generateIdString(path, size, crop);
+    // The file name and the modification time are all a cache hit needs. Working
+    // out the type and the EXIF orientation means DocumentInfo sniffs the file,
+    // which is wasted when the answer is already in the cache - and scrolling a
+    // folder asks for the same thumbnails over and over.
+    const QFileInfo fileInfo(path);
+    const QString fileName = fileInfo.fileName();
+    const QString thumbnailId = generateIdString(path, size, crop);
+    const QString time = QString::number(fileInfo.lastModified().toMSecsSinceEpoch());
     std::unique_ptr<QImage> image;
-
-    QString time = QString::number(imgInfo.lastModified().toMSecsSinceEpoch());
 
     if(!force && cache) {
         image.reset(cache->readThumbnail(thumbnailId));
@@ -46,8 +50,9 @@ std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, 
     }
 
     if(!image) {
+        DocumentInfo imgInfo(path);
         if(imgInfo.type() == DocumentType::NONE) {
-            std::shared_ptr<Thumbnail> thumbnail(new Thumbnail(imgInfo.fileName(), "", size, nullptr));
+            std::shared_ptr<Thumbnail> thumbnail(new Thumbnail(fileName, "", size, nullptr));
             return thumbnail;
         }
         std::pair<QImage*, QSize> pair(nullptr, QSize());
@@ -68,7 +73,7 @@ std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, 
         if(!image) {
             // every strategy failed: report an error thumbnail instead of
             // dereferencing a null image further down
-            std::shared_ptr<Thumbnail> failed(new Thumbnail(imgInfo.fileName(), "", size, nullptr));
+            std::shared_ptr<Thumbnail> failed(new Thumbnail(fileName, "", size, nullptr));
             return failed;
         }
 
@@ -85,14 +90,19 @@ std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, 
             image->setText("label", " [v]");
 
         if(cache) {
-            // save thumbnail if it makes sense
-            // FIXME: avoid too much i/o
-            if(originalSize.width() > size || originalSize.height() > size)
+            // An image is only worth caching once it had to be scaled down: a
+            // cached copy of one smaller than the tile would just be an upscaled
+            // one. A video frame is different - it cost a decode (and for clips
+            // below the tile size, the only thing that ever gets cached is
+            // exactly that small frame), so it is always kept.
+            const bool worthCaching = imgInfo.type() == VIDEO
+                                      || originalSize.width() > size
+                                      || originalSize.height() > size;
+            if(worthCaching)
                 cache->saveThumbnail(image.get(), thumbnailId);
         }
     }
-    auto && tmpPixmap = new QPixmap(image->size());
-    *tmpPixmap = QPixmap::fromImage(*image);
+    auto && tmpPixmap = new QPixmap(QPixmap::fromImage(*image));
     tmpPixmap->setDevicePixelRatio(qApp->devicePixelRatio());
 
     QString label;
@@ -106,7 +116,7 @@ std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, 
                 image->text("label");
     }
     std::shared_ptr<QPixmap> pixmapPtr(tmpPixmap);
-    std::shared_ptr<Thumbnail> thumbnail(new Thumbnail(imgInfo.fileName(), label, size, pixmapPtr));
+    std::shared_ptr<Thumbnail> thumbnail(new Thumbnail(fileName, label, size, pixmapPtr));
     return thumbnail;
 }
 
@@ -148,7 +158,14 @@ std::pair<QImage*, QSize> ThumbnailerRunnable::createThumbnail(QString path, con
     }
     if(manualResize) { // manual resize & crop. slower but should just work
         QImage *fullSize = new QImage();
-        reader->read(fullSize);
+        if(!reader->read(fullSize)) {
+            // nothing to scale: report a failed thumbnail instead of an empty
+            // one that would still be handed to the view
+            delete fullSize;
+            reader->setFileName("");
+            delete reader;
+            return std::make_pair(nullptr, QSize());
+        }
         if(indexed) {
             auto newFmt = QImage::Format_RGB32;
             if(fullSize->hasAlphaChannel())
@@ -257,9 +274,12 @@ std::pair<QImage*, QSize> ThumbnailerRunnable::createShellThumbnail(QString path
 #endif
 
 std::pair<QImage*, QSize> ThumbnailerRunnable::createVideoThumbnail(QString path, int size, bool squared) {
-    QFileInfo fi(path);
     QImageReader reader;
-    QString tmpFilePath = settings->tmpDir() + fi.fileName() + ".png";
+    // Keyed by the thumbnail id rather than by the file name: two clips with the
+    // same name in different folders, or the same clip at another size, would
+    // otherwise write one temporary file from two worker threads at once.
+    const QString tmpFilePath = settings->tmpDir() + generateIdString(path, size, squared) + ".png";
+    QFile tmpFile(tmpFilePath);
 
     // One second in, so the frame shows something instead of a fade-in or a
     // black lead-in. Clips shorter than that have no frame there, so fall back
@@ -267,6 +287,8 @@ std::pair<QImage*, QSize> ThumbnailerRunnable::createVideoThumbnail(QString path
 #ifdef USE_MPV
     if(!MpvFrameGrabber::grabFrame(path, 1.0, tmpFilePath)
        && !MpvFrameGrabber::grabFrame(path, 0.0, tmpFilePath)) {
+        // a grab that timed out can still have left a partial file behind
+        tmpFile.remove();
         return std::make_pair(nullptr, QSize());
     }
 #else
@@ -296,7 +318,6 @@ std::pair<QImage*, QSize> ThumbnailerRunnable::createVideoThumbnail(QString path
     reader.setFileName("");
 
     // remove temporary file
-    QFile tmpFile(tmpFilePath);
     tmpFile.remove();
 
     return std::make_pair(result, originalSize);
