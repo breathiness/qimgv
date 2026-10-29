@@ -85,13 +85,18 @@ QString Settings::tmpDir() {
 //------------------------------------------------------------------------------
 // this here is temporarily, will be moved to some sort of theme manager class
 void Settings::loadStylesheet() {
-    // stylesheet template file. A real QStyle (Qlementine) cannot coexist with
-    // an application-wide stylesheet here: setting one makes Qt wrap the style
-    // in QStyleSheetStyle, which recurses into itself and overflows the stack
-    // (verified with both the full and the reduced stylesheet). Qlementine mode
-    // therefore applies no stylesheet; widgets qimgv paints itself take their
-    // colours from the palette instead (see UiStyle / ColorScheme).
-    const bool qlementineMode = UiStyle::useQlementine();
+    // Qlementine mode applies no stylesheet at all. A real QStyle cannot coexist
+    // with an application-wide stylesheet here: setting one makes Qt wrap the
+    // style in QStyleSheetStyle, which recurses into itself and overflows the
+    // stack (verified with both the full and the reduced stylesheet). Widgets
+    // qimgv paints itself take their colours from the palette instead (see
+    // UiStyle / ColorScheme).
+    //
+    // So there is nothing to build either, and building it is not free: the
+    // template read, the ~60 substitutions and the font metrics below all cost
+    // real time on every theme change, for a string that is then thrown away.
+    if(UiStyle::useQlementine())
+        return;
     QFile file(":/res/styles/style-template.qss");
     if(file.open(QFile::ReadOnly)) {
         QString styleSheet = QLatin1String(file.readAll());
@@ -226,8 +231,7 @@ void Settings::loadStylesheet() {
             styleSheet.replace("%topbar_border_rgba%", colors.folderview.name());
 
         // --- apply -------------------------------------------------
-        if(!qlementineMode)
-            qApp->setStyleSheet(styleSheet);
+        qApp->setStyleSheet(styleSheet);
     }
 }
 //------------------------------------------------------------------------------
