@@ -13,7 +13,7 @@ QString ThumbnailCache::thumbnailPath(QString id) {
     return QString(cacheDirPath + id + ".jpg");
 }
 
-void ThumbnailCache::saveThumbnail(QImage *image, QString id) {
+void ThumbnailCache::saveThumbnail(const QImage *image, QString id) {
     if(!image)
         return;
     const QString filePath = thumbnailPath(id);
@@ -31,18 +31,13 @@ void ThumbnailCache::saveThumbnail(QImage *image, QString id) {
         QFile::remove(tmpPath);
 }
 
-QImage *ThumbnailCache::readThumbnail(QString id) {
-    QString filePath = thumbnailPath(id);
-    QFileInfo file(filePath);
-    if(file.exists() && file.isReadable()) {
-        QImage *thumb = new QImage();
-        if(thumb->load(filePath)) {
-            return thumb;
-        } else {
-            delete thumb;
-            return nullptr;
-        }
-    } else {
+std::unique_ptr<QImage> ThumbnailCache::readThumbnail(QString id) {
+    const QString filePath = thumbnailPath(id);
+    const QFileInfo file(filePath);
+    if(!file.exists() || !file.isReadable())
         return nullptr;
-    }
+    auto thumb = std::make_unique<QImage>();
+    if(!thumb->load(filePath))
+        return nullptr;
+    return thumb;
 }

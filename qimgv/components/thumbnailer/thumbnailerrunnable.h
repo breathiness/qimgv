@@ -21,12 +21,21 @@ public:
     static std::shared_ptr<Thumbnail> generate(ThumbnailCache *cache, QString path, int size, bool crop, bool force);
 private:
     static QString generateIdString(QString path, int size, bool crop);
-    static std::pair<QImage*, QSize> createThumbnail(QString path, const char* format, int size, bool crop);
-    static std::pair<QImage*, QSize> createVideoThumbnail(QString path, int size, bool crop);
+
+    // A generated thumbnail together with the size of the image it was made from.
+    // The image is owned: these used to return a QImage*, so every failed decode
+    // and every early return was a chance to forget a delete.
+    struct ThumbnailImage {
+        std::unique_ptr<QImage> image;
+        QSize originalSize;
+    };
+
+    static ThumbnailImage createThumbnail(const QString &path, const char* format, int size, bool crop);
+    static ThumbnailImage createVideoThumbnail(const QString &path, int size, bool crop);
 #ifdef _WIN32
     // asks the Explorer shell for its cached thumbnail; much cheaper than
     // decoding the video ourselves
-    static std::pair<QImage*, QSize> createShellThumbnail(QString path, int size, bool crop);
+    static ThumbnailImage createShellThumbnail(const QString &path, int size, bool crop);
 #endif
     QString path;
     int size;

@@ -44,37 +44,39 @@ std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, 
     std::unique_ptr<QImage> image;
 
     if(!force && cache) {
-        image.reset(cache->readThumbnail(thumbnailId));
+        image = cache->readThumbnail(thumbnailId);
         if(image && image->text("lastModified") != time)
-            image.reset(nullptr);
+            image.reset();
     }
 
     if(!image) {
         DocumentInfo imgInfo(path);
         if(imgInfo.type() == DocumentType::NONE) {
-            std::shared_ptr<Thumbnail> thumbnail(new Thumbnail(fileName, "", size, nullptr));
-            return thumbnail;
+            return std::make_shared<Thumbnail>(fileName, "", size, nullptr);
         }
-        std::pair<QImage*, QSize> pair(nullptr, QSize());
+
+        ThumbnailImage generated;
         if(imgInfo.type() == VIDEO) {
 #ifdef _WIN32
             // fastest first: the Explorer shell already has (or cheaply makes)
             // a frame, and falls back to decoding only when it has nothing
-            pair = createShellThumbnail(path, size, crop);
+            generated = createShellThumbnail(path, size, crop);
 #endif
-            if(!pair.first)
-                pair = createVideoThumbnail(path, size, crop);
+            if(!generated.image)
+                generated = createVideoThumbnail(path, size, crop);
         } else {
-            pair = createThumbnail(imgInfo.filePath(), imgInfo.format().toStdString().c_str(), size, crop);
+            // QImageReader copies the format name, but keeping it alive for the
+            // call beats relying on how long a temporary would last.
+            const QByteArray format = imgInfo.format().toUtf8();
+            generated = createThumbnail(imgInfo.filePath(), format.constData(), size, crop);
         }
-        image.reset(pair.first);
-        QSize originalSize = pair.second;
+        const QSize originalSize = generated.originalSize;
+        image = std::move(generated.image);
 
         if(!image) {
             // every strategy failed: report an error thumbnail instead of
             // dereferencing a null image further down
-            std::shared_ptr<Thumbnail> failed(new Thumbnail(fileName, "", size, nullptr));
-            return failed;
+            return std::make_shared<Thumbnail>(fileName, "", size, nullptr);
         }
 
         image = ImageLib::exifRotated(std::move(image), imgInfo.exifOrientation());
@@ -102,11 +104,11 @@ std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, 
                 cache->saveThumbnail(image.get(), thumbnailId);
         }
     }
-    auto && tmpPixmap = new QPixmap(QPixmap::fromImage(*image));
-    tmpPixmap->setDevicePixelRatio(qApp->devicePixelRatio());
+    auto pixmap = std::make_unique<QPixmap>(QPixmap::fromImage(*image));
+    pixmap->setDevicePixelRatio(qApp->devicePixelRatio());
 
     QString label;
-    if(tmpPixmap->width() == 0) {
+    if(pixmap->width() == 0) {
         label = "error";
     } else  {
         // put info into Thumbnail object
@@ -115,20 +117,19 @@ std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, 
                 image->text("originalHeight") +
                 image->text("label");
     }
-    std::shared_ptr<QPixmap> pixmapPtr(tmpPixmap);
-    std::shared_ptr<Thumbnail> thumbnail(new Thumbnail(fileName, label, size, pixmapPtr));
-    return thumbnail;
+    std::shared_ptr<QPixmap> pixmapPtr(std::move(pixmap));
+    return std::make_shared<Thumbnail>(fileName, label, size, pixmapPtr);
 }
 
 ThumbnailerRunnable::~ThumbnailerRunnable() {
 }
 
-std::pair<QImage*, QSize> ThumbnailerRunnable::createThumbnail(QString path, const char *format, int size, bool squared) {
-    QImageReader *reader = new QImageReader(path, format);
+ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createThumbnail(const QString &path, const char *format, int size, bool squared) {
     Qt::AspectRatioMode ARMode = squared?
                 (Qt::KeepAspectRatioByExpanding):(Qt::KeepAspectRatio);
-    QImage *result = nullptr;
-    QSize originalSize;
+    auto reader = std::make_unique<QImageReader>(path, format);
+    ThumbnailImage result;
+
     bool indexed = (reader->imageFormat() == QImage::Format_Indexed8);
     bool manualResize = indexed || !reader->supportsOption(QImageIOHandler::Size);
     if(!manualResize) { // resize during read via QImageReader (faster)
@@ -140,60 +141,77 @@ std::pair<QImage*, QSize> ThumbnailerRunnable::createThumbnail(QString path, con
             clip.moveCenter(scaledRect.center());
             reader->setScaledClipRect(clip);
         }
-        originalSize = reader->size();
-        result = new QImage();
-        if(!reader->read(result)) {
+        result.originalSize = reader->size();
+        result.image = std::make_unique<QImage>();
+        if(!reader->read(result.image.get())) {
             // If read() returns false there's no guarantee that size conversion worked properly.
             // So we fallback to manual.
             // Se far I've seen this happen only on some weird (corrupted?) jpeg saved from camera
             manualResize = true;
-            delete result;
-            result = nullptr;
+            result.image.reset();
+            result.originalSize = QSize();
             // Force reset reader because it is really finicky
             // and can fail on the second read attempt (yeah wtf)
-            reader->setFileName("");
-            delete reader;
-            reader = new QImageReader(path, format);
+            reader = std::make_unique<QImageReader>(path, format);
         }
     }
     if(manualResize) { // manual resize & crop. slower but should just work
-        QImage *fullSize = new QImage();
-        if(!reader->read(fullSize)) {
+        auto fullSize = std::make_unique<QImage>();
+        if(!reader->read(fullSize.get())) {
             // nothing to scale: report a failed thumbnail instead of an empty
             // one that would still be handed to the view
-            delete fullSize;
-            reader->setFileName("");
-            delete reader;
-            return std::make_pair(nullptr, QSize());
+            return ThumbnailImage();
         }
         if(indexed) {
             auto newFmt = QImage::Format_RGB32;
             if(fullSize->hasAlphaChannel())
                 newFmt = QImage::Format_ARGB32;
-            auto tmp = new QImage(fullSize->convertToFormat(newFmt));
-            delete fullSize;
-            fullSize = tmp;
+            fullSize = std::make_unique<QImage>(fullSize->convertToFormat(newFmt));
         }
-        originalSize = fullSize->size();
+        result.originalSize = fullSize->size();
         QSize scaledSize = fullSize->size().scaled(size, size, ARMode);
         if(squared) {
             QRect clip(0, 0, size, size);
             QRect scaledRect(QPoint(0,0), scaledSize);
             clip.moveCenter(scaledRect.center());
-            QImage scaled = QImage(fullSize->scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-            result = ImageLib::croppedRaw(&scaled, clip);
+            QImage scaled = fullSize->scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+            result.image = std::unique_ptr<QImage>(ImageLib::croppedRaw(&scaled, clip));
         } else {
-            result = new QImage(fullSize->scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+            result.image = std::make_unique<QImage>(fullSize->scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         }
-        delete fullSize;
     }
-    // force reader to close file so it can be deleted later
-    reader->setFileName("");
-    delete reader;
-    return std::make_pair(result, originalSize);
+    // the reader closes the file when it goes out of scope here
+    return result;
 }
 
 #ifdef _WIN32
+namespace {
+// COINIT_APARTMENTTHREADED has to be balanced by CoUninitialize on every way out
+// of the function, and there is more than one now.
+class ScopedComInitialization {
+public:
+    ScopedComInitialization() :
+        mInitialized(SUCCEEDED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE)))
+    {}
+    ~ScopedComInitialization() {
+        if(mInitialized)
+            CoUninitialize();
+    }
+    ScopedComInitialization(const ScopedComInitialization &) = delete;
+    ScopedComInitialization &operator=(const ScopedComInitialization &) = delete;
+private:
+    const bool mInitialized;
+};
+
+// IShellItemImageFactory is a COM interface, so it is released, not deleted.
+struct ShellItemImageFactoryReleaser {
+    void operator()(IShellItemImageFactory *factory) const {
+        if(factory)
+            factory->Release();
+    }
+};
+} // namespace
+
 // Qt 5.15 no longer ships QImage::fromHBITMAP, so the DIB is read manually.
 // Format_RGB32 is used on purpose: shell thumbnails often carry a zero alpha
 // channel which would otherwise make the whole frame transparent.
@@ -227,54 +245,48 @@ static QImage imageFromHBITMAP(HBITMAP bitmap) {
 
 // Explorer keeps a thumbnail cache for videos, so asking for it costs a few
 // milliseconds instead of spawning a whole mpv process.
-std::pair<QImage*, QSize> ThumbnailerRunnable::createShellThumbnail(QString path, int size, bool squared) {
+ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createShellThumbnail(const QString &path, int size, bool squared) {
+    const ScopedComInitialization com;
+
+    IShellItemImageFactory *createdFactory = nullptr;
+    const HRESULT createResult = SHCreateItemFromParsingName(reinterpret_cast<PCWSTR>(path.utf16()),
+                                                             nullptr, IID_PPV_ARGS(&createdFactory));
+    std::unique_ptr<IShellItemImageFactory, ShellItemImageFactoryReleaser> factory(createdFactory);
+    if(FAILED(createResult) || !factory)
+        return ThumbnailImage();
+
+    SIZE requestedSize;
+    requestedSize.cx = size;
+    requestedSize.cy = size;
+
+    HBITMAP bitmap = nullptr;
+    // THUMBNAILONLY: never settle for a generic icon, a real frame is wanted
+    const HRESULT fetchResult = factory->GetImage(requestedSize, SIIGBF_THUMBNAILONLY | SIIGBF_BIGGERSIZEOK, &bitmap);
     QImage image;
-    const HRESULT initResult = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-    const bool shouldUninitialize = SUCCEEDED(initResult);
-
-    IShellItemImageFactory *factory = nullptr;
-    HRESULT hr = SHCreateItemFromParsingName(reinterpret_cast<PCWSTR>(path.utf16()),
-                                             nullptr, IID_PPV_ARGS(&factory));
-    if(SUCCEEDED(hr) && factory) {
-        SIZE requestedSize;
-        requestedSize.cx = size;
-        requestedSize.cy = size;
-        HBITMAP bitmap = nullptr;
-        // THUMBNAILONLY: never settle for a generic icon, a real frame is wanted
-        hr = factory->GetImage(requestedSize, SIIGBF_THUMBNAILONLY | SIIGBF_BIGGERSIZEOK, &bitmap);
-        if(SUCCEEDED(hr) && bitmap) {
-            QImage converted = imageFromHBITMAP(bitmap);
-            DeleteObject(bitmap);
-            if(!converted.isNull())
-                image = converted;
-        }
-        factory->Release();
+    if(SUCCEEDED(fetchResult) && bitmap) {
+        image = imageFromHBITMAP(bitmap);
+        DeleteObject(bitmap);
     }
-
-    if(shouldUninitialize)
-        CoUninitialize();
-
     if(image.isNull())
-        return std::make_pair(nullptr, QSize());
+        return ThumbnailImage();
 
-    const QSize originalSize = image.size();
-    QImage *result = nullptr;
+    ThumbnailImage result;
+    result.originalSize = image.size();
     if(squared) {
         const QImage scaledImage = image.scaled(size, size, Qt::KeepAspectRatioByExpanding,
                                                 Qt::SmoothTransformation);
         QRect clip(0, 0, size, size);
         clip.moveCenter(QRect(QPoint(0, 0), scaledImage.size()).center());
-        result = new QImage(scaledImage.copy(clip));
+        result.image = std::make_unique<QImage>(scaledImage.copy(clip));
     } else {
-        const QSize scaledSize = originalSize.scaled(size, size, Qt::KeepAspectRatio);
-        result = new QImage(image.scaled(scaledSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        const QSize scaledSize = result.originalSize.scaled(size, size, Qt::KeepAspectRatio);
+        result.image = std::make_unique<QImage>(image.scaled(scaledSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
-    return std::make_pair(result, originalSize);
+    return result;
 }
 #endif
 
-std::pair<QImage*, QSize> ThumbnailerRunnable::createVideoThumbnail(QString path, int size, bool squared) {
-    QImageReader reader;
+ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createVideoThumbnail(const QString &path, int size, bool squared) {
     // Keyed by the thumbnail id rather than by the file name: two clips with the
     // same name in different folders, or the same clip at another size, would
     // otherwise write one temporary file from two worker threads at once.
@@ -289,18 +301,17 @@ std::pair<QImage*, QSize> ThumbnailerRunnable::createVideoThumbnail(QString path
        && !MpvFrameGrabber::grabFrame(path, 0.0, tmpFilePath)) {
         // a grab that timed out can still have left a partial file behind
         tmpFile.remove();
-        return std::make_pair(nullptr, QSize());
+        return ThumbnailImage();
     }
 #else
     // built without video support: there is no libmpv to grab a frame with
-    return std::make_pair(nullptr, QSize());
+    return ThumbnailImage();
 #endif
 
-    reader.setFileName(tmpFilePath);
+    QImageReader reader(tmpFilePath);
     reader.setFormat("png");
     Qt::AspectRatioMode ARMode = squared?
                 (Qt::KeepAspectRatioByExpanding):(Qt::KeepAspectRatio);
-    QImage *result = nullptr;
 
     // scale & crop
     QSize scaledSize = reader.size().scaled(size, size, ARMode);
@@ -311,8 +322,10 @@ std::pair<QImage*, QSize> ThumbnailerRunnable::createVideoThumbnail(QString path
         clip.moveCenter(scaledRect.center());
         reader.setScaledClipRect(clip);
     }
-    QSize originalSize = reader.size();
-    result = new QImage(reader.read());
+
+    ThumbnailImage result;
+    result.originalSize = reader.size();
+    result.image = std::make_unique<QImage>(reader.read());
 
     // force reader to close file so it can be deleted later
     reader.setFileName("");
@@ -320,5 +333,5 @@ std::pair<QImage*, QSize> ThumbnailerRunnable::createVideoThumbnail(QString path
     // remove temporary file
     tmpFile.remove();
 
-    return std::make_pair(result, originalSize);
+    return result;
 }
