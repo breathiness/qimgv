@@ -19,7 +19,10 @@ public slots:
     void getThumbnailAsync(QString path, int size, bool crop, bool force);
 
 private:
-    ThumbnailCache *cache;
+    // One cache per thumbnailer, and the thumbnailer outlives every runnable that
+    // reads it (the destructor waits for the pool). As a member it also cannot be
+    // forgotten the way the pointer it replaces was.
+    ThumbnailCache cache;
     QThreadPool *pool;
     void startThumbnailerThread(QString filePath, int size, bool crop, bool force);
     QMultiMap<QString, int> runningTasks;
