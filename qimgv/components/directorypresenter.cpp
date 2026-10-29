@@ -6,6 +6,7 @@
 #include <QPainter>
 #include <QPolygonF>
 #include <QSet>
+#include <QtSvg/QSvgRenderer>
 
 #include "settings.h"
 #include "sourcecontainers/thumbnail.h"
@@ -290,26 +291,32 @@ void DirectoryPresenter::generateThumbnails(QList<int> indexes, int size, bool c
     }
     for(int i : indexes) {
         if(i < model->dirCount()) {
-            // tmp ------------------------------------------------------------
-            // gen thumb for a directory
-            // TODO: optimize & move dir icon loading to shared res; then overlay
-            // the mini-thumbs on top (similar to dolphin)
-            QSvgRenderer svgRenderer;
-            svgRenderer.load(QString(":/res/icons/common/other/folder32-scalable.svg"));
-            int factor = (size * 0.90f) / svgRenderer.defaultSize().width();
-            QPixmap *pixmap = new QPixmap(svgRenderer.defaultSize() * factor);
-            pixmap->fill(Qt::transparent);
-            QPainter pixPainter(pixmap);
-            svgRenderer.render(&pixPainter);
-            pixPainter.end();
-
-            ImageLib::recolor(*pixmap, settings->colorScheme().icons);
+            // Every directory row shows the same icon, so it is rendered once per
+            // size and colour and then shared: the SVG parse plus the recolor for
+            // each row added up to most of the time a folder-heavy listing took.
+            const QColor iconColor = settings->colorScheme().icons;
+            const QString cacheKey = QString::number(size) + "|" + iconColor.name(QColor::HexArgb);
+            std::shared_ptr<QPixmap> pixmap = mDirIconCache.value(cacheKey);
+            if(!pixmap) {
+                QSvgRenderer svgRenderer;
+                svgRenderer.load(QString(":/res/icons/common/other/folder32-scalable.svg"));
+                int factor = (size * 0.90f) / svgRenderer.defaultSize().width();
+                pixmap = std::make_shared<QPixmap>(svgRenderer.defaultSize() * factor);
+                pixmap->fill(Qt::transparent);
+                QPainter pixPainter(pixmap.get());
+                svgRenderer.render(&pixPainter);
+                pixPainter.end();
+                ImageLib::recolor(*pixmap, iconColor);
+                // a handful of sizes is all this ever holds
+                if(mDirIconCache.size() > 8)
+                    mDirIconCache.clear();
+                mDirIconCache.insert(cacheKey, pixmap);
+            }
 
             std::shared_ptr<Thumbnail> thumb(new Thumbnail(model->dirNameAt(i),
                                                            "Folder",
                                                            size,
-                                                           std::shared_ptr<QPixmap>(pixmap)));
-            // ^----------------------------------------------------------------
+                                                           pixmap));
             view->setThumbnail(i, thumb);
         } else {
             QString path = model->filePathAt(i - model->dirCount());

@@ -11,7 +11,13 @@
 #include "utils/cmdoptionsrunner.h"
 #include "sharedresources.h"
 #include "proxystyle.h"
+#include "uistyle.h"
 #include "core.h"
+
+#ifdef USE_QLEMENTINE
+#include <oclero/qlementine/style/QlementineStyle.hpp>
+#include <oclero/qlementine/icons/QlementineIcons.hpp>
+#endif
 
 #ifdef __APPLE__
 #include "macosapplication.h"
@@ -75,8 +81,25 @@ int main(int argc, char *argv[]) {
         a.setStyle(QStyleFactory::create("Fusion"));
 #else
     QApplication a(argc, argv);
+#ifdef USE_QLEMENTINE
+    // Qlementine is the default UI. QIMGV_UI=classic falls back to the old
+    // stylesheet based look (useful for comparing without a rebuild).
+    if(qgetenv("QIMGV_UI") != "classic") {
+        auto *qlementineStyle = new oclero::qlementine::QlementineStyle;
+        qlementineStyle->setThemeJsonPath(":/qlementine/resources/themes/dark.json");
+        a.setStyle(qlementineStyle);
+        UiStyle::setUseQlementine(true);
+        oclero::qlementine::icons::initializeIconTheme();
+        QIcon::setThemeName("qlementine");
+        qDebug() << "UI style:" << qlementineStyle->metaObject()->className();
+    } else {
+        // use some style workarounds
+        a.setStyle(new ProxyStyle);
+    }
+#else
     // use some style workarounds
     a.setStyle(new ProxyStyle);
+#endif
 #endif
 
     QCoreApplication::setOrganizationName("qimgv");
@@ -159,10 +182,13 @@ int main(int argc, char *argv[]) {
     QObject::connect(&a, &MacOSApplication::fileOpened, &core, &Core::loadPath);
 #endif
 
-    if(parser.positionalArguments().count())
+    if(parser.positionalArguments().count()) {
         core.loadPath(parser.positionalArguments().at(0));
-    else if(settings->defaultViewMode() == MODE_FOLDERVIEW)
+    } else {
+        // started without a file: open the folder view instead of an empty
+        // viewer, at the home directory
         core.loadPath(QDir::homePath());
+    }
 
     // wait for event queue to catch up before showing window
     // this avoids white background flicker on windows (or not?)

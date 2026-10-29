@@ -26,6 +26,7 @@ option(VIDEO_SUPPORT "Enable video support" ON)
 option(OPENCV_SUPPORT "Enable HQ scaling via OpenCV" ON)
 option(KDE_SUPPORT "Support blur when using KDE" OFF)
 option(USE_QT5 "Build with Qt5 if available" ON)
+option(QLEMENTINE "Use the Qlementine widget style (requires Qt6)" OFF)
 
 if(UNIX AND NOT APPLE)
     set(QT_EXTERN_PATH "" CACHE STRING "Tell compile external QT path, example: (/opt/Qt/6.2.0/gcc_64)")
@@ -74,6 +75,21 @@ if(OPENCV_SUPPORT)
 endif()
 
 ##############################################################
+
+if(QLEMENTINE)
+    if(QT_VERSION_MAJOR LESS 6)
+        message(FATAL_ERROR "QLEMENTINE requires Qt6 (configure with -DUSE_QT5=OFF)")
+    endif()
+    # both are submodules; a plain clone leaves the directories empty
+    foreach(dep qlementine qlementine-icons)
+        if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/${dep}/CMakeLists.txt")
+            message(FATAL_ERROR
+                "3rdparty/${dep} is empty - run: git submodule update --init --recursive")
+        endif()
+    endforeach()
+    add_subdirectory(3rdparty/qlementine EXCLUDE_FROM_ALL)
+    add_subdirectory(3rdparty/qlementine-icons EXCLUDE_FROM_ALL)
+endif()
 
 add_subdirectory(qimgv)
 

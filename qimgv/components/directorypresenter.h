@@ -8,9 +8,6 @@
 #include "sharedresources.h"
 #include <QMimeData>
 
-//tmp
-#include <QtSvg/QSvgRenderer>
-
 class DirectoryPresenter : public QObject {
     Q_OBJECT
 public:
@@ -62,4 +59,7 @@ private:
     std::shared_ptr<DirectoryModel> model = nullptr;
     Thumbnailer thumbnailer;
     bool mShowDirs;
+    // one rendered folder icon per (size, colour), shared by every directory row:
+    // re-rendering the SVG for each of them was the bulk of a folder-heavy listing
+    QHash<QString, std::shared_ptr<QPixmap>> mDirIconCache;
 };

@@ -44,3 +44,8 @@ elseif(WIN32)
         directorymanager/watchers/windows/windowswatcher.cpp
         directorymanager/watchers/windows/windowsworker.cpp)
 endif()
+
+# video frames are grabbed with libmpv, in-process (see thumbnailer/)
+if(VIDEO_SUPPORT)
+    target_sources(qimgv PRIVATE thumbnailer/mpvframegrabber.cpp)
+endif()

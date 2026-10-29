@@ -137,7 +137,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="pathLabel">
+          <widget class="ElidedLabel" name="pathLabel">
            <property name="cursor">
             <cursorShape>IBeamCursor</cursorShape>
            </property>
@@ -767,6 +767,11 @@
    <slots>
     <signal>clicked()</signal>
    </slots>
+  </customwidget>
+  <customwidget>
+   <class>ElidedLabel</class>
+   <extends>QLabel</extends>
+   <header>gui/customwidgets/elidedlabel.h</header>
   </customwidget>
   <customwidget>
    <class>StyledComboBox</class>

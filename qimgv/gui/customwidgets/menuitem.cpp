@@ -1,4 +1,5 @@
 #include "menuitem.h"
+#include "uistyle.h"
 
 MenuItem::MenuItem(QWidget *parent)
     : QWidget(parent)
@@ -62,7 +63,35 @@ void MenuItem::paintEvent(QPaintEvent *event) {
     QStyleOption opt;
     opt.initFrom(this);
     QPainter p(this);
+    if(UiStyle::useQlementine()) {
+        // the stylesheet used to draw the hover highlight; use the colour the
+        // style gives its own list rows
+        UiStyle::ChromePalette pal;
+        if(mHovered && isEnabled() && UiStyle::chromePalette(pal))
+            p.fillRect(rect(), pal.menuHover);
+        return;
+    }
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+}
+
+bool MenuItem::event(QEvent *event) {
+    switch(event->type()) {
+    case QEvent::Enter:
+        if(!mHovered) {
+            mHovered = true;
+            update();
+        }
+        break;
+    case QEvent::Leave:
+        if(mHovered) {
+            mHovered = false;
+            update();
+        }
+        break;
+    default:
+        break;
+    }
+    return QWidget::event(event);
 }
 
 void MenuItem::onPress() {

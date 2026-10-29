@@ -28,6 +28,13 @@ enum SortingMode {
     SORT_TIME_DESC
 };
 
+// how the floating navigation bar behaves
+enum NavBarMode {
+    NAVBAR_ALWAYS,  // docked and visible all the time
+    NAVBAR_AUTO,    // hidden, slides up when the mouse reaches the bottom edge
+    NAVBAR_NEVER    // not shown at all
+};
+
 enum ImageFitMode {
     FIT_WINDOW,
     FIT_WIDTH,
@@ -125,8 +132,6 @@ public:
     void setVolume(int vol);
     int volume();
     QString thumbnailCacheDir();
-    QString mpvBinary();
-    void setMpvBinary(QString path);
     PanelPosition panelPosition();
     void setPanelPosition(PanelPosition);
     bool loopSlideshow();
@@ -138,9 +143,8 @@ public:
     // per-button custom icon path (empty string = use the automatic icon)
     QStringList navBarIcons();
     void saveNavBar(const QStringList &shortcuts, const QStringList &icons);
-    // expands only when the mouse gets close to the bottom edge
-    bool navBarAutoHide();
-    void setNavBarAutoHide(bool mode);
+    NavBarMode navBarMode();
+    void setNavBarMode(NavBarMode mode);
     // the built-in button set used when nothing was configured yet
     static QStringList defaultNavBarShortcuts();
     bool panelEnabled();

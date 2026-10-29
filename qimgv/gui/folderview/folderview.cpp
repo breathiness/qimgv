@@ -1,5 +1,8 @@
 #include "folderview.h"
 #include "ui_folderview.h"
+#include "uistyle.h"
+
+#include <QFontMetrics>
 
 FolderView::FolderView(QWidget *parent) :
     FloatingWidgetContainer(parent),
@@ -7,10 +10,27 @@ FolderView::FolderView(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    // Without the stylesheet nothing fixes these sizes any more; restore what the
+    // rules in style-template.qss used to set (FolderViewTopBar, PathBar QLabel).
+    if(UiStyle::useQlementine()) {
+        const QFontMetrics fm(font());
+        const int textHeight = fm.height();
+        const int textPadding = qMax(static_cast<int>(textHeight * 0.10f), 4);
+        ui->topBar->setFixedHeight(qMax(textHeight + textPadding * 2 + 4 * 2, 38));
+        // keeps the path off the rounded border of its field
+        ui->pathLabel->setContentsMargins(8, 0, 9, 0);
+    }
+
     // ------- filesystem view --------
-    QString style = "font: %1pt;";
-    style = style.arg(QApplication::font().pointSize());
-    ui->dirTreeView->setStyleSheet(style);
+    // The font has to be restated for the tree: the stylesheet used to do it. It
+    // is defined in points by default and in pixels by Qlementine, where
+    // pointSize() is -1 - a "-1pt" rule makes Qt warn for every row and leaves
+    // the view with no usable font.
+    const QFont appFont = QApplication::font();
+    if(appFont.pointSize() > 0)
+        ui->dirTreeView->setStyleSheet(QString("font: %1pt;").arg(appFont.pointSize()));
+    else if(appFont.pixelSize() > 0)
+        ui->dirTreeView->setStyleSheet(QString("font: %1px;").arg(appFont.pixelSize()));
 
     optionsPopup = new FVOptionsPopup();
     popupTimerClutch.start();
@@ -287,6 +307,8 @@ void FolderView::setDirectoryPath(QString path) {
     }
 #endif
     ui->pathLabel->setText(path);
+    // the label elides a long path, so keep the whole one reachable
+    ui->pathLabel->setToolTip(path);
 
     if(ui->dirTreeView->currentIndex().data() == path)
         return;
@@ -363,7 +385,39 @@ void FolderView::paintEvent(QPaintEvent *) {
     QStyleOption opt;
     opt.initFrom(this);
     QPainter p(this);
+    if(UiStyle::paintBackground(this, p, false)) {
+        paintChrome(p);
+        return;
+    }
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+}
+
+// Parts of the folder view that only a stylesheet used to paint, drawn here in
+// the colours the Qlementine theme uses, before the children (they draw on top).
+void FolderView::paintChrome(QPainter &p) {
+    UiStyle::ChromePalette pal;
+    if(!UiStyle::chromePalette(pal))
+        return;
+    const QRect topBarRect = ui->topBar->geometry();
+    p.fillRect(topBarRect, pal.bar);
+
+    // The path field: only the text sits in it, so the up button next to it reads
+    // as a button of its own instead of part of the field.
+    const QRect labelRect(ui->pathLabel->mapTo(this, QPoint(0, 0)), ui->pathLabel->size());
+    const QRectF field = QRectF(labelRect).adjusted(0.5, 4.5, -0.5, -4.5);
+    if(field.width() > 2 && field.height() > 2) {
+        p.setRenderHint(QPainter::Antialiasing, true);
+        p.setBrush(pal.surface);
+        p.setPen(QPen(pal.surfaceLine, 1.0));
+        p.drawRoundedRect(field, pal.radius, pal.radius);
+    }
+
+    // 1px seam under the top bar
+    const QRect contentsRect = ui->contentsWidget->geometry();
+    p.setRenderHint(QPainter::Antialiasing, false);
+    p.setPen(QPen(pal.seam, 1));
+    p.drawLine(contentsRect.topLeft(), contentsRect.topRight());
+    p.setBrush(Qt::NoBrush);
 }
 
 void FolderView::resizeEvent(QResizeEvent *event) {

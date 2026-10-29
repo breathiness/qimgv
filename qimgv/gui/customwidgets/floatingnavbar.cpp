@@ -1,5 +1,7 @@
 #include "floatingnavbar.h"
 
+#include "uistyle.h"
+
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QMouseEvent>
@@ -10,7 +12,6 @@
 #include <QIcon>
 #include <QPixmap>
 #include <QMap>
-#include <QTransform>
 #include <QPropertyAnimation>
 #include <QTimer>
 #include <QEnterEvent>
@@ -31,15 +32,53 @@ QString actionForShortcut(const QString &shortcut) {
     return actionManager->actionForShortcut(shortcut);
 }
 
+// action name -> icon in the themed set (qlementine-icons), used when the
+// Qlementine style is active. Missing entries fall back to the PNG resources.
+const QMap<QString, QString> &actionThemeIcons() {
+    static const QMap<QString, QString> icons = {
+        {"prevImage",         "navigation/arrow-left"},
+        {"nextImage",         "navigation/arrow-right"},
+        {"prevDirectory",     "navigation/arrow-left"},
+        {"nextDirectory",     "navigation/arrow-right"},
+        {"zoomIn",            "action/zoom-in"},
+        {"zoomOut",           "action/zoom-out"},
+        {"zoomInCursor",      "action/zoom-in"},
+        {"zoomOutCursor",     "action/zoom-out"},
+        {"fitNormal",         "action/zoom-original"},
+        {"fitWindow",         "action/zoom-fit"},
+        {"fitWidth",          "page/zoom-fit-page"},
+        {"fitWindowStretch",  "page/zoom-fit-screen"},
+        {"rotateLeft",        "action/rotate-anticlockwise"},
+        {"rotateRight",       "action/rotate-clockwise"},
+        {"flipH",             "action/flip-horizontal"},
+        {"flipV",             "action/flip-vertical"},
+        {"moveToTrash",       "action/trash"},
+        {"removeFile",        "action/trash"},
+        {"print",             "action/print"},
+        {"toggleImageInfo",   "misc/info"},
+        {"folderView",        "file/folder"},
+        {"documentView",      "document/open"},
+        {"toggleFolderView",  "file/folder"},
+        {"openSettings",      "navigation/settings"},
+        {"copyFileClipboard", "action/copy"},
+        {"copyPathClipboard", "action/copy"},
+        {"open",              "document/open"},
+        {"crop",              "action/crop"},
+        {"resize",            "action/resize-bigger"},
+        {"showInDirectory",   "file/folder-open"},
+        {"goUp",              "navigation/arrow-up"},
+    };
+    return icons;
+}
+
 // action name -> icon resource. Anything not listed falls back to a text button
 // showing the shortcut itself.
 const QMap<QString, QString> &actionIcons() {
     static const QMap<QString, QString> icons = {
         {"prevImage",         ":/res/icons/common/menuitem/back16.png"},
-        // "next" is the SAME left arrow, turned 180 degrees in rebuildButtons()
-        {"nextImage",         ":/res/icons/common/menuitem/back16.png"},
+        {"nextImage",         ":/res/icons/common/menuitem/next16.png"},
         {"prevDirectory",     ":/res/icons/common/menuitem/back16.png"},
-        {"nextDirectory",     ":/res/icons/common/menuitem/back16.png"},
+        {"nextDirectory",     ":/res/icons/common/menuitem/next16.png"},
         {"zoomIn",            ":/res/icons/common/buttons/contextmenu/zoom-in18.png"},
         {"zoomOut",           ":/res/icons/common/buttons/contextmenu/zoom-out18.png"},
         {"zoomInCursor",      ":/res/icons/common/buttons/contextmenu/zoom-in18.png"},
@@ -83,7 +122,7 @@ QPoint eventGlobalPos(QMouseEvent *event) {
 
 FloatingNavBar::FloatingNavBar(QWidget *parent)
     : QWidget(parent), layout(nullptr), dragging(false), docked(true), barHeight(kBarHeight),
-      mAutoHide(false), peekHeight(12), hoverMargin(40), posAnim(nullptr), collapseTimer(nullptr)
+      mMode(NAVBAR_AUTO), mViewActive(false), hoverMargin(40), posAnim(nullptr), collapseTimer(nullptr)
 {
     setObjectName("FloatingNavBar");
     // never take keyboard focus, otherwise the shortcuts handled by the main
@@ -106,7 +145,7 @@ FloatingNavBar::FloatingNavBar(QWidget *parent)
     collapseTimer = new QTimer(this);
     collapseTimer->setSingleShot(true);
     collapseTimer->setInterval(450);
-    connect(collapseTimer, &QTimer::timeout, this, &FloatingNavBar::collapseBar);
+    connect(collapseTimer, &QTimer::timeout, this, [this]() { collapseBar(); });
 
     // The image widget below consumes its own mouse events, so the hover zone
     // is detected from the global cursor position instead of from widget
@@ -119,19 +158,46 @@ FloatingNavBar::FloatingNavBar(QWidget *parent)
     hide();
 }
 
-void FloatingNavBar::setAutoHide(bool mode) {
-    if(mAutoHide == mode)
+void FloatingNavBar::setMode(NavBarMode mode) {
+    if(mMode == mode)
         return;
-    mAutoHide = mode;
-    if(docked) {
-        dockToBottom();
-        if(mAutoHide && withinHoverZone())
-            expandBar();
-    }
+    mMode = mode;
+    applyState();
 }
 
-bool FloatingNavBar::autoHide() const {
-    return mAutoHide;
+NavBarMode FloatingNavBar::mode() const {
+    return mMode;
+}
+
+void FloatingNavBar::setViewActive(bool active) {
+    if(mViewActive == active)
+        return;
+    mViewActive = active;
+    applyState();
+}
+
+// Decides whether the bar is on screen at all and where it sits. Called when the
+// mode, the active page or the parent size changes.
+void FloatingNavBar::applyState() {
+    collapseTimer->stop();
+    // the folder view has no navigation bar: take it off instead of leaving a
+    // strip or letting it slide in when the cursor reaches the bottom edge
+    if(!mViewActive || mMode == NAVBAR_NEVER) {
+        hide();
+        return;
+    }
+    show();
+    raise();
+    if(mMode == NAVBAR_ALWAYS || !docked) {
+        if(docked)
+            dockToBottom();
+        return;
+    }
+    // auto: out of sight, unless the cursor is already down there
+    if(withinHoverZone())
+        expandBar();
+    else
+        collapseBar(true);
 }
 
 bool FloatingNavBar::withinHoverZone() const {
@@ -145,7 +211,7 @@ bool FloatingNavBar::withinHoverZone() const {
 }
 
 void FloatingNavBar::expandBar() {
-    if(!mAutoHide)
+    if(mMode != NAVBAR_AUTO || !mViewActive)
         return;
     collapseTimer->stop();
     QWidget *container = parentWidget();
@@ -154,15 +220,23 @@ void FloatingNavBar::expandBar() {
     animateTo(qMax(0, container->height() - barHeight));
 }
 
-void FloatingNavBar::collapseBar() {
-    if(!mAutoHide || !docked)
+// Moves the bar fully below the lower edge: nothing of it stays visible, and the
+// hover zone above the edge is what brings it back.
+void FloatingNavBar::collapseBar(bool instant) {
+    if(mMode != NAVBAR_AUTO || !docked || !mViewActive)
         return;
     if(withinHoverZone())
         return;
     QWidget *container = parentWidget();
     if(!container)
         return;
-    animateTo(qMax(0, container->height() - peekHeight));
+    const int y = container->height();
+    if(instant) {
+        posAnim->stop();
+        setGeometry(0, y, container->width(), barHeight);
+        return;
+    }
+    animateTo(y);
 }
 
 void FloatingNavBar::animateTo(int y) {
@@ -185,7 +259,7 @@ bool FloatingNavBar::eventFilter(QObject *watched, QEvent *event) {
     // avoid the coordinate math unless the app is actually interacting.
     if(event->type() != QEvent::MouseMove)
         return QWidget::eventFilter(watched, event);
-    if(!mAutoHide || !docked || !isVisible() || !window()->isActiveWindow())
+    if(mMode != NAVBAR_AUTO || !mViewActive || !docked || !isVisible() || !window()->isActiveWindow())
         return QWidget::eventFilter(watched, event);
 
     if(withinHoverZone()) {
@@ -231,7 +305,7 @@ void FloatingNavBar::applyTheme() {
         "#FloatingNavBar QPushButton {"
         "  background: transparent;"
         "  border: none;"
-        "  border-radius: 7px;"
+        "  border-radius: %7px;"
         "  padding: 6px 13px;"
         "  color: %1;"
         "}"
@@ -242,7 +316,8 @@ void FloatingNavBar::applyTheme() {
      .arg(colors.accent.green())
      .arg(colors.accent.blue())
      .arg(hover.alpha())
-     .arg(pressed.alpha()));
+     .arg(pressed.alpha())
+     .arg(UiStyle::controlRadius()));
 }
 
 void FloatingNavBar::updateFromShortcuts() {
@@ -271,6 +346,21 @@ QString FloatingNavBar::defaultIconPath(const QString &shortcut) {
     if(action.isEmpty())
         return QString();
     return actionIcons().value(action);
+}
+
+QString FloatingNavBar::defaultThemedIconName(const QString &shortcut) {
+    const QString action = actionForShortcut(shortcut);
+    if(action.isEmpty())
+        return QString();
+    return actionThemeIcons().value(action);
+}
+
+QStringList FloatingNavBar::themedIconNames() {
+    QStringList names;
+    for(const QString &name : actionThemeIcons())
+        if(!names.contains(name))
+            names << name;
+    return names;
 }
 
 void FloatingNavBar::rebuildButtons() {
@@ -304,11 +394,25 @@ void FloatingNavBar::rebuildButtons() {
 
         const int iconPx = 28;
 
-        bool custom = !mIcons.value(i).isEmpty();
-        QString iconPath = custom ? mIcons.at(i) : defaultIconPath(shortcut);
+        // a configured icon is either "theme:<name>" (vector icon from the set)
+        // or a path to an image file
+        const QString configured = mIcons.value(i);
+        const bool userThemed = configured.startsWith(QLatin1String("theme:"));
+        bool custom = !configured.isEmpty();
+        const QString customPath = userThemed ? QString() : configured;
+        QString iconPath = custom ? customPath : defaultIconPath(shortcut);
+        // themed vector icons, when that set is available
+        bool themed = userThemed
+                      || (!custom && UiStyle::useQlementine()
+                          && actionThemeIcons().contains(action));
         QPixmap pixmap;
 
-        if(!iconPath.isEmpty()) {
+        if(themed) {
+            const QString name = userThemed ? configured.mid(6)
+                                            : actionThemeIcons().value(action);
+            iconPath = QStringLiteral(":/qlementine/icons/16/%1.svg").arg(name);
+            pixmap = QIcon(iconPath).pixmap(iconPx * 2, iconPx * 2);
+        } else if(!iconPath.isEmpty()) {
             // built-in icons ship an @2x variant which stays crisp at this size
             if(!custom) {
                 QString hiRes = iconPath;
@@ -319,9 +423,12 @@ void FloatingNavBar::rebuildButtons() {
                 pixmap = QPixmap(iconPath);
         }
 
-        // a custom icon that no longer exists falls back to the automatic one
+        // a configured icon that no longer exists falls back to the automatic one
         if(pixmap.isNull() && custom) {
             custom = false;
+            // the replacement is a PNG mask, not a vector icon: it needs the
+            // same rotation/tint treatment the built-in icons get
+            themed = false;
             iconPath = defaultIconPath(shortcut);
             QString hiRes = iconPath;
             hiRes.replace(QLatin1String(".png"), QLatin1String("@2x.png"));
@@ -331,14 +438,11 @@ void FloatingNavBar::rebuildButtons() {
         }
 
         if(!iconPath.isEmpty() && !pixmap.isNull()) {
-            if(!custom) {
-                // built-in icon: "next" reuses the "previous" arrow turned
-                // 180 degrees, and everything is tinted with the theme
-                if(action == QLatin1String("nextImage") || action == QLatin1String("nextDirectory"))
-                    pixmap = pixmap.transformed(QTransform().rotate(180));
+            if(!custom || userThemed) {
+                // built-in and vector icons are masks, so they take the theme colour
                 ImageLib::recolor(pixmap, iconColor);
             }
-            // custom icons keep the colours the user picked
+            // custom image files keep the colours the user picked
             pixmap = pixmap.scaled(iconPx, iconPx, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             button->setIcon(QIcon(pixmap));
             button->setIconSize(pixmap.size());
@@ -372,11 +476,10 @@ void FloatingNavBar::dockToBottom() {
     docked = true;
     if(posAnim)
         posAnim->stop();
-    // auto-hide: rest with only a thin strip visible, unless the mouse is in
-    // the hover zone right now
-    int y = container->height() - barHeight;
-    if(mAutoHide && !withinHoverZone())
-        y = container->height() - peekHeight;
+    // auto mode rests fully out of sight; applyState()/the hover zone brings it
+    // back in
+    const int y = (mMode == NAVBAR_AUTO) ? container->height()
+                                         : container->height() - barHeight;
     setGeometry(0, qMax(0, y), container->width(), barHeight);
 }
 
@@ -390,10 +493,23 @@ void FloatingNavBar::clampToParent() {
 
 void FloatingNavBar::onContainerResized(QSize size) {
     Q_UNUSED(size)
-    if(docked)
-        dockToBottom();
-    else
+    if(!docked) {
         clampToParent();
+        return;
+    }
+    // follow the container without animating, so a resize does not make the bar
+    // slide in or out
+    if(mMode == NAVBAR_AUTO) {
+        QWidget *container = parentWidget();
+        if(!container)
+            return;
+        const int y = (mViewActive && withinHoverZone()) ? qMax(0, container->height() - barHeight)
+                                                         : container->height();
+        posAnim->stop();
+        setGeometry(0, y, container->width(), barHeight);
+        return;
+    }
+    dockToBottom();
 }
 
 void FloatingNavBar::paintEvent(QPaintEvent *event) {
@@ -413,20 +529,20 @@ void FloatingNavBar::enterEvent(QEnterEvent *event) {
 #else
 void FloatingNavBar::enterEvent(QEvent *event) {
 #endif
-    if(mAutoHide)
+    if(mMode == NAVBAR_AUTO)
         expandBar();
     QWidget::enterEvent(event);
 }
 
 void FloatingNavBar::leaveEvent(QEvent *event) {
-    if(mAutoHide && collapseTimer)
+    if(mMode == NAVBAR_AUTO && collapseTimer)
         collapseTimer->start();
     QWidget::leaveEvent(event);
 }
 
 void FloatingNavBar::mousePressEvent(QMouseEvent *event) {
-    // in auto-hide mode the bar stays docked and is not draggable
-    if(mAutoHide) {
+    // in auto mode the bar stays docked and is not draggable
+    if(mMode == NAVBAR_AUTO) {
         QWidget::mousePressEvent(event);
         return;
     }

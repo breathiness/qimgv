@@ -44,12 +44,19 @@ add_executable(qimgv
     sharedresources.cpp
     shortcutbuilder.cpp
     proxystyle.cpp
+    uistyle.cpp
     macosapplication.cpp
     resources.qrc
     qimgv.rc
     ${APPLE_ICON_PATH}
     ${QM_FILES}
 )
+
+# The resource file names the icon the executable carries, but the generate step
+# only looks at the .rc itself: without this the exe keeps an old icon after the
+# .ico is replaced.
+set_property(SOURCE qimgv.rc PROPERTY OBJECT_DEPENDS
+             "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/common/logo/app/qimgv.ico")
 
 # update .ts, compile .qm (qt6 case)
 if(${QT_VERSION_MAJOR} EQUAL 6)
@@ -77,6 +84,13 @@ if(QT_VERSION_MAJOR GREATER_EQUAL 6)
 endif()
 
 # OPTION DEFINITIONS, LINKING
+if(QLEMENTINE AND TARGET qlementine)
+    target_link_libraries(qimgv PRIVATE qlementine)
+    target_compile_definitions(qimgv PRIVATE USE_QLEMENTINE)
+    if(TARGET qlementine-icons)
+        target_link_libraries(qimgv PRIVATE qlementine-icons)
+    endif()
+endif()
 if(EXIV2)
     target_link_libraries(qimgv PRIVATE PkgConfig::Exiv2)
     target_compile_definitions(qimgv PRIVATE USE_EXIV2)
@@ -88,9 +102,17 @@ endif()
 if(VIDEO_SUPPORT)
     target_compile_definitions(qimgv PRIVATE USE_MPV)
     if(WIN32)
+        # the thumbnailer renders video frames with libmpv itself, so the
+        # executable links it too (the player plugin links its own copy)
+        target_include_directories(qimgv PRIVATE "${MPV_DIR}/include")
+        target_link_libraries(qimgv PRIVATE
+            "${MPV_DIR}/lib/$<IF:$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>,x86_64,i686>/libmpv.dll.a")
         ADD_DEFINITIONS(-D_QIMGV_PLUGIN_DIR="plugins")
         ADD_DEFINITIONS(-D_QIMGV_PLAYER_PLUGIN="player_mpv.dll")
     else()
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(MpvForThumbnails REQUIRED IMPORTED_TARGET mpv)
+        target_link_libraries(qimgv PRIVATE PkgConfig::MpvForThumbnails)
         ADD_DEFINITIONS(-D_QIMGV_PLUGIN_DIR="${QIMGV_PLUGIN_DIR}")
         ADD_DEFINITIONS(-D_QIMGV_PLAYER_PLUGIN="player_mpv.so")
     endif()

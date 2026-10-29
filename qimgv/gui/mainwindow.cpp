@@ -164,6 +164,7 @@ void MW::toggleFolderView() {
     docWidget->hideFloatingPanel();
     imageInfoOverlay->hide();
     centralWidget->toggleViewMode();
+    updateNavBarVisibility();
     onInfoUpdated();
 }
 
@@ -176,12 +177,22 @@ void MW::enableFolderView() {
     docWidget->hideFloatingPanel();
     imageInfoOverlay->hide();
     centralWidget->showFolderView();
+    updateNavBarVisibility();
     onInfoUpdated();
 }
 
 void MW::enableDocumentView() {
     centralWidget->showDocumentView();
+    updateNavBarVisibility();
     onInfoUpdated();
+}
+
+// The navigation bar is part of the image viewer. On the other pages it is taken
+// off rather than left hidden, so nothing of it can appear there.
+void MW::updateNavBarVisibility() {
+    if(!navBar)
+        return;
+    navBar->setViewActive(currentViewMode() != MODE_FOLDERVIEW);
 }
 
 ViewMode MW::currentViewMode() {
@@ -691,10 +702,7 @@ void MW::showFullScreen() {
     QWidget::showFullScreen();
     // try to repaint sooner
     qApp->processEvents();
-    if(navBar) {
-        navBar->show();
-        navBar->raise();
-    }
+    updateNavBarVisibility();
     emit fullscreenStateChanged(true);
 }
 
@@ -705,10 +713,7 @@ void MW::showWindowed() {
     QWidget::show();
     // try to repaint sooner
     qApp->processEvents();
-    if(navBar) {
-        navBar->show();
-        navBar->raise();
-    }
+    updateNavBarVisibility();
     emit fullscreenStateChanged(false);
 }
 
@@ -977,9 +982,10 @@ void MW::readSettings() {
     adaptToWindowState();
 
     if(navBar) {
-        navBar->setAutoHide(settings->navBarAutoHide());
+        navBar->setMode(settings->navBarMode());
         navBar->setButtons(settings->navBarShortcuts(), settings->navBarIcons());
-        navBar->raise();
+        // takes the current page into account as well
+        updateNavBarVisibility();
     }
 }
 

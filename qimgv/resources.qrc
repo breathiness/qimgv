@@ -117,11 +117,13 @@
         <file>res/icons/common/overlay/info16.png</file>
         <file>res/icons/common/overlay/info16@2x.png</file>
         <file>res/icons/common/menuitem/back16.png</file>
+        <file>res/icons/common/menuitem/next16.png</file>
         <file>res/icons/common/menuitem/forward16.png</file>
         <file>res/icons/common/other/checkerboard.png</file>
         <file>res/icons/common/menuitem/print16.png</file>
         <file>res/icons/common/menuitem/print16@2x.png</file>
         <file>res/icons/common/menuitem/back16@2x.png</file>
+        <file>res/icons/common/menuitem/next16@2x.png</file>
         <file>res/icons/common/menuitem/run16.png</file>
         <file>res/icons/common/menuitem/run16@2x.png</file>
         <file>res/icons/common/menuitem/trash16.png</file>

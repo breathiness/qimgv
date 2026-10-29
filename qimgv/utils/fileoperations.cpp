@@ -1,5 +1,15 @@
 #include "fileoperations.h"
 
+#include <QThread>
+
+#ifdef Q_OS_WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#include <shellapi.h>
+#endif
+
 QString FileOperations::generateHash(const QString &str) {
     return QString(QCryptographicHash::hash(str.toUtf8(), QCryptographicHash::Md5).toHex());
 }
@@ -273,15 +283,52 @@ void FileOperations::moveToTrash(const QString &filePath, FileOpResult &result) 
         result = FileOpResult::SOURCE_NOT_WRITABLE;
 #endif
     } else {
-        if(moveToTrashImpl(filePath))
-            result = FileOpResult::SUCCESS;
-        else
-            result = FileOpResult::OTHER_ERROR;
+        // A shell delete can report success while the item is still on disk - an
+        // IFileOperation that is only queued, a volume whose Recycle Bin hands the
+        // item back. Trusting the return value alone drops the row from the view
+        // and the file reappears on the next listing, so the outcome is checked
+        // against the file system instead.
+        const bool moved = moveToTrashImpl(filePath);
+        bool gone = false;
+        for(int attempt = 0; moved && attempt < 4 && !gone; ++attempt) {
+            gone = !QFileInfo::exists(filePath);
+            if(!gone)
+                QThread::msleep(50);
+        }
+        result = gone ? FileOpResult::SUCCESS : FileOpResult::OTHER_ERROR;
     }
     return;
 }
 
+#ifdef Q_OS_WIN32
+// Shell delete with FOF_ALLOWUNDO: the item goes to the Recycle Bin (or is
+// removed for good on a volume that has none) and no COM object of our own is
+// needed. SHFileOperationW reports a per-item code, so a refused delete is not
+// mistaken for a successful one.
+static bool recycleWithShell(const QString &filePath) {
+    std::wstring from = QDir::toNativeSeparators(filePath).toStdWString();
+    from.push_back(L'\0');  // SHFileOperation wants a double terminated list
+    from.push_back(L'\0');
+
+    SHFILEOPSTRUCTW operation = {};
+    operation.wFunc = FO_DELETE;
+    operation.pFrom = from.c_str();
+    operation.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI;
+    return SHFileOperationW(&operation) == 0 && !operation.fAnyOperationsAborted;
+}
+
+// QFile::moveToTrash() is tried first; the shell call is the second attempt for
+// the cases where Qt's helper reports failure on a file the shell can delete.
+// Neither path ever falls back to a permanent delete: if the shell refuses, the
+// caller reports an error.
+bool FileOperations::moveToTrashImpl(const QString &filePath) {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    if(QFile::moveToTrash(filePath))
+        return true;
+#endif
+    return recycleWithShell(filePath);
+}
+#elif QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
 bool FileOperations::moveToTrashImpl(const QString &filePath) {
     return QFile::moveToTrash(filePath);
 }

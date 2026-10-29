@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QRunnable>
-#include <QProcess>
 #include <QThread>
 #include <QCryptographicHash>
 #include <ctime>

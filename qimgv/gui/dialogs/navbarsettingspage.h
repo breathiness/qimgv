@@ -7,11 +7,13 @@
 class QCheckBox;
 class QSpinBox;
 class QVBoxLayout;
+class QComboBox;
 class KeySequenceEdit;
+class RowsArea;
 
-// Page shown in Preferences that owns all navigation bar options:
-// auto-hide behaviour, number of buttons, the shortcut of every button and an
-// optional custom icon per button.
+// Page shown in Preferences that owns all navigation bar options: auto-hide
+// behaviour, the buttons in the order they appear on the bar, the shortcut of
+// every button and the icon it shows. Rows are reordered by dragging their grip.
 class NavBarSettingsPage : public QWidget {
     Q_OBJECT
 public:
@@ -22,7 +24,8 @@ public:
     void saveSettings();
 
     QStringList shortcuts() const;
-    // per-button custom icon paths, empty = automatic icon
+    // icon of every button in display order: empty = automatic, "theme:<name>" =
+    // vector icon from the set, anything else = path to an image file
     QStringList icons() const;
 
 private slots:
@@ -31,16 +34,19 @@ private slots:
 
 private:
     void fillRows();
-    void pickIcon(int index);
-    void clearIcon(int index);
-    void updateIconButton(int index);
+    void syncFromRows();
+    void moveRow(int from, int to);
+    void selectIcon(int index, const QString &value);
+    void updateAutoPreview(int index);
+    void chooseIconFile(int index);
 
-    QCheckBox *autoHideCheckBox;
+    QComboBox *modeComboBox;
     QSpinBox *countSpinBox;
     QVBoxLayout *rowsLayout;
+    RowsArea *rowsArea;
+    QList<QWidget*> rows;
     QList<KeySequenceEdit*> sequenceEdits;
-    QList<QWidget*> iconButtons;
-    QList<QWidget*> clearButtons;
+    QList<QComboBox*> iconCombos;
     QStringList mShortcuts;
     QStringList mIcons;
 };

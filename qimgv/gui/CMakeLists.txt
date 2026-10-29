@@ -10,9 +10,11 @@ target_sources(qimgv PRIVATE
     customwidgets/actionbutton.cpp
     customwidgets/clickablelabel.cpp
     customwidgets/contextmenuitem.cpp
+    customwidgets/elidedlabel.cpp
     customwidgets/floatingwidget.cpp
     customwidgets/floatingwidgetcontainer.cpp
     customwidgets/floatingnavbar.cpp
+    customwidgets/grouppanel.cpp
     customwidgets/iconbutton.cpp
     customwidgets/iconwidget.cpp
     customwidgets/keysequenceedit.cpp

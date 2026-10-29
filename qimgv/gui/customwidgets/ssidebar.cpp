@@ -1,4 +1,5 @@
 #include "ssidebar.h"
+#include "uistyle.h"
 
 SSideBar::SSideBar(QWidget *parent) : QWidget{parent} {
     layout = new QBoxLayout(QBoxLayout::TopToBottom);
@@ -93,6 +94,7 @@ void SSideBarItem::setHighlighted(bool mode) {
     this->setProperty("checked", mHighlighted);
     style()->unpolish(this);
     style()->polish(this);
+    update();
 }
 
 bool SSideBarItem::highlighted() {
@@ -104,5 +106,18 @@ void SSideBarItem::paintEvent(QPaintEvent *event) {
     QStyleOption opt;
     opt.initFrom(this);
     QPainter p(this);
+    if(UiStyle::useQlementine()) {
+        // no stylesheet in this mode: draw the selected state from the palette
+        if(mHighlighted) {
+            p.setRenderHint(QPainter::Antialiasing, true);
+            QColor bg = palette().color(QPalette::Highlight);
+            bg.setAlpha(60);
+            p.setPen(Qt::NoPen);
+            p.setBrush(bg);
+            const qreal r = UiStyle::controlRadius();
+            p.drawRoundedRect(QRectF(rect()).adjusted(0, 0, -1, -1), r, r);
+        }
+        return;
+    }
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }
