@@ -47,6 +47,18 @@ int main(int argc, char *argv[]) {
     // if this is set by other app, platform plugin may fail to load
     // https://github.com/easymodo/qimgv/issues/410
     qputenv("QT_PLUGIN_PATH","");
+
+    // Qt6 on Windows fills its font database through DirectWrite before the first
+    // piece of text can be laid out, which means walking every installed font. On
+    // a machine with a lot of them that is a noticeable slice of startup: 1459
+    // font files here took ~250 ms to reach a first text layout, ~160 ms with the
+    // freetype engine (which is what the Qt5 builds used). Only set it when the
+    // platform was not chosen explicitly, so -platform and QT_QPA_PLATFORM keep
+    // working, and QIMGV_FONT=directwrite switches back for comparison.
+    if(qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")
+       && qgetenv("QIMGV_FONT") != "directwrite") {
+        qputenv("QT_QPA_PLATFORM", "windows:fontengine=freetype");
+    }
 #endif
 
     // for hidpi testing
