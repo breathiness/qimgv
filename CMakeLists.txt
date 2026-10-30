@@ -76,6 +76,23 @@ endif()
 
 ##############################################################
 
+if(WIN32 AND VIDEO_SUPPORT)
+    # libmpv for the Windows build lives in the source tree: include/mpv/,
+    # lib/x86_64/libmpv.dll.a and the runtime dll in bin/. It is not tracked by
+    # git (see .gitignore), so a clone has to drop a libmpv package in there;
+    # -DMPV_DIR still overrides this for a system-wide install.
+    if(NOT MPV_DIR)
+        set(MPV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/mpv" CACHE PATH
+            "libmpv dev kit (include/ and lib/x86_64/libmpv.dll.a)")
+    endif()
+    if(NOT EXISTS "${MPV_DIR}/include/mpv/client.h")
+        message(FATAL_ERROR
+            "MPV_DIR (${MPV_DIR}) does not hold the libmpv dev kit. Put the "
+            "headers in <dir>/include/mpv/ and the import library in "
+            "<dir>/lib/x86_64/libmpv.dll.a, or configure with -DMPV_DIR=<path>.")
+    endif()
+endif()
+
 if(QLEMENTINE)
     if(QT_VERSION_MAJOR LESS 6)
         message(FATAL_ERROR "QLEMENTINE requires Qt6 (configure with -DUSE_QT5=OFF)")

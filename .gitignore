@@ -11,6 +11,11 @@
 *.orig
 build
 dist
+# libmpv for the Windows build (headers, import library, runtime dll). It lives
+# in the source tree so MPV_DIR defaults to it, but the dev kit is ~80 MB and is
+# not tracked: drop a libmpv package in 3rdparty/mpv/ with
+#   include/mpv/{client.h,render.h}, lib/x86_64/libmpv.dll.a, bin/libmpv-2.dll
+3rdparty/mpv/
 qrc_resources.cpp
 debug/
 release/
