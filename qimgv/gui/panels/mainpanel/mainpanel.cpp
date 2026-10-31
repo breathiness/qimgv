@@ -1,5 +1,7 @@
 #include "mainpanel.h"
 
+#include "uistyle.h"
+
 MainPanel::MainPanel(FloatingWidgetContainer *parent) : SlidePanel(parent) {
     // buttons stuff
     buttonsWidget.setAccessibleName("panelButtonsWidget");
@@ -136,8 +138,13 @@ void MainPanel::readSettings() {
 // draw separator line at bottom or top
 void MainPanel::paintEvent(QPaintEvent *event) {
     QWidget::paintEvent(event);
-    // borders
     QPainter p(this);
+    // Qlementine gives this panel no stylesheet background. The thumbnail strip
+    // paints its own (QPalette::Base), but the button column next to it is a
+    // plain widget, so without this the image behind showed through it.
+    if(UiStyle::useQlementine())
+        p.fillRect(rect(), palette().color(QPalette::Base));
+    // borders
     p.setPen(settings->colorScheme().folderview_hc);
     switch(mPosition) {
         case PANEL_TOP:

@@ -269,6 +269,13 @@ void IconWidget::applyChromeMetrics() {
         const int textPadding = static_cast<int>(textHeight * 0.10f);
         const int size = qMax(textHeight + textPadding * 2, 30);
         setMinimumSize(size, size);
+    } else if(accessibleName() == QLatin1String("ContextMenuButton")) {
+        // the rows at the top of the context menu got their height from the
+        // stylesheet (min-height: 32 * dpr); without it the layouts squeeze them
+        // to nothing because the .ui files carry no geometry for these buttons
+        const int size = qRound(32 * devicePixelRatioF());
+        setMinimumSize(size, size);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     }
 }
 
