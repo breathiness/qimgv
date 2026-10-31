@@ -140,6 +140,8 @@
         <file>res/icons/common/settings/appearance32@2x.png</file>
         <file>res/icons/common/settings/general32.png</file>
         <file>res/icons/common/settings/general32@2x.png</file>
+        <file>res/icons/common/settings/navbar32.png</file>
+        <file>res/icons/common/settings/navbar32@2x.png</file>
         <file>res/icons/common/settings/scale32.png</file>
         <file>res/icons/common/settings/scale32@2x.png</file>
         <file>res/icons/common/settings/shortcuts32_i.png</file>

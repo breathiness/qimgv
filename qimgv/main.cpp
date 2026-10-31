@@ -93,31 +93,47 @@ int main(int argc, char *argv[]) {
         a.setStyle(QStyleFactory::create("Fusion"));
 #else
     QApplication a(argc, argv);
+#endif
+
+    // Set before the widget style: the UI style is a saved setting now, and
+    // reading it needs the config location (which is derived from the app name).
+    QCoreApplication::setOrganizationName("qimgv");
+    QCoreApplication::setOrganizationDomain("github.com/easymodo/qimgv");
+    QCoreApplication::setApplicationName("qimgv");
+    QCoreApplication::setApplicationVersion(appVersion.toString());
+
+#ifndef __APPLE__
+    // The widget style is picked before anything else exists, so it is chosen
+    // here rather than in Settings (see "Interface style" in the preferences).
+    // QIMGV_UI=classic|qlementine overrides the setting, which keeps the old
+    // A/B comparison working without touching the config file.
+    UiStyleMode uiStyle = Settings::storedUiStyle();
+    if(qgetenv("QIMGV_UI") == "classic")
+        uiStyle = UI_STYLE_CLASSIC;
+    else if(qgetenv("QIMGV_UI") == "qlementine")
+        uiStyle = UI_STYLE_QLEMENTINE;
+    if(uiStyle == UI_STYLE_QLEMENTINE) {
 #ifdef USE_QLEMENTINE
-    // Qlementine is the default UI. QIMGV_UI=classic falls back to the old
-    // stylesheet based look (useful for comparing without a rebuild).
-    if(qgetenv("QIMGV_UI") != "classic") {
         auto *qlementineStyle = new oclero::qlementine::QlementineStyle;
+        // Bootstrap theme, replaced a few lines down by the one the saved
+        // settings ask for (see UiTheme::apply): the style has to exist before
+        // Settings can be constructed, and Settings owns the theme choice.
         qlementineStyle->setThemeJsonPath(":/qlementine/resources/themes/dark.json");
         a.setStyle(qlementineStyle);
         UiStyle::setUseQlementine(true);
         oclero::qlementine::icons::initializeIconTheme();
         QIcon::setThemeName("qlementine");
         qDebug() << "UI style:" << qlementineStyle->metaObject()->className();
+#else
+        // built without Qlementine: nothing to switch to
+        a.setStyle(new ProxyStyle);
+#endif
     } else {
         // use some style workarounds
         a.setStyle(new ProxyStyle);
     }
-#else
-    // use some style workarounds
-    a.setStyle(new ProxyStyle);
-#endif
 #endif
 
-    QCoreApplication::setOrganizationName("qimgv");
-    QCoreApplication::setOrganizationDomain("github.com/easymodo/qimgv");
-    QCoreApplication::setApplicationName("qimgv");
-    QCoreApplication::setApplicationVersion(appVersion.toString());
     QApplication::setEffectEnabled(Qt::UI_AnimateCombo, false);
     QGuiApplication::setDesktopFileName(QCoreApplication::applicationName() + ".desktop");
 

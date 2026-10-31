@@ -756,18 +756,18 @@
     </message>
     <message>
         <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="48" />
-        <source>Number of buttons:</source>
-        <translation>按钮数量：</translation>
+        <source>Number of rows:</source>
+        <translation>行数：</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="51" />
-        <source>How many buttons the navigation bar has.</source>
-        <translation>导航条上显示多少个按钮。</translation>
+        <source>How many rows the navigation bar has: buttons and group separators.</source>
+        <translation>导航条上一共有多少行：按钮和分组分隔条都算一行。</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="56" />
-        <source>Drag a row by its grip to change the order. Click a field and press the shortcut this button should run. Pick the icon of a button from the list on the left.</source>
-        <translation>拖动行首的抓手可调整顺序；点击输入框后按下希望该按钮执行的快捷键；左侧下拉框用于选择该按钮的图标。</translation>
+        <source>Drag a row by its grip to change the order. Click a field and press the shortcut this button should run. Pick the icon of a button from the list on the left. A group separator draws a line between two groups of buttons. Remove deletes the row.</source>
+        <translation>拖动行首的抓手可调整顺序；点击输入框后按下希望该按钮执行的快捷键；左侧下拉框用于选择该按钮的图标。分组分隔条会在两组按钮之间画一条竖线。右侧的“移除”会删掉这一行。</translation>
     </message>
     <message>
         <source>Automatic</source>
@@ -782,13 +782,37 @@
         <translation>该按钮的图标</translation>
     </message>
     <message>
+        <source>Add separator</source>
+        <translation>添加分隔条</translation>
+    </message>
+    <message>
+        <source>Adds a row that is drawn as a line on the bar, to group the buttons around it.</source>
+        <translation>添加一行，在悬浮条上画成一条竖线，用来把两侧的按钮分组。</translation>
+    </message>
+    <message>
+        <source>Group separator</source>
+        <translation>分组分隔条</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>移除</translation>
+    </message>
+    <message>
+        <source>Removes this separator from the bar.</source>
+        <translation>从悬浮条上移除这条分隔条。</translation>
+    </message>
+    <message>
+        <source>Removes this button from the bar.</source>
+        <translation>从悬浮条上移除这个按钮。</translation>
+    </message>
+    <message>
         <source>Drag to change the order</source>
         <translation>拖动可调整顺序</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="206" />
-        <source>Choose icon for button %1</source>
-        <translation>为按钮 %1 选择图标</translation>
+        <source>Choose an icon</source>
+        <translation>选择图标</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="208" />
@@ -1729,6 +1753,26 @@
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2893" />
         <source>Light</source>
         <translation>光亮</translation>
+    </message>
+    <message>
+        <source>Theme:</source>
+        <translation>主题：</translation>
+    </message>
+    <message>
+        <source>Interface style:</source>
+        <translation>界面风格：</translation>
+    </message>
+    <message>
+        <source>Classic</source>
+        <translation>经典</translation>
+    </message>
+    <message>
+        <source>Qlementine draws the whole window from a theme. Classic is the old stylesheet look with separate colours.</source>
+        <translation>Qlementine 由主题文件绘制整个窗口；经典模式是原来的样式表外观，各颜色可分别设置。</translation>
+    </message>
+    <message>
+        <source>Panels and controls follow the window theme. The accent color is the only color that can be changed.</source>
+        <translation>面板与控件跟随窗口主题，此处只能更改点缀色。</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="3364" />

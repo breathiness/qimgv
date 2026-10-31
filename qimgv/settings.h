@@ -28,6 +28,13 @@ enum SortingMode {
     SORT_TIME_DESC
 };
 
+// Which widget style the window is drawn with. Chosen at start-up, before the
+// style exists, so switching needs a restart.
+enum UiStyleMode {
+    UI_STYLE_QLEMENTINE, // default: a theme JSON paints the whole window
+    UI_STYLE_CLASSIC     // old stylesheet look, colours come from ColorScheme
+};
+
 // how the floating navigation bar behaves
 enum NavBarMode {
     NAVBAR_ALWAYS,  // docked and visible all the time
@@ -258,6 +265,13 @@ public:
     bool useSystemColorScheme();
     void setUseSystemColorScheme(bool mode);
 
+    // Widget style. The saved value has to be readable before the QApplication
+    // style is created, hence the static variant (it does not need the Settings
+    // instance to exist yet).
+    static UiStyleMode storedUiStyle();
+    UiStyleMode uiStyle();
+    void setUiStyle(UiStyleMode mode);
+
     void loadStylesheet();
 
     bool showSaveOverlay();
@@ -334,9 +348,18 @@ private:
     QDir *mTmpDir, *mThumbCacheDir, *mConfDir;
     ColorScheme mColorScheme;
     QMultiMap<QByteArray, QByteArray> mVideoFormatsMap; // [mimetype, format]
+    // Qlementine mode only: the accent is the one colour the theme does not
+    // decide. Until the user picks one there is nothing to apply, so the theme
+    // keeps the accent it ships with - that is the look the UI had before the
+    // accent became configurable, and it should not change on its own.
+    bool mTintAccent = false;
+    // Set once loadTheme() has run, so the first setColorScheme() call (coming
+    // from loadTheme itself) is not mistaken for the user picking a colour.
+    bool mThemeLoaded = false;
     void loadTheme();
     void saveTheme();
     void createColorVariants();
+    void followDesktopColorScheme();
 
     void setupCache();
     void fillVideoFormats();

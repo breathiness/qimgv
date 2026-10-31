@@ -8,11 +8,13 @@
  * Configuration lives in Preferences -> "Navigation bar".
  *
  * Modes: "always" keeps it docked and visible, "auto" hides it completely and
- * slides it up as soon as the mouse enters the bottom hover zone, "never"
- * leaves it out. The zone is bigger than the bar itself and is detected from
- * the global cursor position, so it never swallows clicks meant for the image.
- * The bar exists for the image viewer only; setViewActive(false) takes it off
- * the folder view instead of leaving a strip behind.
+ * shows it as soon as the mouse enters the bottom trigger strip, "never" leaves
+ * it out. The strip is much taller than the bar itself and is detected from the
+ * global cursor position, so it never swallows clicks meant for the image. The
+ * video controls use the same strip, so both appear at the same distance from
+ * the bottom edge. The bar exists for the image viewer only;
+ * setViewActive(false) takes it off the folder view instead of leaving a strip
+ * behind.
  *
  * Just set the parent and call setButtons(); do not put it into a layout.
  */
@@ -29,8 +31,6 @@
 
 class QHBoxLayout;
 class QPushButton;
-class QPropertyAnimation;
-class QTimer;
 
 class FloatingNavBar : public QWidget {
     Q_OBJECT
@@ -57,6 +57,11 @@ public:
     // every icon name in the vector set a button can be given
     static QStringList themedIconNames();
 
+    // Shortcut list entry that is not a button but a divider between two groups
+    // of buttons. It is stored like any other entry, so it keeps its position.
+    static QString separatorShortcut();
+    static bool isSeparator(const QString &shortcut);
+
     // how the bar behaves: always visible, hidden until the mouse reaches the
     // bottom edge, or not shown at all
     void setMode(NavBarMode mode);
@@ -64,6 +69,10 @@ public:
     // the bar belongs to the image viewer; the folder view turns this off and
     // the bar disappears from that page entirely
     void setViewActive(bool active);
+    // true while the bar sits in the bottom strip of its parent. In "always"
+    // mode the main window keeps that strip free for the bar instead of letting
+    // it cover the bottom of the image.
+    bool isDocked() const;
 
 public slots:
     // keeps the bar sized/positioned after the parent got resized
@@ -74,6 +83,9 @@ public slots:
 signals:
     // buttons were added / removed / edited and should be persisted
     void shortcutsChanged();
+    // mode or docked state changed: the parent may have to reserve space for
+    // the bar (see MW::updateNavBarSpace)
+    void layoutStateChanged();
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -96,16 +108,19 @@ private:
     void applyTheme();
     void clampToParent();
     void dockToBottom();
+    // undocked: shrink to the width of the buttons, like the video controls card
+    void fitToContent();
     void expandBar();
-    void collapseBar(bool instant = false);
-    void animateTo(int y);
+    void collapseBar();
     // shows/hides and positions the bar for the current mode and page
     void applyState();
-    // true when the cursor sits inside the bottom hover zone of the parent
+    // true when the cursor sits inside the bottom trigger strip of the parent
     bool withinHoverZone() const;
 
     QHBoxLayout *layout;
     QList<QPushButton*> buttons;
+    // dividers between groups of buttons (see separatorShortcut())
+    QList<QWidget*> separators;
     QStringList mShortcuts;
     QStringList mIcons;
     QPoint dragOffset;
@@ -116,8 +131,4 @@ private:
     NavBarMode mMode;
     // false while a page without the bar (the folder view) is active
     bool mViewActive;
-    // extra height above the bar that still counts as "close to the bar"
-    int hoverMargin;
-    QPropertyAnimation *posAnim;
-    QTimer *collapseTimer;
 };

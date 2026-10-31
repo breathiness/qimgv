@@ -1,6 +1,7 @@
 #include "settingsdialog.h"
 #include "ui_settingsdialog.h"
 #include "gui/dialogs/navbarsettingspage.h"
+#include "uistyle.h"
 
 #include <QCheckBox>
 #include <QLabel>
@@ -27,6 +28,19 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
         ui->themeSelectorComboBox->blockSignals(true);
         ui->themeSelectorComboBox->setCurrentIndex(index);
         ui->themeSelectorComboBox->blockSignals(false);
+        if(UiStyle::useQlementine()) {
+            // two entries only: Dark, Light (see setupQlementineThemePage())
+            if(index == 0) {
+                mQlementinePresetTid = COLORS_DARK;
+                setColorScheme(ThemeStore::colorScheme(COLORS_DARK));
+                settings->setColorTid(COLORS_DARK);
+            } else if(index == 1) {
+                mQlementinePresetTid = COLORS_LIGHT;
+                setColorScheme(ThemeStore::colorScheme(COLORS_LIGHT));
+                settings->setColorTid(COLORS_LIGHT);
+            }
+            return;
+        }
         switch(index) {
             case 0: setColorScheme(ThemeStore::colorScheme(COLORS_BLACK));    settings->setColorTid(COLORS_BLACK);    break;
             case 1: setColorScheme(ThemeStore::colorScheme(COLORS_DARK));     settings->setColorTid(COLORS_DARK);     break;
@@ -41,13 +55,22 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
             setColorScheme(ThemeStore::colorScheme(COLORS_SYSTEM));
             settings->setColorTid(COLORS_SYSTEM);
         }
+        else if(UiStyle::useQlementine()) {
+            // Back to the last window theme the user picked. COLORS_CUSTOMIZED
+            // would take the colours from the pickers, but in Qlementine mode
+            // those describe the theme and cannot be applied back.
+            const ColorSchemes tid = mQlementinePresetTid == COLORS_LIGHT ? COLORS_LIGHT : COLORS_DARK;
+            setColorScheme(ThemeStore::colorScheme(tid));
+            settings->setColorTid(tid);
+        }
         else {
             readColorScheme();
             settings->setColorTid(COLORS_CUSTOMIZED);
         }
         ui->themeSelectorComboBox->setEnabled(!useSystemTheme);
         ui->colorConfigSubgroup->setEnabled(!useSystemTheme);
-        ui->modifySystemSchemeLabel->setVisible(useSystemTheme);
+        if(!UiStyle::useQlementine())
+            ui->modifySystemSchemeLabel->setVisible(useSystemTheme);
     });
 
     connect(ui->modifySystemSchemeLabel, &ClickableLabel::clicked, [this]() {
@@ -67,6 +90,9 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
     ui->colorSelectorOverlay->setDescription(tr("Overlay background"));
     ui->colorSelectorOverlayText->setDescription(tr("Overlay text"));
     ui->colorSelectorScrollbar->setDescription(tr("Scrollbars"));
+
+    setupUiStyleRow();
+    setupQlementineThemePage();
 
 #ifndef USE_KDE_BLUR
     ui->blurBackgroundCheckBox->setEnabled(false);
@@ -162,6 +188,68 @@ void SettingsDialog::adjustSizeToContents() {
     //qDebug() << "scrollareawidget:" << ui->scrollAreaWidgetContents->sizeHint() << ui->scrollAreaWidgetContents->minimumSizeHint() << ui->scrollAreaWidgetContents->size();
     //qDebug() << "grid" << ui->gridLayout_15->sizeHint();
     //qDebug() << "wtf" << ui->startInFolderViewCheckBox->sizeHint() << ui->startInFolderViewCheckBox->minimumSizeHint();
+}
+//------------------------------------------------------------------------------
+// Qlementine / Classic, on the theme page next to the theme itself. The widget
+// style is created before the rest of the application exists, so this can only
+// be stored here; the note says it needs a restart.
+void SettingsDialog::setupUiStyleRow() {
+    auto *label = new QLabel(tr("Interface style:"), this);
+    uiStyleComboBox = new QComboBox(this);
+    uiStyleComboBox->addItem(tr("Qlementine"));
+    uiStyleComboBox->addItem(tr("Classic"));
+    uiStyleComboBox->setToolTip(tr("Qlementine draws the whole window from a theme. "
+                                   "Classic is the old stylesheet look with separate colours."));
+    auto *note = new QLabel(tr("Requires application restart"), this);
+    note->setAccessibleName("SNoteText");
+
+    auto *row = new QHBoxLayout;
+    row->setContentsMargins(0, 0, 0, 0);
+    row->setSpacing(7);
+    row->addWidget(label);
+    row->addWidget(uiStyleComboBox);
+    row->addWidget(note);
+    row->addStretch();
+    ui->verticalLayout_38->insertLayout(0, row);
+}
+//------------------------------------------------------------------------------
+// Qlementine mode: the standard widgets are drawn from a theme file, so what the
+// user picks here is the window theme itself rather than a dozen independent
+// colours. The preset list shrinks to Dark/Light (with "Use system colors" next
+// to it, which follows the desktop), the accent stays editable because the theme
+// is recoloured with it, and the rest of the grid is hidden: those values are
+// overwritten by the theme on every apply, so leaving them editable only made
+// them look broken.
+void SettingsDialog::setupQlementineThemePage() {
+    if(!UiStyle::useQlementine())
+        return;
+
+    ui->loadPresetLabel->setText(tr("Theme:"));
+    {
+        // filling the list would otherwise emit currentIndexChanged(0) and
+        // rewrite the saved theme to "Dark" before the dialog is even read
+        const QSignalBlocker blocker(ui->themeSelectorComboBox);
+        ui->themeSelectorComboBox->clear();
+        ui->themeSelectorComboBox->addItem(tr("Dark"));
+        ui->themeSelectorComboBox->addItem(tr("Light"));
+    }
+    ui->modifySystemSchemeLabel->hide();
+    // what "Use system colors" falls back to when switched off again
+    mQlementinePresetTid = settings->colorScheme().tid == COLORS_LIGHT ? COLORS_LIGHT : COLORS_DARK;
+
+    // Keep the accent and its label, hide the rest of the grid.
+    for(int i = 0; i < ui->gridLayout_2->count(); i++) {
+        QWidget *w = ui->gridLayout_2->itemAt(i)->widget();
+        if(!w || w == ui->colorSelectorAccent || w == ui->label_33)
+            continue;
+        w->hide();
+    }
+
+    auto *note = new QLabel(tr("Panels and controls follow the window theme. The accent color is the "
+                               "only color that can be changed."), this);
+    note->setAccessibleName("SNoteText");
+    note->setWordWrap(true);
+    ui->verticalLayout_23->insertWidget(0, note);
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::resetToDesktopTheme() {
@@ -328,7 +416,9 @@ void SettingsDialog::readSettings() {
     ui->panelSizeSlider->setValue(settings->panelPreviewsSize() / 10);
 
     ui->useSystemColorsCheckBox->setChecked(settings->useSystemColorScheme());
-    ui->modifySystemSchemeLabel->setVisible(settings->useSystemColorScheme());
+    uiStyleComboBox->setCurrentIndex(settings->uiStyle() == UI_STYLE_CLASSIC ? 1 : 0);
+    if(!UiStyle::useQlementine()) // the "modify" shortcut is hidden in Qlementine mode
+        ui->modifySystemSchemeLabel->setVisible(settings->useSystemColorScheme());
     ui->themeSelectorComboBox->setEnabled(!settings->useSystemColorScheme());
     ui->colorConfigSubgroup->setEnabled(!settings->useSystemColorScheme());
     
@@ -448,6 +538,7 @@ void SettingsDialog::saveSettings() {
     settings->setMemoryAllocationLimit(ui->memoryLimitSpinBox->value());
 
     settings->setUseSystemColorScheme(ui->useSystemColorsCheckBox->isChecked());
+    settings->setUiStyle(uiStyleComboBox->currentIndex() == 1 ? UI_STYLE_CLASSIC : UI_STYLE_QLEMENTINE);
 
     saveColorScheme();
     saveShortcuts();
@@ -470,12 +561,22 @@ void SettingsDialog::readColorScheme() {
 }
 
 void SettingsDialog::setColorScheme(ColorScheme colors) {
-    switch (colors.tid) {
-        case COLORS_LIGHT: ui->themeSelectorComboBox->setCurrentIndex(3);   break;
-        case COLORS_BLACK: ui->themeSelectorComboBox->setCurrentIndex(0);   break;
-        case COLORS_DARK: ui->themeSelectorComboBox->setCurrentIndex(1);    break;
-        case COLORS_DARKBLUE: ui->themeSelectorComboBox->setCurrentIndex(2);break;
-        default: ui->themeSelectorComboBox->setCurrentIndex(-1);            break;
+    if(UiStyle::useQlementine()) {
+        // two entries: Dark, Light (see setupQlementineThemePage())
+        if(settings->useSystemColorScheme()) {
+            ui->themeSelectorComboBox->setCurrentIndex(-1); // follows the desktop
+        } else {
+            mQlementinePresetTid = colors.tid == COLORS_LIGHT ? COLORS_LIGHT : COLORS_DARK;
+            ui->themeSelectorComboBox->setCurrentIndex(mQlementinePresetTid == COLORS_LIGHT ? 1 : 0);
+        }
+    } else {
+        switch (colors.tid) {
+            case COLORS_LIGHT: ui->themeSelectorComboBox->setCurrentIndex(3);   break;
+            case COLORS_BLACK: ui->themeSelectorComboBox->setCurrentIndex(0);   break;
+            case COLORS_DARK: ui->themeSelectorComboBox->setCurrentIndex(1);    break;
+            case COLORS_DARKBLUE: ui->themeSelectorComboBox->setCurrentIndex(2);break;
+            default: ui->themeSelectorComboBox->setCurrentIndex(-1);            break;
+        }
     }
     ui->colorSelectorAccent->setColor(colors.accent);
     ui->colorSelectorBackground->setColor(colors.background);
@@ -493,6 +594,15 @@ void SettingsDialog::setColorScheme(ColorScheme colors) {
 
 //------------------------------------------------------------------------------
 void SettingsDialog::saveColorScheme() {
+    if(UiStyle::useQlementine()) {
+        // Only the accent is editable in this mode; the rest of the pickers is
+        // hidden and holds the colours the theme produced, so rebuilding the
+        // scheme from them would just overwrite the theme with itself.
+        ColorScheme colors = settings->colorScheme();
+        colors.accent = ui->colorSelectorAccent->color();
+        settings->setColorScheme(colors);
+        return;
+    }
     BaseColorScheme base;
     base.accent = ui->colorSelectorAccent->color();
     base.background = ui->colorSelectorBackground->color();

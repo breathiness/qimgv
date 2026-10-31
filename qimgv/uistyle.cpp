@@ -120,6 +120,7 @@ QString themedIconName(const QString &resourcePath) {
         {"settings/view32.png",               "misc/grid"},
         {"settings/appearance32.png",         "misc/color-swatch"},
         {"settings/shortcuts32.png",          "hardware/keyboard"},
+        {"settings/navbar32.png",             "navigation/ui-panel-top"},
         {"settings/terminal32.png",           "software/command-line"},
         {"settings/advanced32.png",           "misc/debug"},
         {"settings/about32.png",              "misc/faq"},

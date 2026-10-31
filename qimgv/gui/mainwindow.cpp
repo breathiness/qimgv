@@ -114,6 +114,8 @@ void MW::setupUi() {
         settings->saveNavBar(navBar->shortcuts(), navBar->icons());
     });
     connect(this, &FloatingWidgetContainer::resized, navBar, &FloatingNavBar::onContainerResized);
+    // in "always" mode the bar is part of the window instead of an overlay
+    connect(navBar, &FloatingNavBar::layoutStateChanged, this, &MW::updateNavBarSpace);
 }
 
 void MW::setupFullUi() {
@@ -193,6 +195,22 @@ void MW::updateNavBarVisibility() {
     if(!navBar)
         return;
     navBar->setViewActive(currentViewMode() != MODE_FOLDERVIEW);
+    updateNavBarSpace();
+}
+
+// In "always" mode the bar is not an overlay: it keeps a strip of the window for
+// itself, so it never sits on top of the bottom of the image. Auto mode hides it
+// instead and needs no room, and a dragged bar floats like any other overlay.
+void MW::updateNavBarSpace() {
+    if(!navBar)
+        return;
+    const bool reserve = navBar->mode() == NAVBAR_ALWAYS
+                         && navBar->isDocked()
+                         && currentViewMode() != MODE_FOLDERVIEW;
+    const int space = reserve ? FloatingNavBar::kBarHeight : 0;
+    if(layout.contentsMargins().bottom() == space)
+        return;
+    layout.setContentsMargins(0, 0, 0, space);
 }
 
 ViewMode MW::currentViewMode() {

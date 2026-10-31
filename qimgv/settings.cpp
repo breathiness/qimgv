@@ -1,12 +1,26 @@
 #include "settings.h"
 #include "uistyle.h"
+#include "uitheme.h"
 #include <QPalette>
 
 #ifdef USE_QLEMENTINE
 #include <oclero/qlementine/style/QlementineStyle.hpp>
+#include <QGuiApplication>
+#include <QStyleHints>
 #endif
 
 Settings *settings = nullptr;
+
+// The main config file. Shared with storedUiStyle(), which main() calls before
+// any Settings instance exists: the UI style has to be picked before the widget
+// style is created.
+static QString settingsConfPath() {
+#if defined(__linux__) || defined(__FreeBSD__)
+    return QString(); // empty: QSettings() goes to the native location
+#else
+    return QApplication::applicationDirPath() + "/conf/" + qApp->applicationName() + ".ini";
+#endif
+}
 
 Settings::Settings(QObject *parent) : QObject(parent) {
 #if defined(__linux__) || defined(__FreeBSD__)
@@ -18,9 +32,15 @@ Settings::Settings(QObject *parent) : QObject(parent) {
 #else
     mConfDir = new QDir(QApplication::applicationDirPath() + "/conf");
     mConfDir->mkpath(QApplication::applicationDirPath() + "/conf");
-    settingsConf = new QSettings(mConfDir->absolutePath() + "/" + qApp->applicationName() + ".ini", QSettings::IniFormat);
+    settingsConf = new QSettings(settingsConfPath(), QSettings::IniFormat);
     stateConf = new QSettings(mConfDir->absolutePath() + "/savedState.ini", QSettings::IniFormat);
     themeConf = new QSettings(mConfDir->absolutePath() + "/theme.ini", QSettings::IniFormat);
+#endif
+#if defined(USE_QLEMENTINE) && QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    // Windows switches between light and dark while the app is running; follow
+    // it instead of waiting for the next start.
+    connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged,
+            this, [this](Qt::ColorScheme) { followDesktopColorScheme(); });
 #endif
     fillVideoFormats();
 }
@@ -236,6 +256,11 @@ void Settings::loadStylesheet() {
 }
 //------------------------------------------------------------------------------
 void Settings::loadTheme() {
+    // In Qlementine mode a theme.ini written by an older build (or by a
+    // Qlementine build) holds the colours that build ended up with, not a
+    // deliberate choice, so the accent is only applied once it is known to be
+    // the user's: either it is in the file, or they change it in the settings.
+    mTintAccent = themeConf->contains("Colors/accent") && !useSystemColorScheme();
     if(settings->useSystemColorScheme()) {
         setColorScheme(ThemeStore::colorScheme(ColorSchemes::COLORS_SYSTEM));
     } else {
@@ -257,6 +282,7 @@ void Settings::loadTheme() {
         themeConf->endGroup();
         setColorScheme(ColorScheme(base));
     }
+    mThemeLoaded = true;
 }
 void Settings::saveTheme() {
     if(settings->useSystemColorScheme())
@@ -282,44 +308,36 @@ const ColorScheme& Settings::colorScheme() {
     return mColorScheme;
 }
 //------------------------------------------------------------------------------
-#ifdef USE_QLEMENTINE
-// Qlementine paints the standard widgets, qimgv paints the navigation bar,
-// overlays and thumbnail strip itself. Take the colours from Qlementine's
-// theme, otherwise the two halves would not match.
-static void adoptQlementineColors(ColorScheme &scheme) {
-    auto *style = qobject_cast<oclero::qlementine::QlementineStyle*>(qApp->style());
-    if(!style)
-        return;
-    const auto &t = style->theme();
-    const QPalette pal = style->standardPalette();
-    BaseColorScheme base;
-    base.tid                   = scheme.tid;
-    base.background            = t.backgroundColorMain1;
-    base.background_fullscreen = t.backgroundColorWorkspace;
-    base.text                  = pal.color(QPalette::WindowText);
-    base.icons                 = pal.color(QPalette::WindowText);
-    base.widget                = t.neutralColor;
-    base.widget_border         = t.borderColor;
-    base.accent                = t.primaryColor;
-    base.folderview            = t.backgroundColorMain3;
-    base.folderview_topbar     = t.backgroundColorMain2;
-    base.scrollbar             = t.neutralColor;
-    // overlays float above the image, so keep them slightly translucent
-    QColor overlay = t.backgroundColorMain1;
-    overlay.setAlpha(230);
-    base.overlay               = overlay;
-    base.overlay_text          = pal.color(QPalette::WindowText);
-    scheme.setBaseColors(base);
-}
-#endif
-
+// Qlementine paints the standard widgets from a theme; qimgv paints the
+// navigation bar, overlays, folder view and thumbnail strip itself. UiTheme
+// installs the theme this scheme asks for and hands back the colours it ended up
+// with, so both halves of the window agree. In classic mode there is no theme:
+// the stylesheet below is built straight from the scheme.
 void Settings::setColorScheme(ColorScheme scheme) {
 #ifdef USE_QLEMENTINE
-    if(UiStyle::useQlementine())
-        adoptQlementineColors(scheme);
+    if(UiStyle::useQlementine()) {
+        // Anything that changes the theme after start-up is the user picking a
+        // colour, so from then on the accent is theirs to keep.
+        if(mThemeLoaded && !useSystemColorScheme())
+            mTintAccent = true;
+        UiTheme::apply(scheme, useSystemColorScheme(), mTintAccent);
+    }
 #endif
     mColorScheme = scheme;
     loadStylesheet();
+}
+//------------------------------------------------------------------------------
+// "Use system colors" was only honored for the widgets qimgv paints itself: the
+// Qlementine theme stayed dark until the app was restarted, and switching the
+// desktop between light and dark at runtime changed nothing at all. Re-apply the
+// theme whenever the desktop changes its mind.
+void Settings::followDesktopColorScheme() {
+#ifdef USE_QLEMENTINE
+    if(!UiStyle::useQlementine() || !useSystemColorScheme())
+        return;
+    setColorScheme(ThemeStore::colorScheme(ColorSchemes::COLORS_SYSTEM));
+    sendChangeNotification();
+#endif
 }
 //------------------------------------------------------------------------------
 void Settings::setColorTid(int tid) {
@@ -416,6 +434,28 @@ bool Settings::useSystemColorScheme() {
 
 void Settings::setUseSystemColorScheme(bool mode) {
     settings->settingsConf->setValue("useSystemColorScheme", mode);
+}
+//------------------------------------------------------------------------------
+UiStyleMode Settings::storedUiStyle() {
+#if defined(__linux__) || defined(__FreeBSD__)
+    QSettings conf;
+#else
+    QSettings conf(settingsConfPath(), QSettings::IniFormat);
+#endif
+    // anything unfamiliar (or missing) means the style this build ships with
+    return conf.value("uiStyle", UI_STYLE_QLEMENTINE).toInt() == UI_STYLE_CLASSIC
+               ? UI_STYLE_CLASSIC
+               : UI_STYLE_QLEMENTINE;
+}
+
+UiStyleMode Settings::uiStyle() {
+    return settings->settingsConf->value("uiStyle", UI_STYLE_QLEMENTINE).toInt() == UI_STYLE_CLASSIC
+               ? UI_STYLE_CLASSIC
+               : UI_STYLE_QLEMENTINE;
+}
+
+void Settings::setUiStyle(UiStyleMode mode) {
+    settings->settingsConf->setValue("uiStyle", static_cast<int>(mode));
 }
 //------------------------------------------------------------------------------
 QVersionNumber Settings::lastVersion() {

@@ -31,11 +31,14 @@ public:
 private slots:
     void rebuildRows();
     void resetToDefaults();
+    // appends a group separator row (a divider on the bar)
+    void addSeparator();
 
 private:
     void fillRows();
     void syncFromRows();
     void moveRow(int from, int to);
+    void removeRow(int index);
     void selectIcon(int index, const QString &value);
     void updateAutoPreview(int index);
     void chooseIconFile(int index);
@@ -45,6 +48,7 @@ private:
     QVBoxLayout *rowsLayout;
     RowsArea *rowsArea;
     QList<QWidget*> rows;
+    // parallel to rows; a separator row has no key field and no icon combo
     QList<KeySequenceEdit*> sequenceEdits;
     QList<QComboBox*> iconCombos;
     QStringList mShortcuts;

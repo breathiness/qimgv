@@ -276,15 +276,20 @@ NavBarSettingsPage::NavBarSettingsPage(QWidget *parent)
     mainLayout->addLayout(modeLayout);
 
     QHBoxLayout *countLayout = new QHBoxLayout();
-    countLayout->addWidget(new QLabel(tr("Number of buttons:"), this));
+    countLayout->addWidget(new QLabel(tr("Number of rows:"), this));
     countSpinBox = new QSpinBox(this);
-    countSpinBox->setRange(1, 16);
-    countSpinBox->setToolTip(tr("How many buttons the navigation bar has."));
+    // rows are buttons and separators, so this is a bit more than the number of
+    // buttons the defaults use
+    countSpinBox->setRange(0, 24);
+    countSpinBox->setToolTip(tr("How many rows the navigation bar has: buttons and group separators."));
     countLayout->addWidget(countSpinBox);
     countLayout->addStretch();
     mainLayout->addLayout(countLayout);
 
-    mainLayout->addWidget(new QLabel(tr("Drag a row by its grip to change the order. Click a field and press the shortcut this button should run. Pick the icon of a button from the list on the left."), this));
+    QLabel *hint = new QLabel(tr("Drag a row by its grip to change the order. Click a field and press the shortcut this button should run. Pick the icon of a button from the list on the left. A group separator draws a line between two groups of buttons. Remove deletes the row."), this);
+    // the page is narrow, so the hint has to wrap instead of being cut off
+    hint->setWordWrap(true);
+    mainLayout->addWidget(hint);
 
     QScrollArea *scrollArea = new QScrollArea(this);
     scrollArea->setWidgetResizable(true);
@@ -298,10 +303,18 @@ NavBarSettingsPage::NavBarSettingsPage(QWidget *parent)
     scrollArea->setWidget(rowsArea);
     mainLayout->addWidget(scrollArea, 1);
 
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    QPushButton *separatorButton = new QPushButton(tr("Add separator"), this);
+    separatorButton->setToolTip(tr("Adds a row that is drawn as a line on the bar, to group the buttons around it."));
+    buttonLayout->addWidget(separatorButton);
+    buttonLayout->addStretch();
+    mainLayout->addLayout(buttonLayout);
+
     QPushButton *resetButton = new QPushButton(tr("Reset to defaults"), this);
     mainLayout->addWidget(resetButton);
 
     connect(resetButton, &QPushButton::clicked, this, &NavBarSettingsPage::resetToDefaults);
+    connect(separatorButton, &QPushButton::clicked, this, &NavBarSettingsPage::addSeparator);
     connect(countSpinBox, qOverload<int>(&QSpinBox::valueChanged), this, &NavBarSettingsPage::rebuildRows);
 }
 
@@ -317,7 +330,7 @@ void NavBarSettingsPage::readSettings() {
     modeComboBox->setCurrentIndex(index >= 0 ? index : 1);
 
     countSpinBox->blockSignals(true);
-    countSpinBox->setValue(qMax(1, mShortcuts.size()));
+    countSpinBox->setValue(mShortcuts.size());
     countSpinBox->blockSignals(false);
 
     fillRows();
@@ -330,15 +343,23 @@ void NavBarSettingsPage::saveSettings() {
 
 QStringList NavBarSettingsPage::shortcuts() const {
     QStringList result;
-    for(int i = 0; i < sequenceEdits.size(); i++)
-        result << sequenceEdits.at(i)->sequence();
+    // one entry per row; separator rows have no key field of their own
+    for(int i = 0; i < mShortcuts.size(); i++) {
+        KeySequenceEdit *edit = sequenceEdits.value(i);
+        result << (edit ? edit->sequence() : mShortcuts.at(i));
+    }
     return result;
 }
 
 QStringList NavBarSettingsPage::icons() const {
     QStringList result;
-    for(int i = 0; i < iconCombos.size(); i++) {
-        const QString value = iconCombos.at(i)->currentData().toString();
+    for(int i = 0; i < mShortcuts.size(); i++) {
+        QComboBox *combo = iconCombos.value(i);
+        if(!combo) {
+            result << QString();
+            continue;
+        }
+        const QString value = combo->currentData().toString();
         // "choose a file" is an action, never a value
         result << (value == QLatin1String("__file__") ? QString() : value);
     }
@@ -346,11 +367,20 @@ QStringList NavBarSettingsPage::icons() const {
 }
 
 void NavBarSettingsPage::syncFromRows() {
-    for(int i = 0; i < sequenceEdits.size() && i < mShortcuts.size(); i++)
-        mShortcuts[i] = sequenceEdits.at(i)->sequence();
-    for(int i = 0; i < iconCombos.size(); i++) {
-        const QString value = iconCombos.at(i)->currentData().toString();
-        if(i < mIcons.size() && value != QLatin1String("__file__"))
+    while(mIcons.size() < mShortcuts.size())
+        mIcons.append(QString());
+    for(int i = 0; i < sequenceEdits.size() && i < mShortcuts.size(); i++) {
+        KeySequenceEdit *edit = sequenceEdits.at(i);
+        // separator rows keep their token; only real buttons are read back
+        if(edit)
+            mShortcuts[i] = edit->sequence();
+    }
+    for(int i = 0; i < iconCombos.size() && i < mIcons.size(); i++) {
+        QComboBox *combo = iconCombos.at(i);
+        if(!combo)
+            continue;
+        const QString value = combo->currentData().toString();
+        if(value != QLatin1String("__file__"))
             mIcons[i] = value;
     }
 }
@@ -371,6 +401,31 @@ void NavBarSettingsPage::rebuildRows() {
     while(mIcons.size() > count)
         mIcons.removeLast();
 
+    fillRows();
+}
+
+// Appends a group separator: a row that is drawn as a line between two groups of
+// buttons. Stored like a button, so it keeps its position when rows are moved.
+void NavBarSettingsPage::addSeparator() {
+    syncFromRows();
+    mShortcuts.append(FloatingNavBar::separatorShortcut());
+    mIcons.append(QString());
+    countSpinBox->blockSignals(true);
+    countSpinBox->setValue(mShortcuts.size());
+    countSpinBox->blockSignals(false);
+    fillRows();
+}
+
+void NavBarSettingsPage::removeRow(int index) {
+    if(index < 0 || index >= mShortcuts.size())
+        return;
+    syncFromRows();
+    mShortcuts.removeAt(index);
+    if(index < mIcons.size())
+        mIcons.removeAt(index);
+    countSpinBox->blockSignals(true);
+    countSpinBox->setValue(mShortcuts.size());
+    countSpinBox->blockSignals(false);
     fillRows();
 }
 
@@ -399,6 +454,7 @@ void NavBarSettingsPage::fillRows() {
     }
 
     const QStringList iconNames = FloatingNavBar::themedIconNames();
+    int buttonNumber = 0;
 
     for(int i = 0; i < mShortcuts.size(); i++) {
         QWidget *row = new QWidget(rowsArea);
@@ -409,6 +465,33 @@ void NavBarSettingsPage::fillRows() {
         rowLayout->addWidget(new DragHandle(row, rowsArea,
             [this](int from, int to) { moveRow(from, to); }));
 
+        // a group separator has no icon and no key: it is a line on the bar
+        if(FloatingNavBar::isSeparator(mShortcuts.at(i))) {
+            QLabel *label = new QLabel(tr("Group separator"), row);
+            label->setMinimumWidth(190);
+            rowLayout->addWidget(label);
+
+            QFrame *preview = new QFrame(row);
+            preview->setFrameShape(QFrame::HLine);
+            preview->setFrameShadow(QFrame::Plain);
+            rowLayout->addWidget(preview, 1);
+
+            QPushButton *removeButton = new QPushButton(tr("Remove"), row);
+            removeButton->setToolTip(tr("Removes this separator from the bar."));
+            removeButton->setAutoDefault(false);
+            rowLayout->addWidget(removeButton);
+            connect(removeButton, &QPushButton::clicked, this, [this, row]() {
+                removeRow(rows.indexOf(row));
+            });
+
+            rows.append(row);
+            rowsLayout->addWidget(row);
+            sequenceEdits.append(nullptr);
+            iconCombos.append(nullptr);
+            continue;
+        }
+
+        buttonNumber++;
         QComboBox *iconCombo = new QComboBox(row);
         iconCombo->setMinimumWidth(190);
         iconCombo->setIconSize(QSize(18, 18));
@@ -421,7 +504,7 @@ void NavBarSettingsPage::fillRows() {
         rowLayout->addWidget(iconCombo);
         iconCombos.append(iconCombo);
 
-        QLabel *label = new QLabel(tr("Button %1:").arg(i + 1), row);
+        QLabel *label = new QLabel(tr("Button %1:").arg(buttonNumber), row);
         label->setMinimumWidth(64);
         rowLayout->addWidget(label);
 
@@ -430,8 +513,17 @@ void NavBarSettingsPage::fillRows() {
         rowLayout->addWidget(edit, 1);
         sequenceEdits.append(edit);
 
+        QPushButton *removeButton = new QPushButton(tr("Remove"), row);
+        removeButton->setToolTip(tr("Removes this button from the bar."));
+        removeButton->setAutoDefault(false);
+        rowLayout->addWidget(removeButton);
+
         rows.append(row);
         rowsLayout->addWidget(row);
+
+        connect(removeButton, &QPushButton::clicked, this, [this, row]() {
+            removeRow(rows.indexOf(row));
+        });
 
         // the index is looked up from the row itself, so a row can be moved later
         connect(edit, &KeySequenceEdit::edited, this, [this, row]() {
@@ -439,7 +531,7 @@ void NavBarSettingsPage::fillRows() {
         });
         connect(iconCombo, qOverload<int>(&QComboBox::activated), this, [this, row](int) {
             const int index = rows.indexOf(row);
-            if(index < 0)
+            if(index < 0 || !iconCombos.value(index))
                 return;
             QComboBox *combo = iconCombos.at(index);
             if(combo->currentData().toString() == QLatin1String("__file__")) {
@@ -462,6 +554,9 @@ void NavBarSettingsPage::selectIcon(int index, const QString &value) {
     if(index < 0 || index >= iconCombos.size())
         return;
     QComboBox *combo = iconCombos.at(index);
+    // separator rows have no icon combo
+    if(!combo)
+        return;
 
     if(value.isEmpty()) {
         combo->setCurrentIndex(0);
@@ -482,15 +577,20 @@ void NavBarSettingsPage::selectIcon(int index, const QString &value) {
 void NavBarSettingsPage::updateAutoPreview(int index) {
     if(index < 0 || index >= iconCombos.size() || index >= sequenceEdits.size())
         return;
-    iconCombos.at(index)->setItemIcon(0, automaticIcon(sequenceEdits.at(index)->sequence()));
+    // separator rows have neither an icon combo nor a key field
+    QComboBox *combo = iconCombos.at(index);
+    KeySequenceEdit *edit = sequenceEdits.at(index);
+    if(!combo || !edit)
+        return;
+    combo->setItemIcon(0, automaticIcon(edit->sequence()));
 }
 
 void NavBarSettingsPage::chooseIconFile(int index) {
-    if(index < 0 || index >= iconCombos.size())
+    if(index < 0 || index >= iconCombos.size() || !iconCombos.value(index))
         return;
     const QString file = QFileDialog::getOpenFileName(
         this,
-        tr("Choose icon for button %1").arg(index + 1),
+        tr("Choose an icon"),
         QString(),
         tr("Images (*.png *.jpg *.jpeg *.bmp *.ico *.svg);;All files (*)"));
     if(file.isEmpty()) {

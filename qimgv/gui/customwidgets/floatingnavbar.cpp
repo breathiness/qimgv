@@ -12,8 +12,6 @@
 #include <QIcon>
 #include <QPixmap>
 #include <QMap>
-#include <QPropertyAnimation>
-#include <QTimer>
 #include <QEnterEvent>
 #include <QApplication>
 #include <QCursor>
@@ -24,6 +22,32 @@
 #include "settings.h"
 
 namespace {
+
+// Thin vertical line that groups the buttons of the bar. It is not a button: it
+// never reacts to the mouse, so a click there behaves like a click on the bar
+// itself.
+class NavBarSeparator : public QWidget {
+public:
+    explicit NavBarSeparator(QWidget *parent) : QWidget(parent) {
+        setAttribute(Qt::WA_TransparentForMouseEvents, true);
+        setFocusPolicy(Qt::NoFocus);
+        setFixedWidth(11);
+        setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+    }
+
+protected:
+    void paintEvent(QPaintEvent *event) override {
+        Q_UNUSED(event)
+        QPainter painter(this);
+        // a quiet version of the icon colour: the bar's own border colour is too
+        // close to its surface to read as a group divider
+        QColor line = settings->colorScheme().icons;
+        line.setAlpha(70);
+        const int x = width() / 2;
+        painter.setPen(QPen(line, 1));
+        painter.drawLine(x, 9, x, qMax(9, height() - 10));
+    }
+};
 
 // resolves the action bound to a shortcut, tolerating a not-yet-created manager
 QString actionForShortcut(const QString &shortcut) {
@@ -122,7 +146,7 @@ QPoint eventGlobalPos(QMouseEvent *event) {
 
 FloatingNavBar::FloatingNavBar(QWidget *parent)
     : QWidget(parent), layout(nullptr), dragging(false), docked(true), barHeight(kBarHeight),
-      mMode(NAVBAR_AUTO), mViewActive(false), hoverMargin(40), posAnim(nullptr), collapseTimer(nullptr)
+      mMode(NAVBAR_AUTO), mViewActive(false)
 {
     setObjectName("FloatingNavBar");
     // never take keyboard focus, otherwise the shortcuts handled by the main
@@ -138,18 +162,9 @@ FloatingNavBar::FloatingNavBar(QWidget *parent)
     layout->addStretch();
     layout->addStretch();
 
-    posAnim = new QPropertyAnimation(this, "pos", this);
-    posAnim->setDuration(170);
-    posAnim->setEasingCurve(QEasingCurve::OutCubic);
-
-    collapseTimer = new QTimer(this);
-    collapseTimer->setSingleShot(true);
-    collapseTimer->setInterval(450);
-    connect(collapseTimer, &QTimer::timeout, this, [this]() { collapseBar(); });
-
-    // The image widget below consumes its own mouse events, so the hover zone
+    // The image widget below consumes its own mouse events, so the trigger strip
     // is detected from the global cursor position instead of from widget
-    // geometry. This keeps the zone large without ever blocking clicks.
+    // geometry. This keeps the strip large without ever blocking clicks.
     qApp->installEventFilter(this);
 
     applyTheme();
@@ -162,11 +177,20 @@ void FloatingNavBar::setMode(NavBarMode mode) {
     if(mMode == mode)
         return;
     mMode = mode;
+    // auto mode knows only the bottom strip, so a bar that was dragged away is
+    // put back before the strip logic runs
+    if(mode == NAVBAR_AUTO)
+        docked = true;
     applyState();
+    emit layoutStateChanged();
 }
 
 NavBarMode FloatingNavBar::mode() const {
     return mMode;
+}
+
+bool FloatingNavBar::isDocked() const {
+    return docked;
 }
 
 void FloatingNavBar::setViewActive(bool active) {
@@ -179,9 +203,8 @@ void FloatingNavBar::setViewActive(bool active) {
 // Decides whether the bar is on screen at all and where it sits. Called when the
 // mode, the active page or the parent size changes.
 void FloatingNavBar::applyState() {
-    collapseTimer->stop();
     // the folder view has no navigation bar: take it off instead of leaving a
-    // strip or letting it slide in when the cursor reaches the bottom edge
+    // strip or letting it appear when the cursor reaches the bottom edge
     if(!mViewActive || mMode == NAVBAR_NEVER) {
         hide();
         return;
@@ -197,9 +220,11 @@ void FloatingNavBar::applyState() {
     if(withinHoverZone())
         expandBar();
     else
-        collapseBar(true);
+        collapseBar();
 }
 
+// The strip that brings the bar back is exactly the area the bar occupies when it
+// is docked: reaching the bottom edge of the window is enough, no extra margin.
 bool FloatingNavBar::withinHoverZone() const {
     QWidget *container = parentWidget();
     if(!container)
@@ -207,22 +232,26 @@ bool FloatingNavBar::withinHoverZone() const {
     const QPoint p = container->mapFromGlobal(QCursor::pos());
     if(!container->rect().contains(p))
         return false;
-    return p.y() >= container->height() - (barHeight + hoverMargin);
+    return p.y() >= container->height() - barHeight;
 }
 
+// Both directions move the bar in one step: no slide and no idle delay, the same
+// reaction the video controls have. Before, the bar waited 450 ms before it even
+// started a 170 ms slide, which is what made it feel sluggish.
 void FloatingNavBar::expandBar() {
     if(mMode != NAVBAR_AUTO || !mViewActive)
         return;
-    collapseTimer->stop();
     QWidget *container = parentWidget();
     if(!container)
         return;
-    animateTo(qMax(0, container->height() - barHeight));
+    const int y = qMax(0, container->height() - barHeight);
+    if(pos().y() != y || width() != container->width())
+        setGeometry(0, y, container->width(), barHeight);
 }
 
 // Moves the bar fully below the lower edge: nothing of it stays visible, and the
-// hover zone above the edge is what brings it back.
-void FloatingNavBar::collapseBar(bool instant) {
+// trigger strip above the edge is what brings it back.
+void FloatingNavBar::collapseBar() {
     if(mMode != NAVBAR_AUTO || !docked || !mViewActive)
         return;
     if(withinHoverZone())
@@ -231,26 +260,11 @@ void FloatingNavBar::collapseBar(bool instant) {
     if(!container)
         return;
     const int y = container->height();
-    if(instant) {
-        posAnim->stop();
+    if(pos().y() != y || width() != container->width())
         setGeometry(0, y, container->width(), barHeight);
-        return;
-    }
-    animateTo(y);
 }
 
-void FloatingNavBar::animateTo(int y) {
-    if(!posAnim)
-        return;
-    posAnim->stop();
-    if(pos().y() == y)
-        return;
-    posAnim->setStartValue(pos());
-    posAnim->setEndValue(QPoint(0, y));
-    posAnim->start();
-}
-
-// Watches app-wide mouse moves so the hover zone also works while the image
+// Watches app-wide mouse moves so the trigger strip also works while the image
 // widget below is handling the mouse. Nothing is intercepted: the event is
 // always passed through.
 bool FloatingNavBar::eventFilter(QObject *watched, QEvent *event) {
@@ -262,11 +276,10 @@ bool FloatingNavBar::eventFilter(QObject *watched, QEvent *event) {
     if(mMode != NAVBAR_AUTO || !mViewActive || !docked || !isVisible() || !window()->isActiveWindow())
         return QWidget::eventFilter(watched, event);
 
-    if(withinHoverZone()) {
+    if(withinHoverZone())
         expandBar();
-    } else if(!collapseTimer->isActive()) {
-        collapseTimer->start();
-    }
+    else
+        collapseBar();
     return QWidget::eventFilter(watched, event);
 }
 
@@ -278,6 +291,9 @@ void FloatingNavBar::setButtons(const QStringList &shortcuts, const QStringList 
     while(mIcons.size() > mShortcuts.size())
         mIcons.removeLast();
     updateFromShortcuts();
+    // the card is only as wide as its buttons
+    if(!docked)
+        fitToContent();
 }
 
 QStringList FloatingNavBar::shortcuts() const {
@@ -363,9 +379,19 @@ QStringList FloatingNavBar::themedIconNames() {
     return names;
 }
 
+QString FloatingNavBar::separatorShortcut() {
+    return QStringLiteral("|");
+}
+
+bool FloatingNavBar::isSeparator(const QString &shortcut) {
+    return shortcut == separatorShortcut();
+}
+
 void FloatingNavBar::rebuildButtons() {
     while(!buttons.isEmpty())
         delete buttons.takeFirst();
+    while(!separators.isEmpty())
+        delete separators.takeFirst();
 
     const QColor iconColor = settings->colorScheme().icons;
 
@@ -384,6 +410,15 @@ void FloatingNavBar::rebuildButtons() {
 
     for(int i = 0; i < mShortcuts.size(); i++) {
         const QString shortcut = mShortcuts.at(i);
+
+        // a divider between two groups of buttons
+        if(isSeparator(shortcut)) {
+            NavBarSeparator *separator = new NavBarSeparator(this);
+            layout->insertWidget(layout->count() - 1, separator);
+            separators.append(separator);
+            continue;
+        }
+
         const QString action = actionForShortcut(shortcut);
 
         QPushButton *button = new QPushButton(this);
@@ -473,14 +508,31 @@ void FloatingNavBar::dockToBottom() {
     QWidget *container = parentWidget();
     if(!container)
         return;
+    const bool wasDocked = docked;
     docked = true;
-    if(posAnim)
-        posAnim->stop();
-    // auto mode rests fully out of sight; applyState()/the hover zone brings it
-    // back in
+    // auto mode rests fully out of sight; applyState()/the trigger strip brings
+    // it back in
     const int y = (mMode == NAVBAR_AUTO) ? container->height()
                                          : container->height() - barHeight;
     setGeometry(0, qMax(0, y), container->width(), barHeight);
+    if(!wasDocked)
+        emit layoutStateChanged();
+}
+
+// Undocked the bar is a floating card like the video controls: only as wide as
+// its buttons, rounded, with the same surface. Docked it goes back to the full
+// width strip that sits on the bottom edge.
+void FloatingNavBar::fitToContent() {
+    QWidget *container = parentWidget();
+    if(!container)
+        return;
+    const int w = qMin(sizeHint().width(), container->width());
+    // keep the current centre, so a resize does not make it jump sideways
+    const int x = qBound(0, pos().x() + (width() - w) / 2,
+                         qMax(0, container->width() - w));
+    const int y = qBound(0, pos().y(), qMax(0, container->height() - barHeight));
+    if(geometry() != QRect(x, y, w, barHeight))
+        setGeometry(x, y, w, barHeight);
 }
 
 void FloatingNavBar::clampToParent() {
@@ -488,12 +540,15 @@ void FloatingNavBar::clampToParent() {
     if(!container)
         return;
     const int y = qBound(0, pos().y(), qMax(0, container->height() - barHeight));
-    setGeometry(0, y, container->width(), barHeight);
+    const int w = docked ? container->width() : qMin(width(), container->width());
+    const int x = docked ? 0 : qBound(0, pos().x(), qMax(0, container->width() - w));
+    setGeometry(x, y, w, barHeight);
 }
 
 void FloatingNavBar::onContainerResized(QSize size) {
     Q_UNUSED(size)
     if(!docked) {
+        fitToContent();
         clampToParent();
         return;
     }
@@ -505,7 +560,6 @@ void FloatingNavBar::onContainerResized(QSize size) {
             return;
         const int y = (mViewActive && withinHoverZone()) ? qMax(0, container->height() - barHeight)
                                                          : container->height();
-        posAnim->stop();
         setGeometry(0, y, container->width(), barHeight);
         return;
     }
@@ -514,14 +568,31 @@ void FloatingNavBar::onContainerResized(QSize size) {
 
 void FloatingNavBar::paintEvent(QPaintEvent *event) {
     Q_UNUSED(event)
-    const ColorScheme &colors = settings->colorScheme();
     QPainter painter(this);
-    // only the lower part of the widget is the visible bar; everything above it
-    // is a transparent hover/trigger area
-    const QRect barRect(0, height() - barHeight, width(), barHeight);
-    painter.fillRect(barRect, colors.widget);
-    painter.setPen(QPen(colors.widget_border, 1));
-    painter.drawLine(barRect.topLeft(), barRect.topRight());
+    // Same surface as the video controls: their card is filled with
+    // QPalette::Window and bordered with QPalette::Mid (see
+    // UiStyle::paintBackground and the "FloatingWidget" rule in the stylesheet),
+    // so the bar uses exactly those colours instead of the neutral button colour
+    // it used to look like one big button.
+    const ColorScheme &colors = settings->colorScheme();
+    const QColor fill = UiStyle::useQlementine() ? palette().color(QPalette::Window)
+                                                 : colors.widget;
+    const QColor line = UiStyle::useQlementine() ? palette().color(QPalette::Mid)
+                                                 : colors.widget_border;
+    if(!docked) {
+        // free-floating: the whole card, rounded, like the video controls
+        const int radius = UiStyle::useQlementine() ? UiStyle::controlRadius() : 3;
+        const QRectF card = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.setPen(QPen(line, 1.0));
+        painter.setBrush(fill);
+        painter.drawRoundedRect(card, radius, radius);
+        return;
+    }
+    // docked: a strip across the bottom edge, only the top edge is a border
+    painter.fillRect(rect(), fill);
+    painter.setPen(QPen(line, 1));
+    painter.drawLine(QPoint(0, 0), QPoint(width(), 0));
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -535,8 +606,10 @@ void FloatingNavBar::enterEvent(QEvent *event) {
 }
 
 void FloatingNavBar::leaveEvent(QEvent *event) {
-    if(mMode == NAVBAR_AUTO && collapseTimer)
-        collapseTimer->start();
+    // the trigger strip reaches above the bar, so this only hides the bar once
+    // the cursor left the strip too (collapseBar checks that itself)
+    if(mMode == NAVBAR_AUTO)
+        collapseBar();
     QWidget::leaveEvent(event);
 }
 
@@ -547,10 +620,23 @@ void FloatingNavBar::mousePressEvent(QMouseEvent *event) {
         return;
     }
     if(event->button() == Qt::LeftButton) {
+        QWidget *container = parentWidget();
+        const bool wasDocked = docked;
         docked = false;
         dragging = true;
+        if(wasDocked && container) {
+            // undocked: shrink to a card under the cursor, centred on it so the
+            // drag starts where the user grabbed
+            const int w = qMin(sizeHint().width(), container->width());
+            const QPoint grab = container->mapFromGlobal(eventGlobalPos(event));
+            const int x = qBound(0, grab.x() - w / 2, qMax(0, container->width() - w));
+            setGeometry(x, pos().y(), w, barHeight);
+        }
         dragOffset = eventGlobalPos(event) - pos();
         setCursor(Qt::ClosedHandCursor);
+        // the bar is a free-floating overlay now, so its strip can go back to
+        // the image while it is being dragged
+        emit layoutStateChanged();
         event->accept();
         return;
     }
@@ -560,10 +646,14 @@ void FloatingNavBar::mousePressEvent(QMouseEvent *event) {
 void FloatingNavBar::mouseMoveEvent(QMouseEvent *event) {
     if(dragging && (event->buttons() & Qt::LeftButton)) {
         QWidget *container = parentWidget();
-        int y = eventGlobalPos(event).y() - dragOffset.y();
-        if(container)
+        const QPoint target = eventGlobalPos(event) - dragOffset;
+        int y = target.y();
+        int x = target.x();
+        if(container) {
             y = qBound(0, y, qMax(0, container->height() - barHeight));
-        move(0, y);
+            x = qBound(0, x, qMax(0, container->width() - width()));
+        }
+        move(x, y);
         event->accept();
         return;
     }

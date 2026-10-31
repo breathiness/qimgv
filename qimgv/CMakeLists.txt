@@ -45,6 +45,7 @@ add_executable(qimgv
     shortcutbuilder.cpp
     proxystyle.cpp
     uistyle.cpp
+    uitheme.cpp
     macosapplication.cpp
     resources.qrc
     qimgv.rc

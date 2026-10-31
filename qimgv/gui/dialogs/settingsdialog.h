@@ -24,6 +24,7 @@ class SettingsDialog;
 
 class NavBarSettingsPage;
 class QCheckBox;
+class QComboBox;
 class QLabel;
 
 class SettingsDialog : public QDialog
@@ -55,12 +56,19 @@ private:
     // "Advanced" page: large image decoding mode
     QCheckBox *twoPassCheckBox = nullptr;
     QLabel *twoPassNote = nullptr;
+    // "Appearance" page, Qlementine mode: the preset list becomes Dark/Light and
+    // only the accent colour stays editable
+    int mQlementinePresetTid = -1;
+    // "Appearance" page: Qlementine / Classic, applied on the next start
+    QComboBox *uiStyleComboBox = nullptr;
 
     void saveShortcuts();
     void addShortcutToTable(const QString &action, const QString &shortcut);
     void addScriptToList(const QString &name);
 
     void setupSidebar();
+    void setupUiStyleRow();
+    void setupQlementineThemePage();
     void removeShortcutAt(int row);
     void adjustSizeToContents();
     QMap<QString, QString> langs; // <"en_US", "English">
