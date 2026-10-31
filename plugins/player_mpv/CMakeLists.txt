@@ -29,6 +29,8 @@ endif()
 include(GNUInstallDirs)
 
 add_library(player_mpv MODULE
+    src/mpvframegrabber.cpp
+    src/mpvframegrabber.h
     src/videoplayer.cpp
     src/mpvwidget.cpp
     src/videoplayermpv.cpp

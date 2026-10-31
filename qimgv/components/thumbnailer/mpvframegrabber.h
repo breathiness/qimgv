@@ -2,9 +2,9 @@
 
 #include <QString>
 
-// Renders a single video frame with libmpv, in-process. The player plugin is not
-// involved: this creates its own mpv instance, so it is safe to call from the
-// thumbnailer threads and needs no external mpv executable.
+// Video thumbnails without linking libmpv: the frame grabber lives in the
+// optional player plugin, which exports a C function for it. When the pack is
+// not installed, grabFrame() simply reports failure and video tiles stay empty.
 namespace MpvFrameGrabber {
 // Writes one frame of the video at `positionSec` to `outPath` (png).
 // Returns true when a file was written.

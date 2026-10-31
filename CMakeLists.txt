@@ -27,9 +27,6 @@ option(OPENCV_SUPPORT "Enable HQ scaling via OpenCV" ON)
 option(KDE_SUPPORT "Support blur when using KDE" OFF)
 option(USE_QT5 "Build with Qt5 if available" ON)
 option(QLEMENTINE "Use the Qlementine widget style (requires Qt6)" OFF)
-option(LIBHEIF "Read HEIC/HEIF/AVIF with libheif" ON)
-option(LIBJXL "Read JPEG XL with libjxl" ON)
-option(LIBRAW "Read camera raw files with libraw" ON)
 
 if(UNIX AND NOT APPLE)
     set(QT_EXTERN_PATH "" CACHE STRING "Tell compile external QT path, example: (/opt/Qt/6.2.0/gcc_64)")
@@ -66,37 +63,6 @@ endif()
 if(EXIV2)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(Exiv2 REQUIRED IMPORTED_TARGET exiv2)
-endif()
-
-if(LIBHEIF)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(LibHeif IMPORTED_TARGET libheif)
-    if(NOT LibHeif_FOUND)
-        message(STATUS "libheif not found, HEIC/HEIF/AVIF will not be supported")
-    endif()
-endif()
-
-if(LIBJXL)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(LibJxl IMPORTED_TARGET libjxl)
-    pkg_check_modules(LibJxlThreads IMPORTED_TARGET libjxl_threads)
-    if(NOT LibJxl_FOUND)
-        message(STATUS "libjxl not found, JPEG XL will not be supported")
-    endif()
-endif()
-
-# PSD files can store their image data zlib compressed
-find_package(ZLIB)
-if(ZLIB_FOUND)
-    message(STATUS "zlib found, ZIP compressed PSD data is supported")
-endif()
-
-if(LIBRAW)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(LibRaw IMPORTED_TARGET libraw_r)
-    if(NOT LibRaw_FOUND)
-        message(STATUS "libraw not found, camera raw files will not be supported")
-    endif()
 endif()
 
 if(KDE_SUPPORT)
@@ -148,5 +114,8 @@ if(VIDEO_SUPPORT)
     add_subdirectory(plugins/player_mpv)
 endif()
 
-# APNG reader: Qt's PNG plugin only reads the default image
+# image format plugins: APNG, and the optional pack with HEIC/AVIF, JPEG XL,
+# camera raw and PSD. Keeping them out of the executable means they can be
+# distributed separately, and a missing pack only removes formats.
 add_subdirectory(plugins/imageformats/apng)
+add_subdirectory(plugins/imageformats/formats)

@@ -1,0 +1,8 @@
+{
+    "Keys": [
+        "heic", "heif", "hif", "avif", "jxl", "psd", "psb",
+        "cr2", "cr3", "crw", "nef", "nrw", "arw", "srf", "sr2", "raf", "orf",
+        "rw2", "rwl", "dng", "pef", "srw", "x3f", "3fr", "fff", "kdc", "dcr",
+        "mrw", "mos", "raw", "iiq", "erf", "mef", "ptx", "r3d", "nkd", "pxn"
+    ]
+}

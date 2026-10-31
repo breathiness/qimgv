@@ -1,8 +1,4 @@
 #include "imagestatic.h"
-#include "utils/heifdecoder.h"
-#include "utils/jxldecoder.h"
-#include "utils/rawdecoder.h"
-#include "utils/psddecoder.h"
 #include <time.h>
 
 // Two-pass loading policy: a preview pass only pays off for files that are big
@@ -158,29 +154,8 @@ std::unique_ptr<const QImage> ImageStatic::readImage(QSize scaledTarget) {
     }
     std::unique_ptr<QImage> tmp(new QImage());
     if(!r.read(tmp.get()) || tmp->isNull()) {
-        // Qt only opens HEIC/HEIF/AVIF when a third-party plugin happens to be
-        // installed; libheif is linked in, so try it before giving up
-        const QString format = mDocInfo->format();
-        if(HeifDecoder::isHeifSuffix(format) && HeifDecoder::isAvailable()) {
-            QImage heif = HeifDecoder::read(mPath, scaledTarget);
-            if(!heif.isNull())
-                return std::make_unique<const QImage>(std::move(heif));
-        }
-        if(JxlImage::isJxlSuffix(format) && JxlImage::isAvailable()) {
-            QImage jxl = JxlImage::read(mPath, scaledTarget);
-            if(!jxl.isNull())
-                return std::make_unique<const QImage>(std::move(jxl));
-        }
-        if(RawImage::isRawSuffix(format) && RawImage::isAvailable()) {
-            QImage raw = RawImage::read(mPath, scaledTarget);
-            if(!raw.isNull())
-                return std::make_unique<const QImage>(std::move(raw));
-        }
-        if(PsdDecoder::isPsdSuffix(format)) {
-            QImage psd = PsdDecoder::read(mPath, scaledTarget);
-            if(!psd.isNull())
-                return std::make_unique<const QImage>(std::move(psd));
-        }
+        // HEIC/JPEG XL/camera raw/PSD come from the optional image format pack
+        // (see plugins/imageformats/formats); without it they simply fail
         return nullptr;
     }
     std::unique_ptr<const QImage> img(std::move(tmp));
