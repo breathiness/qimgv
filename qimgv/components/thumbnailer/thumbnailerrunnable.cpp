@@ -1,4 +1,8 @@
 #include "thumbnailerrunnable.h"
+#include "utils/heifdecoder.h"
+#include "utils/jxldecoder.h"
+#include "utils/rawdecoder.h"
+#include "utils/psddecoder.h"
 
 #ifdef USE_MPV
 #include "mpvframegrabber.h"
@@ -158,6 +162,102 @@ ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createThumbnail(const Q
     if(manualResize) { // manual resize & crop. slower but should just work
         auto fullSize = std::make_unique<QImage>();
         if(!reader->read(fullSize.get())) {
+            // HEIC/HEIF/AVIF: Qt needs a third-party plugin for these, libheif is
+            // linked in. Its embedded thumbnail is exactly what a tile wants, so
+            // try that before decoding the whole picture.
+            if(HeifDecoder::isHeifSuffix(QFileInfo(path).suffix()) && HeifDecoder::isAvailable()) {
+                QImage thumb = HeifDecoder::readThumbnail(path, size);
+                if(!thumb.isNull()) {
+                    result.originalSize = HeifDecoder::size(path);
+                    QImage scaled = thumb.scaled(thumb.size().scaled(size, size, ARMode),
+                                                 Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                    if(squared && (scaled.width() > size || scaled.height() > size)) {
+                        QRect clip(0, 0, size, size);
+                        clip.moveCenter(QRect(QPoint(0, 0), scaled.size()).center());
+                        result.image = std::unique_ptr<QImage>(ImageLib::croppedRaw(&scaled, clip));
+                    } else {
+                        result.image = std::make_unique<QImage>(scaled);
+                    }
+                    return result;
+                }
+                QImage heif = HeifDecoder::read(path, QSize(size, size) * 2);
+                if(!heif.isNull()) {
+                    result.originalSize = HeifDecoder::size(path);
+                    QSize scaledSize = heif.size().scaled(size, size, ARMode);
+                    if(squared) {
+                        QRect clip(0, 0, size, size);
+                        clip.moveCenter(QRect(QPoint(0, 0), scaledSize).center());
+                        QImage scaled = heif.scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                        result.image = std::unique_ptr<QImage>(ImageLib::croppedRaw(&scaled, clip));
+                    } else {
+                        result.image = std::make_unique<QImage>(heif.scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+                    }
+                    return result;
+                }
+            }
+            const QString suffix = QFileInfo(path).suffix();
+            // JPEG XL: no Qt reader in this build
+            if(JxlImage::isJxlSuffix(suffix) && JxlImage::isAvailable()) {
+                QImage jxl = JxlImage::read(path, QSize(size, size) * 2);
+                if(!jxl.isNull()) {
+                    result.originalSize = jxl.size();
+                    QSize scaledSize = jxl.size().scaled(size, size, ARMode);
+                    if(squared) {
+                        QRect clip(0, 0, size, size);
+                        clip.moveCenter(QRect(QPoint(0, 0), scaledSize).center());
+                        QImage scaled = jxl.scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                        result.image = std::unique_ptr<QImage>(ImageLib::croppedRaw(&scaled, clip));
+                    } else {
+                        result.image = std::make_unique<QImage>(jxl.scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+                    }
+                    return result;
+                }
+            }
+            // camera raw: the preview stored in the file is a JPEG, so this is
+            // orders of magnitude cheaper than developing the sensor data
+            if(RawImage::isRawSuffix(suffix) && RawImage::isAvailable()) {
+                QImage preview = RawImage::readPreview(path);
+                if(preview.isNull())
+                    preview = RawImage::read(path, QSize(size, size) * 2);
+                if(!preview.isNull()) {
+                    result.originalSize = RawImage::size(path);
+                    if(result.originalSize.isEmpty())
+                        result.originalSize = preview.size();
+                    QSize scaledSize = preview.size().scaled(size, size, ARMode);
+                    if(squared) {
+                        QRect clip(0, 0, size, size);
+                        clip.moveCenter(QRect(QPoint(0, 0), scaledSize).center());
+                        QImage scaled = preview.scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                        result.image = std::unique_ptr<QImage>(ImageLib::croppedRaw(&scaled, clip));
+                    } else {
+                        result.image = std::make_unique<QImage>(preview.scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+                    }
+                    return result;
+                }
+            }
+            // PSD/PSB: Photoshop stores a thumbnail in the image resources, so
+            // a folder of layered documents does not have to decode every
+            // composite
+            if(PsdDecoder::isPsdSuffix(suffix)) {
+                QImage psd = PsdDecoder::readThumbnail(path, size);
+                if(psd.isNull())
+                    psd = PsdDecoder::read(path, QSize(size, size) * 2);
+                if(!psd.isNull()) {
+                    result.originalSize = PsdDecoder::size(path);
+                    if(result.originalSize.isEmpty())
+                        result.originalSize = psd.size();
+                    QSize scaledSize = psd.size().scaled(size, size, ARMode);
+                    if(squared) {
+                        QRect clip(0, 0, size, size);
+                        clip.moveCenter(QRect(QPoint(0, 0), scaledSize).center());
+                        QImage scaled = psd.scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+                        result.image = std::unique_ptr<QImage>(ImageLib::croppedRaw(&scaled, clip));
+                    } else {
+                        result.image = std::make_unique<QImage>(psd.scaled(scaledSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+                    }
+                    return result;
+                }
+            }
             // nothing to scale: report a failed thumbnail instead of an empty
             // one that would still be handed to the view
             return ThumbnailImage();

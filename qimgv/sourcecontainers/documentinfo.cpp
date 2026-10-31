@@ -104,7 +104,18 @@ void DocumentInfo::detectFormat() {
         }
     } else if(mimeName == "image/avif") {
         mFormat = "avif";
-        mDocumentType = detectAnimatedAvif() ? DocumentType::ANIMATED : DocumentType::STATIC;
+        mDocumentType = DocumentType::STATIC;
+        // a sequence needs a Qt reader that can animate it; without a plugin
+        // libheif shows the first frame instead of the file failing to open
+        if(detectAnimatedAvif() && QImageReader::supportedImageFormats().contains("avif"))
+            mDocumentType = DocumentType::ANIMATED;
+    } else if(mimeName == "image/heic" || mimeName == "image/heif"
+              || mimeName == "image/heic-sequence" || mimeName == "image/heif-sequence") {
+        // decoded by libheif, see utils/heifdecoder.cpp
+        mFormat = suffix;
+        if(mFormat.isEmpty())
+            mFormat = "heic";
+        mDocumentType = DocumentType::STATIC;
     } else if(mimeName == "image/bmp") {
         mFormat = "bmp";
         mDocumentType = DocumentType::STATIC;

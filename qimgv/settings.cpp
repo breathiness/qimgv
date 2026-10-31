@@ -1,6 +1,10 @@
 #include "settings.h"
 #include "uistyle.h"
 #include "uitheme.h"
+#include "utils/heifdecoder.h"
+#include "utils/jxldecoder.h"
+#include "utils/rawdecoder.h"
+#include "utils/psddecoder.h"
 #include <QPalette>
 
 #ifdef USE_QLEMENTINE
@@ -370,11 +374,59 @@ void Settings::fillVideoFormats() {
     mVideoFormatsMap.insert("video/divx",         "divx");
     mVideoFormatsMap.insert("video/x-dv",         "dv");
     mVideoFormatsMap.insert("video/mp2v",         "m2v");
+    // elementary streams and the remaining containers mpv opens without help
+    mVideoFormatsMap.insert("video/x-h264",         "h264");
+    mVideoFormatsMap.insert("video/x-h264",         "264");
+    mVideoFormatsMap.insert("video/x-h264",         "avc");
+    mVideoFormatsMap.insert("video/x-h265",         "h265");
+    mVideoFormatsMap.insert("video/x-h265",         "hevc");
+    mVideoFormatsMap.insert("video/x-h265",         "265");
+    mVideoFormatsMap.insert("video/x-ivf",          "ivf");
+    mVideoFormatsMap.insert("application/x-yuv4mpeg", "y4m");
+    mVideoFormatsMap.insert("video/x-nut",          "nut");
+    mVideoFormatsMap.insert("application/mxf",      "mxf");
+    mVideoFormatsMap.insert("video/mp2t",           "m2t");
+    mVideoFormatsMap.insert("video/mp2t",           "tp");
+    mVideoFormatsMap.insert("video/x-ogm",          "ogm");
+    mVideoFormatsMap.insert("video/3gpp2",          "3g2");
+    mVideoFormatsMap.insert("video/x-matroska",     "mk3d");
+    mVideoFormatsMap.insert("video/x-ms-wtv",       "wtv");
 }
 //------------------------------------------------------------------------------
 QList<QByteArray> Settings::supportedFormats() {
     auto formats = QImageReader::supportedImageFormats();
     formats << "jfif";
+    // Qt has no reader for these unless a plugin is installed; libheif covers
+    // them, and the folder view builds its file filter from this list
+    if(HeifDecoder::isAvailable()) {
+        const QList<QByteArray> heifFormats = {"heic", "heif", "hif", "avif"};
+        for(const QByteArray &format : heifFormats) {
+            if(!formats.contains(format))
+                formats << format;
+        }
+    }
+    if(JxlImage::isAvailable() && !formats.contains("jxl"))
+        formats << "jxl";
+    if(PsdDecoder::isAvailable()) {
+        const QList<QByteArray> psdFormats = {"psd", "psb"};
+        for(const QByteArray &format : psdFormats) {
+            if(!formats.contains(format))
+                formats << format;
+        }
+    }
+    if(RawImage::isAvailable()) {
+        // camera raw; the folder view filters files by this list, so without it
+        // the files would not even be listed
+        const QList<QByteArray> rawFormats = {
+            "cr2", "cr3", "crw", "nef", "nrw", "arw", "srf", "sr2", "raf", "orf",
+            "rw2", "rwl", "dng", "pef", "srw", "x3f", "3fr", "fff", "kdc", "dcr",
+            "mrw", "mos", "raw", "iiq", "erf", "mef", "ptx", "r3d", "nkd", "pxn"
+        };
+        for(const QByteArray &format : rawFormats) {
+            if(!formats.contains(format))
+                formats << format;
+        }
+    }
     if(videoPlayback())
         formats << mVideoFormatsMap.values();
     formats.removeAll("pdf");
@@ -408,6 +460,34 @@ QString Settings::supportedFormatsRegex() {
 QStringList Settings::supportedMimeTypes() {
     QStringList filters;
     QList<QByteArray> mimeTypes = QImageReader::supportedMimeTypes();
+    if(HeifDecoder::isAvailable()) {
+        const QList<QByteArray> heifMimeTypes = {"image/heic", "image/heif", "image/avif"};
+        for(const QByteArray &mime : heifMimeTypes) {
+            if(!mimeTypes.contains(mime))
+                mimeTypes << mime;
+        }
+    }
+    if(JxlImage::isAvailable() && !mimeTypes.contains("image/jxl"))
+        mimeTypes << "image/jxl";
+    if(PsdDecoder::isAvailable()) {
+        const QList<QByteArray> psdMimeTypes = {"image/vnd.adobe.photoshop"};
+        for(const QByteArray &mime : psdMimeTypes) {
+            if(!mimeTypes.contains(mime))
+                mimeTypes << mime;
+        }
+    }
+    if(RawImage::isAvailable()) {
+        const QList<QByteArray> rawMimeTypes = {
+            "image/x-canon-cr2", "image/x-canon-cr3", "image/x-nikon-nef",
+            "image/x-sony-arw", "image/x-adobe-dng", "image/x-olympus-orf",
+            "image/x-panasonic-rw2", "image/x-fuji-raf", "image/x-pentax-pef",
+            "image/x-samsung-srw"
+        };
+        for(const QByteArray &mime : rawMimeTypes) {
+            if(!mimeTypes.contains(mime))
+                mimeTypes << mime;
+        }
+    }
     if(videoPlayback())
         mimeTypes << mVideoFormatsMap.keys();
     for(int i = 0; i < mimeTypes.count(); i++) {

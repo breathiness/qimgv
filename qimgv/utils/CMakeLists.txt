@@ -3,6 +3,10 @@
 target_sources(qimgv PRIVATE
     actions.cpp
     cmdoptionsrunner.cpp
+    heifdecoder.cpp
+    jxldecoder.cpp
+    psddecoder.cpp
+    rawdecoder.cpp
     imagefactory.cpp
     imagelib.cpp
     inputmap.cpp
