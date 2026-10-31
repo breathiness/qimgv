@@ -4,6 +4,8 @@ qimgv（个人修改版）
 > 本项目 fork 自 [easymodo/qimgv](https://github.com/easymodo/qimgv)，遵循原项目的 GPLv3 许可证。
 > 原版功能全部保留，下述内容为本分支在此基础上所做的修改。
 
+[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)
+
 ## 本分支修改了什么
 
 | 改动 | 说明 |
