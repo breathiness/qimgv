@@ -471,6 +471,23 @@ void MW::restoreWindowGeometry() {
     if(settings->maximizedWindow())
         this->setWindowState(Qt::WindowMaximized);
     updateCurrentDisplay();
+    updatePreviewSizeHint();
+}
+
+// The first image starts decoding before the window is on screen, so the loader
+// has to be told how large the viewer will be. Without this the hint keeps its
+// screen-sized default and a windowed session decodes the whole file instead of
+// a preview, because no power-of-two divisor reaches that default any more.
+void MW::updatePreviewSizeHint() {
+    // the widget's own ratio is not available before the window is shown
+    QScreen *scr = screen() ? screen() : qApp->primaryScreen();
+    const qreal dpr = scr ? scr->devicePixelRatio()
+                          : qMax(qreal(1.0), devicePixelRatioF());
+    QSize pixels = size() * dpr;
+    if((isMaximized() || isFullScreen()) && scr)
+        pixels = scr->size() * dpr;
+    if(!pixels.isEmpty())
+        ImageStatic::setPreviewSizeHint(pixels);
 }
 
 void MW::updateCurrentDisplay() {

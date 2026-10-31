@@ -1,5 +1,7 @@
 #include "thumbnailer.h"
 
+#include <QThread>
+
 Thumbnailer::Thumbnailer() {
     pool = new QThreadPool(this);
     int threads = settings->thumbnailerThreadCount();
@@ -7,6 +9,12 @@ Thumbnailer::Thumbnailer() {
     if(threads > globalThreads)
         threads = globalThreads;
     pool->setMaxThreadCount(threads);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    // Thumbnails are background work: the user does not wait for one specific
+    // tile, so keep these threads below the UI and the interactive image loads.
+    // Qt asks the OS to schedule the whole pool accordingly.
+    pool->setServiceLevel(QThread::QualityOfService::Eco);
+#endif
 }
 
 Thumbnailer::~Thumbnailer() {

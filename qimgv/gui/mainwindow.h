@@ -123,6 +123,9 @@ private:
 
     void saveWindowGeometry();
     void restoreWindowGeometry();
+    // tells the loader how large the viewer will be, before the first image is
+    // decoded (see the comment on the definition)
+    void updatePreviewSizeHint();
     void saveCurrentDisplay();
     void setupUi();
 
