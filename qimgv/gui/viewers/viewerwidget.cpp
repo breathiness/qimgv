@@ -108,6 +108,8 @@ void ViewerWidget::enableVideoPlayer() {
         connect(videoPlayer.get(), &VideoPlayer::durationChanged, videoControls, &VideoControlsProxyWrapper::setPlaybackDuration);
         connect(videoPlayer.get(), &VideoPlayer::positionChanged, videoControls, &VideoControlsProxyWrapper::setPlaybackPosition);
         connect(videoPlayer.get(), &VideoPlayer::videoPaused,     videoControls, &VideoControlsProxyWrapper::onPlaybackPaused);
+        mVideoScaled = settings->expandImage();
+        videoPlayer->setVideoUnscaled(!mVideoScaled);
         videoPlayer->show();
         currentWidget = VIDEOPLAYER;
     }
@@ -212,6 +214,17 @@ bool ViewerWidget::interactionEnabled() {
 
 bool ViewerWidget::isVideo() {
     return currentWidget == VIDEOPLAYER;
+}
+
+void ViewerWidget::setVideoScaled(bool scaled) {
+    if(!videoPlayer)
+        return;
+    mVideoScaled = scaled;
+    videoPlayer->setVideoUnscaled(!scaled);
+}
+
+bool ViewerWidget::videoScaled() {
+    return mVideoScaled;
 }
 
 bool ViewerWidget::showImage(std::unique_ptr<QPixmap> pixmap) {

@@ -28,6 +28,10 @@ public:
     bool interactionEnabled();
     // true while the video player is the active viewer
     bool isVideo();
+    // video playback: scale the picture to the widget (fit) or show it at its
+    // own size, only downscaling when it does not fit
+    void setVideoScaled(bool scaled);
+    bool videoScaled();
 
     bool showImage(std::unique_ptr<QPixmap> pixmap);
     void refreshImage(std::unique_ptr<QPixmap> pixmap);
@@ -51,6 +55,8 @@ private:
     void enableVideoPlayer();
 
     CurrentWidget currentWidget;
+    // what setVideoUnscaled() was last given; the video player has no getter
+    bool mVideoScaled = true;
     bool mInteractionEnabled, mWaylandCursorWorkaround;
     QTimer cursorTimer;
     const int CURSOR_HIDE_TIMEOUT_MS = 1000;

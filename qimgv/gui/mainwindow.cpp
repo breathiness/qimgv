@@ -243,6 +243,13 @@ ViewMode MW::currentViewMode() {
 }
 
 void MW::fitWindow() {
+    // a video has no zoom of its own: fitting means letting the player scale the
+    // picture to this widget instead of showing it at its own size
+    if(viewerWidget->isVideo()) {
+        viewerWidget->setVideoScaled(true);
+        showMessageFitWindow();
+        return;
+    }
     if(viewerWidget->interactionEnabled()) {
         viewerWidget->fitWindow();
     } else {
@@ -251,6 +258,12 @@ void MW::fitWindow() {
 }
 
 void MW::fitWidth() {
+    if(viewerWidget->isVideo()) {
+        // the player keeps the aspect ratio; there is nothing narrower to fit
+        viewerWidget->setVideoScaled(true);
+        showMessageFitWidth();
+        return;
+    }
     if(viewerWidget->interactionEnabled()) {
         viewerWidget->fitWidth();
     } else {
@@ -259,6 +272,12 @@ void MW::fitWidth() {
 }
 
 void MW::fitOriginal() {
+    if(viewerWidget->isVideo()) {
+        // 1:1 - the player only downscales when the picture does not fit
+        viewerWidget->setVideoScaled(false);
+        showMessageFitOriginal();
+        return;
+    }
     if(viewerWidget->interactionEnabled()) {
         viewerWidget->fitOriginal();
     } else {
@@ -267,6 +286,11 @@ void MW::fitOriginal() {
 }
 
 void MW::fitWindowStretch() {
+    if(viewerWidget->isVideo()) {
+        viewerWidget->setVideoScaled(true);
+        showMessageFitWindow();
+        return;
+    }
     if(viewerWidget->interactionEnabled()) {
         viewerWidget->fitWindowStretch();
     } else {
@@ -277,6 +301,14 @@ void MW::fitWindowStretch() {
 // switch between 1:1 and Fit All
 // TODO: move to viewerWidget?
 void MW::switchFitMode() {
+    if(viewerWidget->isVideo()) {
+        viewerWidget->setVideoScaled(!viewerWidget->videoScaled());
+        if(viewerWidget->videoScaled())
+            showMessageFitWindow();
+        else
+            showMessageFitOriginal();
+        return;
+    }
     if(viewerWidget->fitMode() == FIT_WINDOW)
         viewerWidget->setFitMode(FIT_ORIGINAL);
     else
