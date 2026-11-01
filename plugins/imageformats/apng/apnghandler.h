@@ -22,6 +22,7 @@ public:
     bool canRead() const override;
     bool read(QImage *image) override;
     bool supportsOption(ImageOption option) const override;
+    QVariant option(ImageOption option) const override;
 
     bool jumpToNextImage() override;
     bool jumpToImage(int imageNumber) override;
@@ -61,5 +62,10 @@ private:
     // canvas kept between frames so sequential playback is one compose per frame
     mutable QImage mCanvas;
     mutable int mCanvasFrame = -1;
-    mutable QImage mLastFrameBefore;
+    // Pixels the frame we composed last overwrote, i.e. the state its region has
+    // to be reverted to for dispose_op 2 (APNG_DISPOSE_OP_PREVIOUS). Only that
+    // frame's rectangle is kept: a full-canvas snapshot stack would cost one
+    // canvas per frame, while the spec only reverts the frame's own region.
+    mutable QImage mRestoreImage;
+    mutable QRect mRestoreRect;
 };

@@ -96,6 +96,7 @@ bool FormatsHandler::supportsOption(ImageOption option) const
     case Size:
     case ScaledSize:
     case ImageFormat:
+    case Animation:
         return true;
     default:
         return QImageIOHandler::supportsOption(option);
@@ -107,6 +108,13 @@ QVariant FormatsHandler::option(ImageOption option) const
     const QString path = filePath();
     const QString suffix = resolvedSuffix();
     switch(option) {
+    case ScaledSize:
+        // what read() is going to produce
+        return mScaledSize.isValid() ? QVariant(mScaledSize) : QVariant();
+    case Animation:
+        // only JPEG XL can animate here; for everything else this stays false so
+        // QMovie does not take over a still image
+        return ensureAnimationLoaded();
     case Size: {
         if(path.isEmpty())
             return QVariant();
@@ -125,6 +133,45 @@ QVariant FormatsHandler::option(ImageOption option) const
     default:
         return QVariant();
     }
+}
+
+bool FormatsHandler::ensureAnimationLoaded() const
+{
+    if(mAnimProbed)
+        return mAnimIsAnimated;
+    mAnimProbed = true;
+    mAnimIsAnimated = false;
+
+    const QString path = filePath();
+    const QString suffix = resolvedSuffix();
+    if(path.isEmpty() || !JxlImage::isJxlSuffix(suffix) || !JxlImage::isAvailable())
+        return false;
+    // the header says whether this is an animation at all; asking readAnimation()
+    // would decode a still image twice (once here, once for the actual read)
+    if(!JxlImage::isAnimated(path))
+        return false;
+
+    JxlImage::Animation animation;
+    if(!JxlImage::readAnimation(path, &animation) || animation.frames.size() < 2)
+        return false;   // a single frame does not need the animation path
+
+    mAnimFrames = animation.frames;
+    mAnimNumLoops = animation.numLoops;
+    mAnimNext = 0;
+    mAnimCurrent = 0;
+    mAnimIsAnimated = true;
+    return true;
+}
+
+void FormatsHandler::setOption(ImageOption option, const QVariant &value)
+{
+    // QImageReader::setScaledSize() arrives here. Without storing it the reader
+    // gets a full size image for every thumbnail: a handler that advertises
+    // ScaledSize support is expected to scale, Qt will not rescale the result.
+    if(option == ScaledSize)
+        mScaledSize = value.toSize();
+    else
+        QImageIOHandler::setOption(option, value);
 }
 
 QImage FormatsHandler::decode(const QString &path, const QString &suffix, const QSize &target) const
@@ -179,11 +226,78 @@ bool FormatsHandler::read(QImage *image)
     if(path.isEmpty() || !isSupportedSuffix(suffix))
         return false;
 
-    const QSize requested = option(ScaledSize).toSize();
+    if(ensureAnimationLoaded() && !mAnimFrames.isEmpty()) {
+        // QMovie reads one frame per call, like the APNG handler does
+        const int index = qBound(0, mAnimNext, mAnimFrames.size() - 1);
+        QImage frame = mAnimFrames[index].image;
+        if(mScaledSize.isValid() && (mScaledSize.width() < frame.width()
+                                     || mScaledSize.height() < frame.height())) {
+            frame = frame.scaled(mScaledSize, Qt::KeepAspectRatio,
+                                 Qt::SmoothTransformation);
+        }
+        *image = frame;
+        mAnimCurrent = index;
+        mAnimNext = (index + 1) % mAnimFrames.size();
+        return true;
+    }
+
+    const QSize requested = mScaledSize;
     const QSize target = requested.isValid() ? requested : QSize();
     const QImage decoded = decode(path, suffix, target);
     if(decoded.isNull())
         return false;
     *image = decoded;
     return true;
+}
+
+int FormatsHandler::imageCount() const
+{
+    if(ensureAnimationLoaded())
+        return mAnimFrames.size();
+    return 1;
+}
+
+int FormatsHandler::currentImageNumber() const
+{
+    return mAnimCurrent;
+}
+
+bool FormatsHandler::jumpToImage(int imageNumber)
+{
+    if(!ensureAnimationLoaded() || mAnimFrames.isEmpty())
+        return false;
+    if(imageNumber < 0 || imageNumber >= mAnimFrames.size())
+        return false;
+    mAnimNext = imageNumber;
+    mAnimCurrent = imageNumber;
+    return true;
+}
+
+bool FormatsHandler::jumpToNextImage()
+{
+    if(!ensureAnimationLoaded() || mAnimFrames.isEmpty())
+        return false;
+    mAnimNext = (mAnimNext + 1) % mAnimFrames.size();
+    mAnimCurrent = mAnimNext;
+    return true;
+}
+
+int FormatsHandler::loopCount() const
+{
+    if(!ensureAnimationLoaded())
+        return 1;   // QImageIOHandler's default for a still image
+    // JXL num_loops is 0 for "forever" and n for "play n times"; Qt wants the
+    // number of *repeats*, with -1 for forever (same as the APNG handler).
+    if(mAnimNumLoops == 0)
+        return -1;
+    return qMax(0, mAnimNumLoops - 1);
+}
+
+int FormatsHandler::nextImageDelay() const
+{
+    if(ensureAnimationLoaded() && mAnimCurrent >= 0
+       && mAnimCurrent < mAnimFrames.size()) {
+        return mAnimFrames[mAnimCurrent].delayMs;
+    }
+    return 0;
 }

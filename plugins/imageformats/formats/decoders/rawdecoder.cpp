@@ -71,10 +71,16 @@ QSize size(const QString &path)
     LibRaw raw;
     if(raw.open_file(nativePath(path).constData()) != LIBRAW_SUCCESS)
         return QSize();
-    const int w = raw.imgdata.sizes.iwidth ? raw.imgdata.sizes.iwidth
-                                           : raw.imgdata.sizes.width;
-    const int h = raw.imgdata.sizes.iheight ? raw.imgdata.sizes.iheight
-                                            : raw.imgdata.sizes.height;
+    // sizes.width/height describe the sensor image area, not what the develop
+    // step returns: dcraw applies sizes.flip afterwards, and every flip with the
+    // transpose bit set (5 and 6, i.e. the 90 degree rotations) swaps the axes.
+    // Report the orientation the viewer is actually going to show.
+    int w = raw.imgdata.sizes.width ? raw.imgdata.sizes.width
+                                    : raw.imgdata.sizes.iwidth;
+    int h = raw.imgdata.sizes.height ? raw.imgdata.sizes.height
+                                     : raw.imgdata.sizes.iheight;
+    if(raw.imgdata.sizes.flip & 4)
+        qSwap(w, h);
     return QSize(w, h);
 #else
     Q_UNUSED(path)
@@ -91,8 +97,8 @@ QImage read(const QString &path, const QSize &targetSize)
 
     // half size development is roughly twice as fast; worth it when the screen
     // shows far less than the sensor resolution
-    const int rawWidth = raw.imgdata.sizes.iwidth ? raw.imgdata.sizes.iwidth
-                                                  : raw.imgdata.sizes.width;
+    const int rawWidth = raw.imgdata.sizes.width ? raw.imgdata.sizes.width
+                                                 : raw.imgdata.sizes.iwidth;
     if(targetSize.isValid() && rawWidth > targetSize.width() * 3)
         raw.imgdata.params.half_size = 1;
 

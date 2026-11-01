@@ -99,8 +99,9 @@ void DocumentInfo::detectFormat() {
         mFormat = "jxl";
         mDocumentType = detectAnimatedJxl() ? DocumentType::ANIMATED : DocumentType::STATIC;
         if(mDocumentType == DocumentType::ANIMATED && !settings->jxlAnimation()) {
-            mDocumentType = DocumentType::NONE;
-            qDebug() << "animated jxl is off; skipping file";
+            // animation is switched off: show the first frame, the same thing
+            // this build did before the plugin learned to play the sequence
+            mDocumentType = DocumentType::STATIC;
         }
     } else if(mimeName == "image/avif") {
         mFormat = "avif";

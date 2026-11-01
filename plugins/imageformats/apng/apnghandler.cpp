@@ -3,6 +3,7 @@
 #include <QBuffer>
 #include <QPainter>
 #include <QImageReader>
+#include <QColor>
 #include <QIODevice>
 #include <cstring>
 
@@ -106,6 +107,26 @@ bool ApngHandler::supportsOption(ImageOption option) const
         return true;
     default:
         return QImageIOHandler::supportsOption(option);
+    }
+}
+
+// QMovie asks the reader for the canvas size before the first frame; without this
+// QImageReader::size() reports an invalid size until one frame has been decoded.
+QVariant ApngHandler::option(ImageOption option) const
+{
+    if(!ensureParsed())
+        return QVariant();
+    switch(option) {
+    case Size:
+        return mSize;
+    case Animation:
+        return true;
+    case ImageFormat:
+        return QImage::Format_ARGB32;
+    case BackgroundColor:
+        return QColor(Qt::transparent);
+    default:
+        return QImageIOHandler::option(option);
     }
 }
 
@@ -215,7 +236,8 @@ bool ApngHandler::ensureParsed() const
     if(!hasAnimation || mFrames.isEmpty() || mSize.isEmpty())
         return false;
     for(const Frame &frame : mFrames) {
-        if(frame.data.isEmpty())
+        // an empty rectangle is a legal no-op frame and carries no pixel data
+        if(!frame.rect.isEmpty() && frame.data.isEmpty())
             return false;
     }
     mValid = true;
@@ -265,10 +287,8 @@ QImage ApngHandler::renderUpTo(int index) const
         }
     }
 
-    QImage before = mCanvas;   // needed by dispose_op 2 (restore to previous)
     if(!composeFrame(mCanvas, index))
         return QImage();
-    mLastFrameBefore = before;
     mCanvasFrame = index;
     return mCanvas;
 }
@@ -276,9 +296,20 @@ QImage ApngHandler::renderUpTo(int index) const
 bool ApngHandler::composeFrame(QImage &canvas, int index) const
 {
     const Frame &frame = mFrames[index];
+    // a zero-sized frame draws nothing but still advances the sequence
+    if(frame.rect.isEmpty())
+        return true;
     QImage pixels = decodeFrame(index);
     if(pixels.isNull())
         return false;
+
+    // remember what this frame is about to cover: dispose_op 2 has to put these
+    // pixels back, and by then the canvas already holds the frame on top of them
+    mRestoreImage = QImage();
+    mRestoreRect = frame.rect.intersected(QRect(QPoint(0, 0), canvas.size()));
+    if(frame.disposeOp == 2 && !mRestoreRect.isEmpty())
+        mRestoreImage = canvas.copy(mRestoreRect);
+
     QPainter painter(&canvas);
     painter.setCompositionMode(frame.blendOp == 0 ? QPainter::CompositionMode_Source
                                                   : QPainter::CompositionMode_SourceOver);
@@ -289,15 +320,20 @@ bool ApngHandler::composeFrame(QImage &canvas, int index) const
 void ApngHandler::disposeFrame(QImage &canvas, const Frame &frame) const
 {
     switch(frame.disposeOp) {
-    case 1: { // background
+    case 1: { // background: clear the frame region back to transparent
+        const QRect rect = frame.rect.intersected(QRect(QPoint(0, 0), canvas.size()));
+        if(rect.isEmpty())
+            break;
         QPainter clear(&canvas);
         clear.setCompositionMode(QPainter::CompositionMode_Clear);
-        clear.fillRect(frame.rect, Qt::transparent);
-        clear.end();
+        clear.fillRect(rect, Qt::transparent);
     } break;
-    case 2: // previous
-        if(!mLastFrameBefore.isNull())
-            canvas = mLastFrameBefore;
+    case 2: // previous: restore the frame region to the pixels it covered
+        if(!mRestoreImage.isNull() && !mRestoreRect.isEmpty()) {
+            QPainter restore(&canvas);
+            restore.setCompositionMode(QPainter::CompositionMode_Source);
+            restore.drawImage(mRestoreRect.topLeft(), mRestoreImage);
+        }
         break;
     default:
         break;
@@ -313,27 +349,12 @@ bool ApngHandler::read(QImage *image)
     // to advance, so each call produces the next frame (this is also how Qt's own
     // GIF and WebP handlers behave). jumpToImage() repositions that sequence.
     const int index = mNextFrame;
-    if(index < 0 || index >= mFrames.size())
+    const QImage frame = renderUpTo(index);
+    if(frame.isNull())
         return false;
-
-    if(mCanvasFrame != index - 1 || mCanvas.isNull()) {
-        mCanvas = QImage(mSize, QImage::Format_ARGB32);
-        mCanvas.fill(Qt::transparent);
-        mCanvasFrame = -1;
-        for(int i = 0; i < index; i++) {
-            if(!composeFrame(mCanvas, i))
-                return false;
-            disposeFrame(mCanvas, mFrames[i]);
-        }
-    }
-    const QImage before = mCanvas;
-    if(!composeFrame(mCanvas, index))
-        return false;
-    mLastFrameBefore = before;
-    mCanvasFrame = index;
+    *image = frame;
     mCurrentFrame = index;
     mNextFrame = (index + 1) % mFrames.size();
-    *image = mCanvas;
     return true;
 }
 
@@ -382,7 +403,11 @@ int ApngHandler::loopCount() const
 {
     if(!ensureParsed())
         return 0;
-    return mPlayCount;
+    // acTL num_plays is 0 for "forever" and n for "play n times"; Qt wants the
+    // number of *repeats*, with -1 for forever (QGifHandler does the same).
+    if(mPlayCount == 0)
+        return -1;
+    return qMax(0, mPlayCount - 1);
 }
 
 int ApngHandler::nextImageDelay() const
