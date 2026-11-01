@@ -1,5 +1,7 @@
 #include "thumbnailerrunnable.h"
 
+#include <QDir>
+
 #ifdef USE_MPV
 #include "mpvframegrabber.h"
 #endif
@@ -287,10 +289,15 @@ ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createShellThumbnail(co
 #endif
 
 ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createVideoThumbnail(const QString &path, int size, bool squared) {
+    // The frame is written to a real file before it can be read back, so this
+    // must not depend on the cache being writable: a cache directory the process
+    // cannot write to used to cost every video thumbnail, silently. The system
+    // temporary directory is always usable and gets cleaned up by the OS.
     // Keyed by the thumbnail id rather than by the file name: two clips with the
     // same name in different folders, or the same clip at another size, would
     // otherwise write one temporary file from two worker threads at once.
-    const QString tmpFilePath = settings->tmpDir() + generateIdString(path, size, squared) + ".png";
+    const QString tmpFilePath = QDir::tempPath() + "/qimgv-"
+                                + generateIdString(path, size, squared) + ".png";
     QFile tmpFile(tmpFilePath);
 
     // One second in, so the frame shows something instead of a fade-in or a
@@ -299,6 +306,8 @@ ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createVideoThumbnail(co
 #ifdef USE_MPV
     if(!MpvFrameGrabber::grabFrame(path, 1.0, tmpFilePath)
        && !MpvFrameGrabber::grabFrame(path, 0.0, tmpFilePath)) {
+        // without this a missing frame looks exactly like a video that has none
+        qWarning() << "Thumbnailer: could not grab a frame from" << path;
         // a grab that timed out can still have left a partial file behind
         tmpFile.remove();
         return ThumbnailImage();

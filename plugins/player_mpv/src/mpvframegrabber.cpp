@@ -71,7 +71,10 @@ bool MpvFrameGrabber::grabFrame(const QString &videoPath, double positionSec, co
     mpv_destroy(mpv);
 
     const QFileInfo written(outPath);
-    return finished && written.exists() && written.size() > 0;
+    const bool ok = finished && written.exists() && written.size() > 0;
+    if(!ok && finished)
+        qWarning() << "MpvFrameGrabber: nothing was written to" << outPath;
+    return ok;
 }
 
 // The application resolves this symbol with QLibrary; keep it a plain C name so

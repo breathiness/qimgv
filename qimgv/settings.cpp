@@ -3,6 +3,7 @@
 #include "uitheme.h"
 #include <QMimeDatabase>
 #include <QPalette>
+#include <QStandardPaths>
 
 #ifdef USE_QLEMENTINE
 #include <oclero/qlementine/style/QlementineStyle.hpp>
@@ -64,6 +65,31 @@ Settings *Settings::getInstance() {
     return settings;
 }
 //------------------------------------------------------------------------------
+namespace {
+// A cache location that can actually be written to. The portable layout keeps
+// the cache beside the executable, which works everywhere except an
+// installation directory the user cannot write to (Program Files). A dead path
+// there is not merely a lost speed-up: a video frame is written to disk before
+// it can be read back, so video thumbnails used to stop appearing with no other
+// symptom. Fall back to the per-user location instead of carrying a path
+// nothing can be saved into.
+QString usableCacheDir(const QString &portable, const QString &perUser, const char *what) {
+    QDir dir(portable);
+    dir.mkpath(dir.absolutePath());
+    const QFileInfo portableInfo(dir.absolutePath());
+    if(portableInfo.isDir() && portableInfo.isWritable())
+        return dir.absolutePath();
+
+    qWarning() << "Settings:" << what << "directory is not writable:" << portable
+               << "- using" << perUser << "instead";
+    QDir fallback(perUser);
+    fallback.mkpath(fallback.absolutePath());
+    if(!QFileInfo(fallback.absolutePath()).isWritable())
+        qWarning() << "Settings:" << what << "fallback is not writable either:" << perUser;
+    return fallback.absolutePath();
+}
+} // namespace
+//------------------------------------------------------------------------------
 void Settings::setupCache() {
 #if defined(__linux__) ||  defined(__FreeBSD__)
     QString genericCacheLocation = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation);
@@ -84,10 +110,16 @@ void Settings::setupCache() {
     mThumbCacheDir = new QDir(mTmpDir->absolutePath() + "/thumbnails");
     mThumbCacheDir->mkpath(mThumbCacheDir->absolutePath());
 #else
-    mTmpDir = new QDir(QApplication::applicationDirPath() + "/cache");
-    mTmpDir->mkpath(mTmpDir->absolutePath());
-    mThumbCacheDir = new QDir(QApplication::applicationDirPath() + "/thumbnails");
-    mThumbCacheDir->mkpath(mThumbCacheDir->absolutePath());
+    // Neither directory is required to be beside the executable: an
+    // installation under Program Files cannot create one there, and the
+    // thumbnail cache silently kept nothing in that case.
+    const QString appDir = QApplication::applicationDirPath();
+    QString perUser = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    if(perUser.isEmpty())
+        perUser = QDir::tempPath() + "/qimgv";
+    mTmpDir = new QDir(usableCacheDir(appDir + "/cache", perUser + "/cache", "cache"));
+    mThumbCacheDir = new QDir(usableCacheDir(appDir + "/thumbnails", perUser + "/thumbnails",
+                                            "thumbnail cache"));
 #endif
 }
 //------------------------------------------------------------------------------
