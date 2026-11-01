@@ -92,6 +92,10 @@ public:
     // image viewer, so the button icon follows the mode that is really active
     // instead of remembering the last one it set itself.
     void setFitModeProvider(std::function<ImageFitMode()> provider);
+    // A video has no zoom of its own: the picture is either scaled to the widget
+    // or shown at its own size, so the button cycles just those two states there.
+    void setVideoStateProvider(std::function<bool()> isVideo,
+                               std::function<bool()> isScaled);
     ImageFitMode currentFitMode() const;
     // re-reads the mode and updates the icon of the cycle buttons
     void refreshFitCycleIcon();
@@ -147,6 +151,12 @@ private:
     QPixmap themedIconPixmap(const QString &name, int iconPx);
     // radio dot for the menus of the mode buttons (filled when active)
     QPixmap radioIndicator(bool checked, int px);
+    // the entries the fit button cycles right now: the four image modes, or the
+    // two video states
+    QStringList activeFitActions() const;
+    // the one of them that is active now
+    QString activeFitAction() const;
+    bool showingVideo() const;
     // runs one of fitCycleActions() and refreshes the button afterwards
     void applyFitAction(const QString &action);
     void advanceFitMode();
@@ -186,4 +196,6 @@ private:
     // true while the fit mode menu is on screen (it runs its own event loop)
     bool mMenuOpen;
     std::function<ImageFitMode()> mFitModeProvider;
+    std::function<bool()> mVideoProvider;
+    std::function<bool()> mVideoScaledProvider;
 };

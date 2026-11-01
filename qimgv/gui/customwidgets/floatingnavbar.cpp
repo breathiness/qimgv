@@ -445,14 +445,40 @@ void FloatingNavBar::setFitModeProvider(std::function<ImageFitMode()> provider) 
     refreshFitCycleIcon();
 }
 
+void FloatingNavBar::setVideoStateProvider(std::function<bool()> isVideo,
+                                           std::function<bool()> isScaled) {
+    mVideoProvider = std::move(isVideo);
+    mVideoScaledProvider = std::move(isScaled);
+    refreshFitCycleIcon();
+}
+
 ImageFitMode FloatingNavBar::currentFitMode() const {
     return mFitModeProvider ? mFitModeProvider() : FIT_WINDOW;
+}
+
+bool FloatingNavBar::showingVideo() const {
+    return mVideoProvider && mVideoProvider();
+}
+
+// A video only knows "scaled to the widget" and "own size"; the four image modes
+// collapse into those two there.
+QStringList FloatingNavBar::activeFitActions() const {
+    if(showingVideo())
+        return {QStringLiteral("fitWindow"), QStringLiteral("fitNormal")};
+    return fitCycleActions();
+}
+
+QString FloatingNavBar::activeFitAction() const {
+    if(showingVideo())
+        return (mVideoScaledProvider && mVideoScaledProvider()) ? QStringLiteral("fitWindow")
+                                                                : QStringLiteral("fitNormal");
+    return fitActionForMode(currentFitMode());
 }
 
 void FloatingNavBar::refreshFitCycleIcon() {
     if(!fitButton)
         return;
-    const QString action = fitActionForMode(currentFitMode());
+    const QString action = activeFitAction();
     // the icon is the one the mode itself has: no per-mode configuration
     const QPixmap pixmap = iconForAction(action, QString(), 28);
     if(!pixmap.isNull()) {
@@ -476,10 +502,10 @@ void FloatingNavBar::applyFitAction(const QString &action) {
 }
 
 void FloatingNavBar::advanceFitMode() {
-    const QStringList actions = fitCycleActions();
+    const QStringList actions = activeFitActions();
     if(actions.isEmpty())
         return;
-    int next = actions.indexOf(fitActionForMode(currentFitMode())) + 1;
+    int next = actions.indexOf(activeFitAction()) + 1;
     if(next <= 0 || next >= actions.size())
         next = 0;
     applyFitAction(actions.at(next));
@@ -488,9 +514,9 @@ void FloatingNavBar::advanceFitMode() {
 void FloatingNavBar::showFitModeMenu(QPushButton *button) {
     if(!button || mMenuOpen)
         return;
-    const QString current = fitActionForMode(currentFitMode());
+    const QString current = activeFitAction();
     QMenu menu(this);
-    for(const QString &action : fitCycleActions()) {
+    for(const QString &action : activeFitActions()) {
         const bool active = (action == current);
         QAction *entry = menu.addAction(QIcon(radioIndicator(active, 14)), fitActionName(action));
         // the dot already says which one is active; no check box on top of it
@@ -891,15 +917,10 @@ void FloatingNavBar::leaveEvent(QEvent *event) {
 void FloatingNavBar::mousePressEvent(QMouseEvent *event) {
     // A right click belongs to the bar, not to the image under it: the bar is an
     // overlay, so the press is swallowed here and the image never opens its file
-    // menu on top of the bar. On a cycle button it opens that button's menu.
+    // menu on top of the bar. The menu itself opens on the release - one opened
+    // on the press is dismissed by that same click's release before the user can
+    // pick anything.
     if(event->button() == Qt::RightButton) {
-        const QPoint pos = eventGlobalPos(event);
-        if(fitButton && fitButton->isVisible()
-           && fitButton->rect().contains(fitButton->mapFromGlobal(pos)))
-            showFitModeMenu(fitButton);
-        else if(wheelButton && wheelButton->isVisible()
-                && wheelButton->rect().contains(wheelButton->mapFromGlobal(pos)))
-            showWheelModeMenu(wheelButton);
         event->accept();
         return;
     }
@@ -949,8 +970,15 @@ void FloatingNavBar::mouseMoveEvent(QMouseEvent *event) {
 
 void FloatingNavBar::mouseReleaseEvent(QMouseEvent *event) {
     // see mousePressEvent: the release must not travel on to the image either,
-    // or its context menu opens on top of the bar
+    // and this is where the menu of a cycle button opens
     if(event->button() == Qt::RightButton) {
+        const QPoint pos = eventGlobalPos(event);
+        if(fitButton && fitButton->isVisible()
+           && fitButton->rect().contains(fitButton->mapFromGlobal(pos)))
+            showFitModeMenu(fitButton);
+        else if(wheelButton && wheelButton->isVisible()
+                && wheelButton->rect().contains(wheelButton->mapFromGlobal(pos)))
+            showWheelModeMenu(wheelButton);
         event->accept();
         return;
     }
