@@ -80,12 +80,20 @@ public:
     // Human readable name of one of fitCycleActions().
     static QString fitActionName(const QString &action);
 
+    // The same for the mouse wheel: a button that cycles WHEEL_SWITCH_IMAGES,
+    // WHEEL_ZOOM and WHEEL_SCROLL.
+    static QString wheelCycleShortcut();
+    static bool isWheelCycle(const QString &shortcut);
+    static QString wheelModeName(WheelMode mode);
+    // icon of the vector set that stands for the mode
+    static QString wheelModeIconName(WheelMode mode);
+
     // Where the current mode comes from. The application points this at the
     // image viewer, so the button icon follows the mode that is really active
     // instead of remembering the last one it set itself.
     void setFitModeProvider(std::function<ImageFitMode()> provider);
     ImageFitMode currentFitMode() const;
-    // re-reads the mode and updates the icon of the cycle button
+    // re-reads the mode and updates the icon of the cycle buttons
     void refreshFitCycleIcon();
 
     // how the bar behaves: always visible, hidden until the mouse reaches the
@@ -135,10 +143,15 @@ private:
     // icon of one button: `configured` ("theme:<name>" or a file path) wins,
     // otherwise the action's own icon is used
     QPixmap iconForAction(const QString &action, const QString &configured, int iconPx);
+    // vector icon of the icon set, tinted like the built-in ones
+    QPixmap themedIconPixmap(const QString &name, int iconPx);
     // runs one of fitCycleActions() and refreshes the button afterwards
     void applyFitAction(const QString &action);
     void advanceFitMode();
     void showFitModeMenu(QPushButton *button);
+    void advanceWheelMode();
+    void showWheelModeMenu(QPushButton *button);
+    void refreshWheelButton();
     void clampToParent();
     void dockToBottom();
     // undocked: shrink to the width of the buttons, like the video controls card
@@ -166,6 +179,8 @@ private:
     bool mViewActive;
     // the fit-mode cycle button, when one is configured; null otherwise
     QPushButton *fitButton;
+    // the wheel-mode cycle button, when one is configured; null otherwise
+    QPushButton *wheelButton;
     // true while the fit mode menu is on screen (it runs its own event loop)
     bool mMenuOpen;
     std::function<ImageFitMode()> mFitModeProvider;

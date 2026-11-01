@@ -210,6 +210,10 @@ bool ViewerWidget::interactionEnabled() {
     return mInteractionEnabled;
 }
 
+bool ViewerWidget::isVideo() {
+    return currentWidget == VIDEOPLAYER;
+}
+
 bool ViewerWidget::showImage(std::unique_ptr<QPixmap> pixmap) {
     if(!pixmap)
         return false;

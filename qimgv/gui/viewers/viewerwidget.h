@@ -26,6 +26,8 @@ public:
 
     void setInteractionEnabled(bool mode);
     bool interactionEnabled();
+    // true while the video player is the active viewer
+    bool isVideo();
 
     bool showImage(std::unique_ptr<QPixmap> pixmap);
     void refreshImage(std::unique_ptr<QPixmap> pixmap);

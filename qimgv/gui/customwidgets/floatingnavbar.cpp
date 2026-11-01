@@ -148,7 +148,8 @@ QPoint eventGlobalPos(QMouseEvent *event) {
 
 FloatingNavBar::FloatingNavBar(QWidget *parent)
     : QWidget(parent), layout(nullptr), dragging(false), docked(true), barHeight(kBarHeight),
-      mMode(NAVBAR_AUTO), mViewActive(false), fitButton(nullptr), mMenuOpen(false)
+      mMode(NAVBAR_AUTO), mViewActive(false), fitButton(nullptr), wheelButton(nullptr),
+      mMenuOpen(false)
 {
     setObjectName("FloatingNavBar");
     // never take keyboard focus, otherwise the shortcuts handled by the main
@@ -213,8 +214,9 @@ void FloatingNavBar::applyState() {
     }
     show();
     raise();
-    // the fit mode may have changed while the bar was away
+    // the modes may have changed while the bar was away
     refreshFitCycleIcon();
+    refreshWheelButton();
     if(mMode == NAVBAR_ALWAYS || !docked) {
         if(docked)
             dockToBottom();
@@ -274,17 +276,10 @@ void FloatingNavBar::collapseBar() {
 // always passed through.
 bool FloatingNavBar::eventFilter(QObject *watched, QEvent *event) {
     // A context menu request over the bar belongs to the bar. The image viewer
-    // would otherwise open its file menu on top of it, and on the fit button the
-    // bar opens its mode menu instead.
+    // would otherwise open its file menu on top of it.
     if(event->type() == QEvent::ContextMenu && isVisible()) {
-        const QPoint cursor = QCursor::pos();
-        if(rect().contains(mapFromGlobal(cursor))) {
-            // already showing the menu for this very click
-            if(!mMenuOpen && fitButton && fitButton->isVisible()
-               && fitButton->rect().contains(fitButton->mapFromGlobal(cursor)))
-                showFitModeMenu(fitButton);
+        if(rect().contains(mapFromGlobal(QCursor::pos())))
             return true;
-        }
     }
     Q_UNUSED(watched)
     // Cheap guards first: this filter sees every event in the application, so
@@ -457,11 +452,9 @@ ImageFitMode FloatingNavBar::currentFitMode() const {
 void FloatingNavBar::refreshFitCycleIcon() {
     if(!fitButton)
         return;
-    const int iconPx = 28;
-    const QStringList actions = fitCycleActions();
     const QString action = fitActionForMode(currentFitMode());
-    const QStringList configured = settings->navBarFitIcons();
-    const QPixmap pixmap = iconForAction(action, configured.value(actions.indexOf(action)), iconPx);
+    // the icon is the one the mode itself has: no per-mode configuration
+    const QPixmap pixmap = iconForAction(action, QString(), 28);
     if(!pixmap.isNull()) {
         fitButton->setIcon(QIcon(pixmap));
         fitButton->setIconSize(pixmap.size());
@@ -510,6 +503,98 @@ void FloatingNavBar::showFitModeMenu(QPushButton *button) {
     mMenuOpen = true;
     menu.exec(QPoint(qMax(0, anchor.x() - hint.width() / 2), anchor.y() - hint.height() - 4));
     mMenuOpen = false;
+}
+
+// The mouse wheel button. It cycles a stored setting instead of running an
+// action, and its icon is the one that stands for the mode.
+QString FloatingNavBar::wheelCycleShortcut() {
+    return QStringLiteral("@wheel");
+}
+
+bool FloatingNavBar::isWheelCycle(const QString &shortcut) {
+    return shortcut == wheelCycleShortcut();
+}
+
+QString FloatingNavBar::wheelModeName(WheelMode mode) {
+    switch(mode) {
+    case WHEEL_ZOOM:
+        return tr("Wheel zooms");
+    case WHEEL_SCROLL:
+        return tr("Wheel scrolls the image");
+    default:
+        return tr("Wheel switches images");
+    }
+}
+
+QString FloatingNavBar::wheelModeIconName(WheelMode mode) {
+    switch(mode) {
+    case WHEEL_ZOOM:
+        return QStringLiteral("action/zoom-in");
+    case WHEEL_SCROLL:
+        return QStringLiteral("action/resize-vertical");
+    default:
+        return QStringLiteral("action/swap");
+    }
+}
+
+void FloatingNavBar::refreshWheelButton() {
+    if(!wheelButton)
+        return;
+    const WheelMode mode = settings->wheelMode();
+    const QPixmap pixmap = themedIconPixmap(wheelModeIconName(mode), 28);
+    if(!pixmap.isNull()) {
+        wheelButton->setIcon(QIcon(pixmap));
+        wheelButton->setIconSize(pixmap.size());
+        wheelButton->setText(QString());
+    } else {
+        wheelButton->setIcon(QIcon());
+        wheelButton->setText(wheelModeName(mode));
+    }
+    wheelButton->setToolTip(tr("Mouse wheel: %1\nLeft click: next mode - Right click: pick one")
+                                .arg(wheelModeName(mode)));
+}
+
+void FloatingNavBar::advanceWheelMode() {
+    const int next = (int(settings->wheelMode()) + 1) % 3;
+    settings->setWheelMode(static_cast<WheelMode>(next));
+    refreshWheelButton();
+}
+
+void FloatingNavBar::showWheelModeMenu(QPushButton *button) {
+    if(!button || mMenuOpen)
+        return;
+    const WheelMode current = settings->wheelMode();
+    QMenu menu(this);
+    for(int i = 0; i <= 2; i++) {
+        const WheelMode mode = static_cast<WheelMode>(i);
+        QAction *entry = menu.addAction(wheelModeName(mode));
+        entry->setCheckable(true);
+        entry->setChecked(mode == current);
+        connect(entry, &QAction::triggered, this, [this, mode]() {
+            settings->setWheelMode(mode);
+            refreshWheelButton();
+        });
+    }
+    const QPoint anchor = button->mapToGlobal(QPoint(button->width() / 2, 0));
+    const QSize hint = menu.sizeHint();
+    mMenuOpen = true;
+    menu.exec(QPoint(qMax(0, anchor.x() - hint.width() / 2), anchor.y() - hint.height() - 4));
+    mMenuOpen = false;
+}
+
+// Vector icon from the set that ships with the app, tinted like the built-in
+// png icons (they are masks as well).
+QPixmap FloatingNavBar::themedIconPixmap(const QString &name, int iconPx) {
+    if(name.isEmpty())
+        return QPixmap();
+    // through QIcon: it knows how to render the svg resources
+    QPixmap pixmap = QIcon(QStringLiteral(":/qlementine/icons/16/%1.svg").arg(name))
+                         .pixmap(iconPx * 2, iconPx * 2);
+    if(pixmap.isNull())
+        return pixmap;
+    pixmap = pixmap.scaled(iconPx * 2, iconPx * 2, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    ImageLib::recolor(pixmap, settings->colorScheme().icons);
+    return pixmap;
 }
 
 // Resolves the icon of a button: a configured "theme:<name>" or file path wins,
@@ -570,8 +655,9 @@ void FloatingNavBar::rebuildButtons() {
         delete buttons.takeFirst();
     while(!separators.isEmpty())
         delete separators.takeFirst();
-    // the cycle button is one of `buttons` and was just deleted with them
+    // the cycle buttons are part of `buttons` and were just deleted with them
     fitButton = nullptr;
+    wheelButton = nullptr;
 
     // Nothing configured: show a placeholder so the bar can be brought back.
     if(mShortcuts.isEmpty()) {
@@ -609,6 +695,21 @@ void FloatingNavBar::rebuildButtons() {
             layout->insertWidget(layout->count() - 1, button);
             buttons.append(button);
             refreshFitCycleIcon();
+            continue;
+        }
+
+        // a button that cycles what the mouse wheel does
+        if(isWheelCycle(shortcut)) {
+            QPushButton *button = new QPushButton(this);
+            button->setFocusPolicy(Qt::NoFocus);
+            button->setCursor(Qt::PointingHandCursor);
+            button->setFlat(true);
+            button->setAutoDefault(false);
+            wheelButton = button;
+            connect(button, &QPushButton::clicked, this, [this]() { advanceWheelMode(); });
+            layout->insertWidget(layout->count() - 1, button);
+            buttons.append(button);
+            refreshWheelButton();
             continue;
         }
 
@@ -746,9 +847,10 @@ void FloatingNavBar::enterEvent(QEnterEvent *event) {
 void FloatingNavBar::enterEvent(QEvent *event) {
 #endif
     if(mMode == NAVBAR_AUTO) {
-        // the bar comes back into view: make sure the fit button shows the mode
-        // the viewer is in now
+        // the bar comes back into view: make sure the cycle buttons show the
+        // modes that are active now
         refreshFitCycleIcon();
+        refreshWheelButton();
         expandBar();
     }
     QWidget::enterEvent(event);
@@ -765,11 +867,15 @@ void FloatingNavBar::leaveEvent(QEvent *event) {
 void FloatingNavBar::mousePressEvent(QMouseEvent *event) {
     // A right click belongs to the bar, not to the image under it: the bar is an
     // overlay, so the press is swallowed here and the image never opens its file
-    // menu on top of the bar. On the fit button this opens the mode menu.
+    // menu on top of the bar. On a cycle button it opens that button's menu.
     if(event->button() == Qt::RightButton) {
+        const QPoint pos = eventGlobalPos(event);
         if(fitButton && fitButton->isVisible()
-           && fitButton->rect().contains(fitButton->mapFromGlobal(eventGlobalPos(event))))
+           && fitButton->rect().contains(fitButton->mapFromGlobal(pos)))
             showFitModeMenu(fitButton);
+        else if(wheelButton && wheelButton->isVisible()
+                && wheelButton->rect().contains(wheelButton->mapFromGlobal(pos)))
+            showWheelModeMenu(wheelButton);
         event->accept();
         return;
     }

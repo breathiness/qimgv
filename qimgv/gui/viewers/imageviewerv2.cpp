@@ -724,8 +724,9 @@ void ImageViewerV2::wheelEvent(QWheelEvent *event) {
                 centerIfNecessary();
                 snapToEdges();
             }
-        } else if(isWheel && settings->imageScrolling() == SCROLL_BY_TRACKPAD_AND_WHEEL) {
-            // scroll by interval
+        } else if(isWheel && settings->wheelMode() == WHEEL_SCROLL) {
+            // scroll by interval. At an edge the event is passed on instead,
+            // which is what switches the image in this mode (see MW::wheelEvent).
             bool scrollable = false;
             QRect imgRect = scaledRectR();
             // shift by 2px in case of img edge misalignment

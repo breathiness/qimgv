@@ -88,6 +88,17 @@ enum ImageScrolling {
     SCROLL_BY_TRACKPAD_AND_WHEEL
 };
 
+// What the mouse wheel does over the image viewer.
+enum WheelMode {
+    // wheel switches to the previous/next image, Ctrl+wheel zooms
+    WHEEL_SWITCH_IMAGES,
+    // wheel zooms at the cursor, Ctrl+wheel switches images
+    WHEEL_ZOOM,
+    // wheel scrolls the image; at the top/bottom edge it switches images,
+    // Ctrl+wheel zooms
+    WHEEL_SCROLL
+};
+
 enum ViewMode {
     MODE_DOCUMENT,
     MODE_FOLDERVIEW
@@ -150,10 +161,6 @@ public:
     // per-button custom icon path (empty string = use the automatic icon)
     QStringList navBarIcons();
     void saveNavBar(const QStringList &shortcuts, const QStringList &icons);
-    // icons of the fit-mode cycle button, index-aligned with
-    // FloatingNavBar::fitCycleActions(); empty entry = the mode's own icon
-    QStringList navBarFitIcons();
-    void saveNavBarFitIcons(const QStringList &icons);
     NavBarMode navBarMode();
     void setNavBarMode(NavBarMode mode);
     // the built-in button set used when nothing was configured yet
@@ -249,6 +256,10 @@ public:
 
     ImageScrolling imageScrolling();
     void setImageScrolling(ImageScrolling mode);
+
+    // what the mouse wheel does; the navigation bar has a button that cycles it
+    WheelMode wheelMode();
+    void setWheelMode(WheelMode mode);
 
     int placesPanelWidth();
     void setPlacesPanelWidth(int width);

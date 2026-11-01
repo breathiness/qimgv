@@ -896,21 +896,6 @@ void Settings::saveNavBar(const QStringList &shortcuts, const QStringList &icons
     settings->settingsConf->endGroup();
 }
 
-// Icons of the fit-mode cycle button: one per mode, in the order the button
-// cycles them (see FloatingNavBar::fitCycleActions()). An empty entry means the
-// mode's own icon is used.
-QStringList Settings::navBarFitIcons() {
-    settings->settingsConf->beginGroup("NavBar");
-    QStringList list = settings->settingsConf->value("fitIcons").toStringList();
-    settings->settingsConf->endGroup();
-    return list;
-}
-
-void Settings::saveNavBarFitIcons(const QStringList &icons) {
-    settings->settingsConf->beginGroup("NavBar");
-    settings->settingsConf->setValue("fitIcons", icons);
-    settings->settingsConf->endGroup();
-}
 //------------------------------------------------------------------------------
 NavBarMode Settings::navBarMode() {
     settings->settingsConf->beginGroup("NavBar");
@@ -1281,6 +1266,17 @@ ImageScrolling Settings::imageScrolling() {
 
 void Settings::setImageScrolling(ImageScrolling mode) {
     settings->settingsConf->setValue("imageScrolling", mode);
+}
+
+WheelMode Settings::wheelMode() {
+    int mode = settings->settingsConf->value("wheelMode", 0).toInt();
+    if(mode < 0 || mode > 2)
+        mode = 0;
+    return static_cast<WheelMode>(mode);
+}
+
+void Settings::setWheelMode(WheelMode mode) {
+    settings->settingsConf->setValue("wheelMode", mode);
 }
 //------------------------------------------------------------------------------
 ViewMode Settings::defaultViewMode() {

@@ -33,8 +33,9 @@ private slots:
     void resetToDefaults();
     // appends a group separator row (a divider on the bar)
     void addSeparator();
-    // appends the button that cycles the image fit mode
+    // appends a button that cycles a mode (image fit, mouse wheel)
     void addFitCycle();
+    void addWheelCycle();
 
 private:
     void fillRows();
@@ -44,9 +45,6 @@ private:
     void selectIcon(int index, const QString &value);
     void updateAutoPreview(int index);
     void chooseIconFile(int index);
-    // per-mode icons of the fit-mode button, in FloatingNavBar::fitCycleActions()
-    // order; empty when the bar has no such button
-    QStringList fitIcons() const;
 
     QComboBox *modeComboBox;
     QSpinBox *countSpinBox;
@@ -56,10 +54,6 @@ private:
     // parallel to rows; a separator row has no key field and no icon combo
     QList<KeySequenceEdit*> sequenceEdits;
     QList<QComboBox*> iconCombos;
-    // parallel to rows; one icon picker per fit mode for the cycle button row,
-    // empty for every other row
-    QList<QList<QComboBox*>> fitIconCombos;
     QStringList mShortcuts;
     QStringList mIcons;
-    QStringList mFitIcons;
 };

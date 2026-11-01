@@ -343,6 +343,9 @@ NavBarSettingsPage::NavBarSettingsPage(QWidget *parent)
     QPushButton *fitButton = new QPushButton(tr("Add fit mode button"), this);
     fitButton->setToolTip(tr("Adds one button that cycles the image fit mode: left click goes to the next mode, right click opens a menu. Its icon follows the mode that is active."));
     buttonLayout->addWidget(fitButton);
+    QPushButton *wheelButton = new QPushButton(tr("Add wheel mode button"), this);
+    wheelButton->setToolTip(tr("Adds one button that switches what the mouse wheel does: switch images, zoom, or scroll the image. Its icon follows the active mode."));
+    buttonLayout->addWidget(wheelButton);
     buttonLayout->addStretch();
     mainLayout->addLayout(buttonLayout);
 
@@ -352,6 +355,7 @@ NavBarSettingsPage::NavBarSettingsPage(QWidget *parent)
     connect(resetButton, &QPushButton::clicked, this, &NavBarSettingsPage::resetToDefaults);
     connect(separatorButton, &QPushButton::clicked, this, &NavBarSettingsPage::addSeparator);
     connect(fitButton, &QPushButton::clicked, this, &NavBarSettingsPage::addFitCycle);
+    connect(wheelButton, &QPushButton::clicked, this, &NavBarSettingsPage::addWheelCycle);
     connect(countSpinBox, qOverload<int>(&QSpinBox::valueChanged), this, &NavBarSettingsPage::rebuildRows);
 }
 
@@ -362,13 +366,6 @@ void NavBarSettingsPage::readSettings() {
         mIcons.append(QString());
     while(mIcons.size() > mShortcuts.size())
         mIcons.removeLast();
-
-    mFitIcons = settings->navBarFitIcons();
-    const int modeCount = FloatingNavBar::fitCycleActions().size();
-    while(mFitIcons.size() < modeCount)
-        mFitIcons.append(QString());
-    while(mFitIcons.size() > modeCount)
-        mFitIcons.removeLast();
 
     const int index = modeComboBox->findData(int(settings->navBarMode()));
     modeComboBox->setCurrentIndex(index >= 0 ? index : 1);
@@ -383,7 +380,6 @@ void NavBarSettingsPage::readSettings() {
 void NavBarSettingsPage::saveSettings() {
     settings->setNavBarMode(static_cast<NavBarMode>(modeComboBox->currentData().toInt()));
     settings->saveNavBar(shortcuts(), icons());
-    settings->saveNavBarFitIcons(fitIcons());
 }
 
 QStringList NavBarSettingsPage::shortcuts() const {
@@ -428,10 +424,6 @@ void NavBarSettingsPage::syncFromRows() {
         if(value != QLatin1String("__file__"))
             mIcons[i] = value;
     }
-    // keep the per-mode icons of a fit button across a rebuild of the rows
-    const QStringList fit = fitIcons();
-    if(!fit.isEmpty())
-        mFitIcons = fit;
 }
 
 void NavBarSettingsPage::rebuildRows() {
@@ -477,21 +469,15 @@ void NavBarSettingsPage::addFitCycle() {
     fillRows();
 }
 
-// Per-mode icons of the first fit-mode row; the bar stores only one set, so a
-// second button of that kind shares them.
-QStringList NavBarSettingsPage::fitIcons() const {
-    QStringList result;
-    for(const QList<QComboBox*> &combos : fitIconCombos) {
-        if(combos.isEmpty())
-            continue;
-        for(QComboBox *combo : combos) {
-            const QString value = combo ? combo->currentData().toString() : QString();
-            // "choose a file" is an action, never a value
-            result << (value == QLatin1String("__file__") ? QString() : value);
-        }
-        break;
-    }
-    return result;
+// Appends the button that cycles what the mouse wheel does.
+void NavBarSettingsPage::addWheelCycle() {
+    syncFromRows();
+    mShortcuts.append(FloatingNavBar::wheelCycleShortcut());
+    mIcons.append(QString());
+    countSpinBox->blockSignals(true);
+    countSpinBox->setValue(mShortcuts.size());
+    countSpinBox->blockSignals(false);
+    fillRows();
 }
 
 void NavBarSettingsPage::removeRow(int index) {
@@ -523,7 +509,6 @@ void NavBarSettingsPage::moveRow(int from, int to) {
 void NavBarSettingsPage::fillRows() {
     sequenceEdits.clear();
     iconCombos.clear();
-    fitIconCombos.clear();
     rows.clear();
 
     while(QLayoutItem *item = rowsLayout->takeAt(0)) {
@@ -567,78 +552,34 @@ void NavBarSettingsPage::fillRows() {
             rowsLayout->addWidget(row);
             sequenceEdits.append(nullptr);
             iconCombos.append(nullptr);
-            fitIconCombos.append(QList<QComboBox*>());
             continue;
         }
 
-        // the fit-mode button: no key field, one icon picker per mode
-        if(FloatingNavBar::isFitCycle(mShortcuts.at(i))) {
-            QWidget *row = new QWidget(rowsArea);
-            QVBoxLayout *outer = new QVBoxLayout(row);
-            outer->setContentsMargins(0, 0, 0, 0);
-            outer->setSpacing(4);
-
-            QHBoxLayout *first = new QHBoxLayout();
-            first->setContentsMargins(0, 0, 0, 0);
-            first->setSpacing(6);
-            first->addWidget(new DragHandle(row, rowsArea,
+        // the cycle buttons: no key field, and no icon to pick either - each one
+        // shows the icon of whatever mode it is in
+        if(FloatingNavBar::isFitCycle(mShortcuts.at(i)) || FloatingNavBar::isWheelCycle(mShortcuts.at(i))) {
+            const bool isFit = FloatingNavBar::isFitCycle(mShortcuts.at(i));
+            rowLayout->addWidget(new DragHandle(row, rowsArea,
                 [this](int from, int to) { moveRow(from, to); }));
-            QLabel *label = new QLabel(tr("Fit mode button:"), row);
+
+            QLabel *label = new QLabel(isFit ? tr("Fit mode button:") : tr("Wheel mode button:"), row);
             label->setMinimumWidth(190);
-            first->addWidget(label);
-            QLabel *hint = new QLabel(tr("Left click cycles, right click picks. One icon per mode:"), row);
+            rowLayout->addWidget(label);
+
+            QLabel *hint = new QLabel(isFit
+                ? tr("Left click cycles the fit mode, right click picks one.")
+                : tr("Left click cycles what the wheel does, right click picks one."), row);
             hint->setWordWrap(true);
-            first->addWidget(hint, 1);
+            rowLayout->addWidget(hint, 1);
+
             QPushButton *removeButton = new QPushButton(tr("Remove"), row);
             removeButton->setAutoDefault(false);
-            first->addWidget(removeButton);
-            outer->addLayout(first);
-
-            QHBoxLayout *second = new QHBoxLayout();
-            second->setContentsMargins(0, 0, 0, 0);
-            second->setSpacing(6);
-            // line the pickers up under the label of the line above
-            second->addSpacing(24);
-            QList<QComboBox*> combos;
-            for(const QString &action : FloatingNavBar::fitCycleActions()) {
-                QComboBox *combo = makeIconCombo(row, iconNames);
-                // four pickers on one line: they stay narrow and elide the icon
-                // name instead of pushing the row wider than the page
-                combo->setMinimumWidth(120);
-                combo->setMaximumWidth(170);
-                combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
-                combo->setMinimumContentsLength(4);
-                combo->setToolTip(FloatingNavBar::fitActionName(action));
-                connect(combo, qOverload<int>(&QComboBox::activated), this, [this, combo](int) {
-                    if(combo->currentData().toString() != QLatin1String("__file__"))
-                        return;
-                    const QString file = QFileDialog::getOpenFileName(
-                        this, tr("Choose an icon"), QString(),
-                        tr("Images (*.png *.jpg *.jpeg *.bmp *.ico *.svg);;All files (*)"));
-                    if(file.isEmpty()) {
-                        combo->setCurrentIndex(0);
-                        return;
-                    }
-                    const int at = combo->count() - 1;
-                    combo->insertItem(at, previewIcon(file, false), QFileInfo(file).fileName(), file);
-                    combo->setCurrentIndex(at);
-                });
-                second->addWidget(combo);
-                combos.append(combo);
-            }
-            second->addStretch();
-            outer->addLayout(second);
-
-            selectComboValue(combos.value(0), mFitIcons.value(0));
-            selectComboValue(combos.value(1), mFitIcons.value(1));
-            selectComboValue(combos.value(2), mFitIcons.value(2));
-            selectComboValue(combos.value(3), mFitIcons.value(3));
+            rowLayout->addWidget(removeButton);
 
             rows.append(row);
             rowsLayout->addWidget(row);
             sequenceEdits.append(nullptr);
             iconCombos.append(nullptr);
-            fitIconCombos.append(combos);
             connect(removeButton, &QPushButton::clicked, this, [this, row]() {
                 removeRow(rows.indexOf(row));
             });
@@ -668,7 +609,6 @@ void NavBarSettingsPage::fillRows() {
 
         rows.append(row);
         rowsLayout->addWidget(row);
-        fitIconCombos.append(QList<QComboBox*>());
 
         connect(removeButton, &QPushButton::clicked, this, [this, row]() {
             removeRow(rows.indexOf(row));

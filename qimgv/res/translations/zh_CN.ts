@@ -558,6 +558,24 @@ Left click: next mode - Right click: pick one</source>
         <translation>适应模式：%1
 左键切换下一个 — 右键选择</translation>
     </message>
+    <message>
+        <source>Wheel switches images</source>
+        <translation>滚轮切换图片</translation>
+    </message>
+    <message>
+        <source>Wheel zooms</source>
+        <translation>滚轮放大缩小</translation>
+    </message>
+    <message>
+        <source>Wheel scrolls the image</source>
+        <translation>滚轮上下移动图片</translation>
+    </message>
+    <message>
+        <source>Mouse wheel: %1
+Left click: next mode - Right click: pick one</source>
+        <translation>鼠标滚轮：%1
+左键切换下一个 — 右键选择</translation>
+    </message>
 </context>
 <context>
     <name>FolderView</name>
@@ -873,8 +891,24 @@ Left click: next mode - Right click: pick one</source>
         <translation>适应模式按钮：</translation>
     </message>
     <message>
-        <source>Left click cycles, right click picks. One icon per mode:</source>
-        <translation>左键循环切换，右键选择。每个模式一个图标：</translation>
+        <source>Wheel mode button:</source>
+        <translation>滚轮模式按钮：</translation>
+    </message>
+    <message>
+        <source>Left click cycles the fit mode, right click picks one.</source>
+        <translation>左键循环切换适应模式，右键直接选择。</translation>
+    </message>
+    <message>
+        <source>Left click cycles what the wheel does, right click picks one.</source>
+        <translation>左键循环切换滚轮功能，右键直接选择。</translation>
+    </message>
+    <message>
+        <source>Add wheel mode button</source>
+        <translation>添加滚轮模式按钮</translation>
+    </message>
+    <message>
+        <source>Adds one button that switches what the mouse wheel does: switch images, zoom, or scroll the image. Its icon follows the active mode.</source>
+        <translation>添加一个切换鼠标滚轮功能的按钮：切换图片 / 放大缩小 / 上下移动图片。图标跟随当前功能。</translation>
     </message>
 </context>
 <context>

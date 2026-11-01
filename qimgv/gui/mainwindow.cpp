@@ -607,7 +607,30 @@ void MW::keyPressEvent(QKeyEvent *event) {
 
 void MW::wheelEvent(QWheelEvent *event) {
     event->accept();
-    actionManager->processEvent(event);
+    const int dy = event->angleDelta().y();
+    // video playback and horizontal-only events keep the plain shortcut mapping
+    if(!viewerWidget || dy == 0 || viewerWidget->isVideo()) {
+        actionManager->processEvent(event);
+        return;
+    }
+    // The wheel does one thing at a time, and which one is a setting the
+    // navigation bar can cycle (see FloatingNavBar's wheel button). Ctrl+wheel is
+    // always the counterpart: it switches images when the wheel zooms, and it
+    // zooms when the wheel switches or scrolls.
+    const bool ctrl = event->modifiers().testFlag(Qt::ControlModifier);
+    const bool up = dy > 0;
+    const WheelMode mode = settings->wheelMode();
+    QString action;
+    if(mode == WHEEL_ZOOM) {
+        action = ctrl ? (up ? "prevImage" : "nextImage")
+                      : (up ? "zoomInCursor" : "zoomOutCursor");
+    } else {
+        // WHEEL_SWITCH_IMAGES, and WHEEL_SCROLL once the image reached an edge:
+        // the viewer scrolls by itself and only lets the event through there
+        action = ctrl ? (up ? "zoomInCursor" : "zoomOutCursor")
+                      : (up ? "prevImage" : "nextImage");
+    }
+    actionManager->invokeAction(action);
 }
 
 void MW::mousePressEvent(QMouseEvent *event) {
