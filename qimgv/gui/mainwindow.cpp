@@ -131,6 +131,9 @@ void MW::setupUi() {
     // positioned freely on top of everything else and dragged around.
     // It is configured from Preferences -> "Navigation bar".
     navBar = new FloatingNavBar(this);
+    // the fit-mode button shows the mode the viewer is actually in, not the last
+    // one the bar set itself
+    navBar->setFitModeProvider([this]() { return viewerWidget->fitMode(); });
     // add / remove / edit: the bar already rebuilt itself, just persist the list
     connect(navBar, &FloatingNavBar::shortcutsChanged, this, [this]() {
         settings->saveNavBar(navBar->shortcuts(), navBar->icons());

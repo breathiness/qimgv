@@ -536,6 +536,28 @@
         <source>Configure all buttons...</source>
         <translation type="vanished">配置所有按钮...</translation>
     </message>
+    <message>
+        <source>Fit window</source>
+        <translation>适应窗口</translation>
+    </message>
+    <message>
+        <source>Fit width</source>
+        <translation>适应宽度</translation>
+    </message>
+    <message>
+        <source>Original size</source>
+        <translation>原始大小</translation>
+    </message>
+    <message>
+        <source>Stretch to window</source>
+        <translation>拉伸到窗口</translation>
+    </message>
+    <message>
+        <source>Image fit mode: %1
+Left click: next mode - Right click: pick one</source>
+        <translation>适应模式：%1
+左键切换下一个 — 右键选择</translation>
+    </message>
 </context>
 <context>
     <name>FolderView</name>
@@ -837,6 +859,22 @@
         <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="154" />
         <source>Button %1:</source>
         <translation>按钮 %1：</translation>
+    </message>
+    <message>
+        <source>Add fit mode button</source>
+        <translation>添加适应模式按钮</translation>
+    </message>
+    <message>
+        <source>Adds one button that cycles the image fit mode: left click goes to the next mode, right click opens a menu. Its icon follows the mode that is active.</source>
+        <translation>添加一个循环切换适应模式的按钮：左键切到下一个模式，右键打开菜单。按钮图标会跟随当前模式。</translation>
+    </message>
+    <message>
+        <source>Fit mode button:</source>
+        <translation>适应模式按钮：</translation>
+    </message>
+    <message>
+        <source>Left click cycles, right click picks. One icon per mode:</source>
+        <translation>左键循环切换，右键选择。每个模式一个图标：</translation>
     </message>
 </context>
 <context>

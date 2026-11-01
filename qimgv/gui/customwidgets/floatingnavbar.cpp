@@ -6,6 +6,8 @@
 #include <QPushButton>
 #include <QMouseEvent>
 #include <QContextMenuEvent>
+#include <QMenu>
+#include <QAction>
 #include <QPainter>
 #include <QPen>
 #include <QColor>
@@ -146,7 +148,7 @@ QPoint eventGlobalPos(QMouseEvent *event) {
 
 FloatingNavBar::FloatingNavBar(QWidget *parent)
     : QWidget(parent), layout(nullptr), dragging(false), docked(true), barHeight(kBarHeight),
-      mMode(NAVBAR_AUTO), mViewActive(false)
+      mMode(NAVBAR_AUTO), mViewActive(false), fitButton(nullptr), mMenuOpen(false)
 {
     setObjectName("FloatingNavBar");
     // never take keyboard focus, otherwise the shortcuts handled by the main
@@ -211,6 +213,8 @@ void FloatingNavBar::applyState() {
     }
     show();
     raise();
+    // the fit mode may have changed while the bar was away
+    refreshFitCycleIcon();
     if(mMode == NAVBAR_ALWAYS || !docked) {
         if(docked)
             dockToBottom();
@@ -269,6 +273,19 @@ void FloatingNavBar::collapseBar() {
 // widget below is handling the mouse. Nothing is intercepted: the event is
 // always passed through.
 bool FloatingNavBar::eventFilter(QObject *watched, QEvent *event) {
+    // A context menu request over the bar belongs to the bar. The image viewer
+    // would otherwise open its file menu on top of it, and on the fit button the
+    // bar opens its mode menu instead.
+    if(event->type() == QEvent::ContextMenu && isVisible()) {
+        const QPoint cursor = QCursor::pos();
+        if(rect().contains(mapFromGlobal(cursor))) {
+            // already showing the menu for this very click
+            if(!mMenuOpen && fitButton && fitButton->isVisible()
+               && fitButton->rect().contains(fitButton->mapFromGlobal(cursor)))
+                showFitModeMenu(fitButton);
+            return true;
+        }
+    }
     Q_UNUSED(watched)
     // Cheap guards first: this filter sees every event in the application, so
     // avoid the coordinate math unless the app is actually interacting.
@@ -388,13 +405,173 @@ bool FloatingNavBar::isSeparator(const QString &shortcut) {
     return shortcut == separatorShortcut();
 }
 
+// Stored like a button, but instead of a key it cycles through the image fit
+// modes: left click goes to the next one, right click opens a menu.
+QString FloatingNavBar::fitCycleShortcut() {
+    return QStringLiteral("@fit");
+}
+
+bool FloatingNavBar::isFitCycle(const QString &shortcut) {
+    return shortcut == fitCycleShortcut();
+}
+
+QStringList FloatingNavBar::fitCycleActions() {
+    return {QStringLiteral("fitWindow"), QStringLiteral("fitWidth"),
+            QStringLiteral("fitNormal"), QStringLiteral("fitWindowStretch")};
+}
+
+QString FloatingNavBar::fitActionForMode(ImageFitMode mode) {
+    switch(mode) {
+    case FIT_WIDTH:
+        return QStringLiteral("fitWidth");
+    case FIT_ORIGINAL:
+        return QStringLiteral("fitNormal");
+    case FIT_WINDOW_STRETCH:
+        return QStringLiteral("fitWindowStretch");
+    default:
+        // FIT_FREE (the image was zoomed away from a fit mode) shows the mode a
+        // click would apply first
+        return QStringLiteral("fitWindow");
+    }
+}
+
+QString FloatingNavBar::fitActionName(const QString &action) {
+    if(action == QLatin1String("fitWidth"))
+        return tr("Fit width");
+    if(action == QLatin1String("fitNormal"))
+        return tr("Original size");
+    if(action == QLatin1String("fitWindowStretch"))
+        return tr("Stretch to window");
+    return tr("Fit window");
+}
+
+void FloatingNavBar::setFitModeProvider(std::function<ImageFitMode()> provider) {
+    mFitModeProvider = std::move(provider);
+    refreshFitCycleIcon();
+}
+
+ImageFitMode FloatingNavBar::currentFitMode() const {
+    return mFitModeProvider ? mFitModeProvider() : FIT_WINDOW;
+}
+
+void FloatingNavBar::refreshFitCycleIcon() {
+    if(!fitButton)
+        return;
+    const int iconPx = 28;
+    const QStringList actions = fitCycleActions();
+    const QString action = fitActionForMode(currentFitMode());
+    const QStringList configured = settings->navBarFitIcons();
+    const QPixmap pixmap = iconForAction(action, configured.value(actions.indexOf(action)), iconPx);
+    if(!pixmap.isNull()) {
+        fitButton->setIcon(QIcon(pixmap));
+        fitButton->setIconSize(pixmap.size());
+        fitButton->setText(QString());
+    } else {
+        fitButton->setIcon(QIcon());
+        fitButton->setText(fitActionName(action));
+    }
+    fitButton->setToolTip(tr("Image fit mode: %1\nLeft click: next mode - Right click: pick one")
+                              .arg(fitActionName(action)));
+}
+
+void FloatingNavBar::applyFitAction(const QString &action) {
+    if(action.isEmpty() || !actionManager)
+        return;
+    actionManager->invokeAction(action);
+    // the viewer has the new mode by now, so the icon can follow right away
+    refreshFitCycleIcon();
+}
+
+void FloatingNavBar::advanceFitMode() {
+    const QStringList actions = fitCycleActions();
+    if(actions.isEmpty())
+        return;
+    int next = actions.indexOf(fitActionForMode(currentFitMode())) + 1;
+    if(next <= 0 || next >= actions.size())
+        next = 0;
+    applyFitAction(actions.at(next));
+}
+
+void FloatingNavBar::showFitModeMenu(QPushButton *button) {
+    if(!button || mMenuOpen)
+        return;
+    const QString current = fitActionForMode(currentFitMode());
+    QMenu menu(this);
+    for(const QString &action : fitCycleActions()) {
+        QAction *entry = menu.addAction(fitActionName(action));
+        entry->setCheckable(true);
+        entry->setChecked(action == current);
+        connect(entry, &QAction::triggered, this, [this, action]() { applyFitAction(action); });
+    }
+    // above the button: the bar normally sits on the bottom edge, so a menu
+    // dropped below the cursor would run off the screen
+    const QPoint anchor = button->mapToGlobal(QPoint(button->width() / 2, 0));
+    const QSize hint = menu.sizeHint();
+    mMenuOpen = true;
+    menu.exec(QPoint(qMax(0, anchor.x() - hint.width() / 2), anchor.y() - hint.height() - 4));
+    mMenuOpen = false;
+}
+
+// Resolves the icon of a button: a configured "theme:<name>" or file path wins,
+// otherwise the action's own icon (the vector set under Qlementine, the png
+// resources otherwise). A configured icon that no longer exists falls back to the
+// automatic one, and built-in icons are masks, so they get tinted.
+QPixmap FloatingNavBar::iconForAction(const QString &action, const QString &configured, int iconPx) {
+    const bool userThemed = configured.startsWith(QLatin1String("theme:"));
+    bool custom = !configured.isEmpty();
+    const QString customPath = userThemed ? QString() : configured;
+    QString iconPath = custom ? customPath : actionIcons().value(action);
+    bool themed = userThemed
+                  || (!custom && UiStyle::useQlementine() && actionThemeIcons().contains(action));
+    QPixmap pixmap;
+
+    if(themed) {
+        const QString name = userThemed ? configured.mid(6)
+                                        : actionThemeIcons().value(action);
+        iconPath = QStringLiteral(":/qlementine/icons/16/%1.svg").arg(name);
+        pixmap = QIcon(iconPath).pixmap(iconPx * 2, iconPx * 2);
+    } else if(!iconPath.isEmpty()) {
+        // built-in icons ship an @2x variant which stays crisp at this size
+        if(!custom) {
+            QString hiRes = iconPath;
+            hiRes.replace(QLatin1String(".png"), QLatin1String("@2x.png"));
+            pixmap = QPixmap(hiRes);
+        }
+        if(pixmap.isNull())
+            pixmap = QPixmap(iconPath);
+    }
+
+    if(pixmap.isNull() && custom) {
+        custom = false;
+        // the replacement is a PNG mask, not a vector icon: it needs the same
+        // rotation/tint treatment the built-in icons get
+        themed = false;
+        iconPath = actionIcons().value(action);
+        QString hiRes = iconPath;
+        hiRes.replace(QLatin1String(".png"), QLatin1String("@2x.png"));
+        pixmap = QPixmap(hiRes);
+        if(pixmap.isNull())
+            pixmap = QPixmap(iconPath);
+    }
+
+    if(!iconPath.isEmpty() && !pixmap.isNull()) {
+        if(!custom || userThemed) {
+            // built-in and vector icons are masks, so they take the theme colour
+            ImageLib::recolor(pixmap, settings->colorScheme().icons);
+        }
+        // custom image files keep the colours the user picked
+        pixmap = pixmap.scaled(iconPx, iconPx, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    }
+    return pixmap;
+}
+
 void FloatingNavBar::rebuildButtons() {
     while(!buttons.isEmpty())
         delete buttons.takeFirst();
     while(!separators.isEmpty())
         delete separators.takeFirst();
-
-    const QColor iconColor = settings->colorScheme().icons;
+    // the cycle button is one of `buttons` and was just deleted with them
+    fitButton = nullptr;
 
     // Nothing configured: show a placeholder so the bar can be brought back.
     if(mShortcuts.isEmpty()) {
@@ -420,6 +597,21 @@ void FloatingNavBar::rebuildButtons() {
             continue;
         }
 
+        // a button that cycles the fit mode instead of running one shortcut
+        if(isFitCycle(shortcut)) {
+            QPushButton *button = new QPushButton(this);
+            button->setFocusPolicy(Qt::NoFocus);
+            button->setCursor(Qt::PointingHandCursor);
+            button->setFlat(true);
+            button->setAutoDefault(false);
+            fitButton = button;
+            connect(button, &QPushButton::clicked, this, [this]() { advanceFitMode(); });
+            layout->insertWidget(layout->count() - 1, button);
+            buttons.append(button);
+            refreshFitCycleIcon();
+            continue;
+        }
+
         const QString action = actionForShortcut(shortcut);
 
         QPushButton *button = new QPushButton(this);
@@ -430,56 +622,8 @@ void FloatingNavBar::rebuildButtons() {
 
         const int iconPx = 28;
 
-        // a configured icon is either "theme:<name>" (vector icon from the set)
-        // or a path to an image file
-        const QString configured = mIcons.value(i);
-        const bool userThemed = configured.startsWith(QLatin1String("theme:"));
-        bool custom = !configured.isEmpty();
-        const QString customPath = userThemed ? QString() : configured;
-        QString iconPath = custom ? customPath : defaultIconPath(shortcut);
-        // themed vector icons, when that set is available
-        bool themed = userThemed
-                      || (!custom && UiStyle::useQlementine()
-                          && actionThemeIcons().contains(action));
-        QPixmap pixmap;
-
-        if(themed) {
-            const QString name = userThemed ? configured.mid(6)
-                                            : actionThemeIcons().value(action);
-            iconPath = QStringLiteral(":/qlementine/icons/16/%1.svg").arg(name);
-            pixmap = QIcon(iconPath).pixmap(iconPx * 2, iconPx * 2);
-        } else if(!iconPath.isEmpty()) {
-            // built-in icons ship an @2x variant which stays crisp at this size
-            if(!custom) {
-                QString hiRes = iconPath;
-                hiRes.replace(QLatin1String(".png"), QLatin1String("@2x.png"));
-                pixmap = QPixmap(hiRes);
-            }
-            if(pixmap.isNull())
-                pixmap = QPixmap(iconPath);
-        }
-
-        // a configured icon that no longer exists falls back to the automatic one
-        if(pixmap.isNull() && custom) {
-            custom = false;
-            // the replacement is a PNG mask, not a vector icon: it needs the
-            // same rotation/tint treatment the built-in icons get
-            themed = false;
-            iconPath = defaultIconPath(shortcut);
-            QString hiRes = iconPath;
-            hiRes.replace(QLatin1String(".png"), QLatin1String("@2x.png"));
-            pixmap = QPixmap(hiRes);
-            if(pixmap.isNull())
-                pixmap = QPixmap(iconPath);
-        }
-
-        if(!iconPath.isEmpty() && !pixmap.isNull()) {
-            if(!custom || userThemed) {
-                // built-in and vector icons are masks, so they take the theme colour
-                ImageLib::recolor(pixmap, iconColor);
-            }
-            // custom image files keep the colours the user picked
-            pixmap = pixmap.scaled(iconPx, iconPx, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        const QPixmap pixmap = iconForAction(action, mIcons.value(i), iconPx);
+        if(!pixmap.isNull()) {
             button->setIcon(QIcon(pixmap));
             button->setIconSize(pixmap.size());
         } else {
@@ -601,8 +745,12 @@ void FloatingNavBar::enterEvent(QEnterEvent *event) {
 #else
 void FloatingNavBar::enterEvent(QEvent *event) {
 #endif
-    if(mMode == NAVBAR_AUTO)
+    if(mMode == NAVBAR_AUTO) {
+        // the bar comes back into view: make sure the fit button shows the mode
+        // the viewer is in now
+        refreshFitCycleIcon();
         expandBar();
+    }
     QWidget::enterEvent(event);
 }
 
@@ -615,6 +763,16 @@ void FloatingNavBar::leaveEvent(QEvent *event) {
 }
 
 void FloatingNavBar::mousePressEvent(QMouseEvent *event) {
+    // A right click belongs to the bar, not to the image under it: the bar is an
+    // overlay, so the press is swallowed here and the image never opens its file
+    // menu on top of the bar. On the fit button this opens the mode menu.
+    if(event->button() == Qt::RightButton) {
+        if(fitButton && fitButton->isVisible()
+           && fitButton->rect().contains(fitButton->mapFromGlobal(eventGlobalPos(event))))
+            showFitModeMenu(fitButton);
+        event->accept();
+        return;
+    }
     if(event->button() == Qt::LeftButton) {
         QWidget *container = parentWidget();
         const bool wasDocked = docked;
@@ -660,6 +818,12 @@ void FloatingNavBar::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void FloatingNavBar::mouseReleaseEvent(QMouseEvent *event) {
+    // see mousePressEvent: the release must not travel on to the image either,
+    // or its context menu opens on top of the bar
+    if(event->button() == Qt::RightButton) {
+        event->accept();
+        return;
+    }
     if(dragging) {
         dragging = false;
         setCursor(Qt::ArrowCursor);

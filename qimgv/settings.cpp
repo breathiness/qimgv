@@ -895,6 +895,22 @@ void Settings::saveNavBar(const QStringList &shortcuts, const QStringList &icons
     settings->settingsConf->endArray();
     settings->settingsConf->endGroup();
 }
+
+// Icons of the fit-mode cycle button: one per mode, in the order the button
+// cycles them (see FloatingNavBar::fitCycleActions()). An empty entry means the
+// mode's own icon is used.
+QStringList Settings::navBarFitIcons() {
+    settings->settingsConf->beginGroup("NavBar");
+    QStringList list = settings->settingsConf->value("fitIcons").toStringList();
+    settings->settingsConf->endGroup();
+    return list;
+}
+
+void Settings::saveNavBarFitIcons(const QStringList &icons) {
+    settings->settingsConf->beginGroup("NavBar");
+    settings->settingsConf->setValue("fitIcons", icons);
+    settings->settingsConf->endGroup();
+}
 //------------------------------------------------------------------------------
 NavBarMode Settings::navBarMode() {
     settings->settingsConf->beginGroup("NavBar");

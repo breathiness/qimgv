@@ -32,6 +32,7 @@
 #include <QList>
 #include <QPoint>
 #include <QSize>
+#include <functional>
 
 #include "settings.h"
 
@@ -67,6 +68,25 @@ public:
     // of buttons. It is stored like any other entry, so it keeps its position.
     static QString separatorShortcut();
     static bool isSeparator(const QString &shortcut);
+
+    // Shortcut list entry that is not bound to a key but cycles the image fit
+    // mode: left click goes to the next mode, right click opens a menu with all
+    // of them, and the icon shows the mode that is active.
+    static QString fitCycleShortcut();
+    static bool isFitCycle(const QString &shortcut);
+    // modes in the order the button cycles them (action names)
+    static QStringList fitCycleActions();
+    static QString fitActionForMode(ImageFitMode mode);
+    // Human readable name of one of fitCycleActions().
+    static QString fitActionName(const QString &action);
+
+    // Where the current mode comes from. The application points this at the
+    // image viewer, so the button icon follows the mode that is really active
+    // instead of remembering the last one it set itself.
+    void setFitModeProvider(std::function<ImageFitMode()> provider);
+    ImageFitMode currentFitMode() const;
+    // re-reads the mode and updates the icon of the cycle button
+    void refreshFitCycleIcon();
 
     // how the bar behaves: always visible, hidden until the mouse reaches the
     // bottom edge, or not shown at all
@@ -112,6 +132,13 @@ private:
     void rebuildButtons();
     void updateFromShortcuts();
     void applyTheme();
+    // icon of one button: `configured` ("theme:<name>" or a file path) wins,
+    // otherwise the action's own icon is used
+    QPixmap iconForAction(const QString &action, const QString &configured, int iconPx);
+    // runs one of fitCycleActions() and refreshes the button afterwards
+    void applyFitAction(const QString &action);
+    void advanceFitMode();
+    void showFitModeMenu(QPushButton *button);
     void clampToParent();
     void dockToBottom();
     // undocked: shrink to the width of the buttons, like the video controls card
@@ -137,4 +164,9 @@ private:
     NavBarMode mMode;
     // false while a page without the bar (the folder view) is active
     bool mViewActive;
+    // the fit-mode cycle button, when one is configured; null otherwise
+    QPushButton *fitButton;
+    // true while the fit mode menu is on screen (it runs its own event loop)
+    bool mMenuOpen;
+    std::function<ImageFitMode()> mFitModeProvider;
 };

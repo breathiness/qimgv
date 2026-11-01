@@ -150,6 +150,10 @@ public:
     // per-button custom icon path (empty string = use the automatic icon)
     QStringList navBarIcons();
     void saveNavBar(const QStringList &shortcuts, const QStringList &icons);
+    // icons of the fit-mode cycle button, index-aligned with
+    // FloatingNavBar::fitCycleActions(); empty entry = the mode's own icon
+    QStringList navBarFitIcons();
+    void saveNavBarFitIcons(const QStringList &icons);
     NavBarMode navBarMode();
     void setNavBarMode(NavBarMode mode);
     // the built-in button set used when nothing was configured yet
