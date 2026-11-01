@@ -53,6 +53,10 @@ public:
     int thumbnailSize();
     void reset();
     void unsetThumbnail();
+    // Draw nothing for an item that has no thumbnail yet, so a freshly populated
+    // view reads as empty background instead of a grid of loading badges. Set
+    // while the first batch is still being decoded; see ThumbnailView::populate().
+    void setPlaceholderHidden(bool mode);
 
 protected:
     void setupTextLayout();
@@ -82,6 +86,7 @@ protected:
     QFont font, fontInfo;
     QRect drawRectCentered, nameRect, infoRect;
     qreal dpr = 1.0;
+    bool hidePlaceholder = false;
     void updateBoundingRect();
     ThumbnailStyle thumbStyle;
 };

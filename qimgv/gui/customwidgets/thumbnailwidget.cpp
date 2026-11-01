@@ -117,6 +117,13 @@ void ThumbnailWidget::unsetThumbnail() {
     isLoaded = false;
 }
 
+void ThumbnailWidget::setPlaceholderHidden(bool mode) {
+    if(hidePlaceholder == mode)
+        return;
+    hidePlaceholder = mode;
+    update();
+}
+
 void ThumbnailWidget::setupTextLayout() {
     if(thumbStyle != THUMB_SIMPLE) {
         nameRect = QRect(padding + marginX,
@@ -198,13 +205,18 @@ void ThumbnailWidget::paint(QPainter *painter, const QStyleOptionGraphicsItem *o
         drawHighlight(painter);
 
     if(!thumbnail) { // not loaded
-        // todo: recolor once in shrRes
-        QPixmap loadingIcon(*shrRes->getPixmap(ShrIcon::SHR_ICON_LOADING, dpr));
-        if(isHighlighted())
-            ImageLib::recolor(loadingIcon, settings->colorScheme().accent);
-        else
-            ImageLib::recolor(loadingIcon, settings->colorScheme().folderview_hc2);
-        drawIcon(painter, &loadingIcon);
+        // During the first batch a view is populated long before anything is
+        // decoded: painting the badge for every item there turns the startup
+        // frame into a wall of clocks. Leaving the cell empty reads as background.
+        if(!hidePlaceholder) {
+            // todo: recolor once in shrRes
+            QPixmap loadingIcon(*shrRes->getPixmap(ShrIcon::SHR_ICON_LOADING, dpr));
+            if(isHighlighted())
+                ImageLib::recolor(loadingIcon, settings->colorScheme().accent);
+            else
+                ImageLib::recolor(loadingIcon, settings->colorScheme().folderview_hc2);
+            drawIcon(painter, &loadingIcon);
+        }
     } else {
         if(!thumbnail->pixmap() || thumbnail->pixmap().get()->width() == 0) { // invalid thumb
             QPixmap errorIcon(*shrRes->getPixmap(ShrIcon::SHR_ICON_ERROR, dpr));

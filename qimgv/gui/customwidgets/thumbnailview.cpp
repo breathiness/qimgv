@@ -224,6 +224,14 @@ void ThumbnailView::populate(int newCount) {
     // wait for possible queued layout events before removing items
     qApp->processEvents();
 
+    // The items exist long before their thumbnails do, and a view that is being
+    // shown for the first time would otherwise paint a grid of loading badges.
+    // Hide them for this batch: the cells read as background until the picture
+    // is there. The items created here keep the flag, so they stay quiet; the
+    // timer only restores the badge for whatever is added later (scrolling).
+    hidePlaceholders = true;
+    QTimer::singleShot(1500, this, [this]() { hidePlaceholders = false; });
+
     clearSelection();
     // reset
     lastScrollDirection = SCROLL_FORWARDS;
@@ -265,12 +273,14 @@ void ThumbnailView::populate(int newCount) {
             QList<ThumbnailWidget*>::iterator i;
             for (i = thumbnails.begin(); i != thumbnails.end(); ++i) {
                 (*i)->reset();
+                (*i)->setPlaceholderHidden(hidePlaceholders);
             }
         } else {
             removeAll();
             for(int i = 0; i < newCount; i++) {
                 ThumbnailWidget *widget = createThumbnailWidget();
                 widget->setThumbnailSize(mThumbnailSize);
+                widget->setPlaceholderHidden(hidePlaceholders);
                 thumbnails.append(widget);
                 addItemToLayout(widget, i);
             }
@@ -293,6 +303,7 @@ void ThumbnailView::addItem() {
 // insert at index
 void ThumbnailView::insertItem(int index) {
     ThumbnailWidget *widget = createThumbnailWidget();
+    widget->setPlaceholderHidden(hidePlaceholders);
     thumbnails.insert(index, widget);
     addItemToLayout(widget, index);
     updateLayout();

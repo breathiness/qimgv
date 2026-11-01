@@ -108,6 +108,11 @@ protected:
     QRect indicator;
     const int indicatorSize = 2;
 
+    // True while a freshly populated view is still waiting for its first
+    // thumbnails: items created in that window keep their cell empty instead of
+    // drawing the loading badge. See populate().
+    bool hidePlaceholders = false;
+
     int scrollRefreshRate = 16;
     const int SCROLL_DURATION = 120;
     const float WHEEL_SCROLL_MULTIPLIER = 2.5f;
