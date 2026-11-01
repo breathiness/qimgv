@@ -239,7 +239,8 @@ bool FloatingNavBar::withinHoverZone() const {
 // reaction the video controls have. Before, the bar waited 450 ms before it even
 // started a 170 ms slide, which is what made it feel sluggish.
 void FloatingNavBar::expandBar() {
-    if(mMode != NAVBAR_AUTO || !mViewActive)
+    // a bar that was dragged out of the strip stays where the user put it
+    if(mMode != NAVBAR_AUTO || !mViewActive || !docked)
         return;
     QWidget *container = parentWidget();
     if(!container)
@@ -614,11 +615,6 @@ void FloatingNavBar::leaveEvent(QEvent *event) {
 }
 
 void FloatingNavBar::mousePressEvent(QMouseEvent *event) {
-    // in auto mode the bar stays docked and is not draggable
-    if(mMode == NAVBAR_AUTO) {
-        QWidget::mousePressEvent(event);
-        return;
-    }
     if(event->button() == Qt::LeftButton) {
         QWidget *container = parentWidget();
         const bool wasDocked = docked;
@@ -626,7 +622,10 @@ void FloatingNavBar::mousePressEvent(QMouseEvent *event) {
         dragging = true;
         if(wasDocked && container) {
             // undocked: shrink to a card under the cursor, centred on it so the
-            // drag starts where the user grabbed
+            // drag starts where the user grabbed. This is also how the bar is
+            // taken out of the bottom strip in auto mode: the strip no longer owns
+            // it once it is undocked, so it stays where it is dropped instead of
+            // hiding again.
             const int w = qMin(sizeHint().width(), container->width());
             const QPoint grab = container->mapFromGlobal(eventGlobalPos(event));
             const int x = qBound(0, grab.x() - w / 2, qMax(0, container->width() - w));

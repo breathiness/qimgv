@@ -16,6 +16,12 @@
  * setViewActive(false) takes it off the folder view instead of leaving a strip
  * behind.
  *
+ * Dragging works in both "always" and "auto": pressing the bar turns it into a
+ * floating card, and dropping it near the bottom edge docks it again (double
+ * click does the same). A bar dragged out of the strip in "auto" mode stays
+ * where it was dropped instead of hiding again - the strip only owns a docked
+ * bar - so it can be put anywhere and stays there.
+ *
  * Just set the parent and call setButtons(); do not put it into a layout.
  */
 
