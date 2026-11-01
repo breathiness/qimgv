@@ -7,6 +7,16 @@ if(APPLE)
     set(APPLE_ICON_PATH "distrib/${APPLE_ICON_NAME}")
 endif()
 
+# VERSION METADATA
+# The project() version in the top-level CMakeLists.txt is the single source of
+# truth: it becomes the compiler-visible QIMGV_VERSION_* macros and, on Windows,
+# the executable's VERSIONINFO resource (Explorer "Details" tab).
+configure_file(qimgv-version.h.in
+    "${CMAKE_CURRENT_BINARY_DIR}/qimgv-version.h" @ONLY)
+configure_file(qimgv-version.rc.in
+    "${CMAKE_CURRENT_BINARY_DIR}/qimgv-version.rc" @ONLY)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 # TRANSLATIONS
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS LinguistTools)
 # Example of creating a new translation file.
@@ -49,6 +59,7 @@ add_executable(qimgv
     macosapplication.cpp
     resources.qrc
     qimgv.rc
+    "${CMAKE_CURRENT_BINARY_DIR}/qimgv-version.rc"
     ${APPLE_ICON_PATH}
     ${QM_FILES}
 )
@@ -58,6 +69,13 @@ add_executable(qimgv
 # .ico is replaced.
 set_property(SOURCE qimgv.rc PROPERTY OBJECT_DEPENDS
              "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/common/logo/app/qimgv.ico")
+
+# Same idea for the version block: reconfigure whenever the project version or
+# the template changes, so a bump always reaches the executable.
+set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/qimgv-version.rc" PROPERTY OBJECT_DEPENDS
+             "${CMAKE_CURRENT_SOURCE_DIR}/qimgv-version.rc.in")
+set_property(SOURCE appversion.cpp PROPERTY OBJECT_DEPENDS
+             "${CMAKE_CURRENT_BINARY_DIR}/qimgv-version.h")
 
 # update .ts, compile .qm (qt6 case)
 if(${QT_VERSION_MAJOR} EQUAL 6)
@@ -136,8 +154,8 @@ elseif(APPLE)
     set_target_properties(qimgv PROPERTIES
         MACOSX_BUNDLE YES
         MACOSX_BUNDLE_BUNDLE_NAME "qimgv"
-        MACOSX_BUNDLE_BUNDLE_VERSION "1.0.2"
-        MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.2"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
         MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/distrib/MyBundleInfo.plist.in
         MACOSX_BUNDLE_ICON_FILE ${APPLE_ICON_NAME}
     )
