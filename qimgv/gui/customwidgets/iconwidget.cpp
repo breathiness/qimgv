@@ -3,6 +3,7 @@
 
 #include <QEvent>
 #include <QFontMetrics>
+#include <QGuiApplication>
 #include <QPainterPath>
 #include <QRegularExpression>
 #include <QIcon>
@@ -263,13 +264,19 @@ void IconWidget::applyChromeMetrics() {
     mChromeMetricsDone = true;
     if(!UiStyle::useQlementine())
         return;
-    if(accessibleName() == QLatin1String("OverlayHeaderButton")) {
-        const QFontMetrics fm(font());
+    const QString name = accessibleName();
+    if(name == QLatin1String("OverlayHeaderButton")
+       || name == QLatin1String("OverlayHeaderIcon")) {
+        // the stylesheet sized both of these from %overlay_header_size%, which is
+        // derived from the application font in Settings::loadStylesheet(); the
+        // widget font can be different (Qlementine sets its own), so measure the
+        // same one here to land on the same box
+        const QFontMetrics fm(QGuiApplication::font());
         const int textHeight = fm.height();
         const int textPadding = static_cast<int>(textHeight * 0.10f);
         const int size = qMax(textHeight + textPadding * 2, 30);
         setMinimumSize(size, size);
-    } else if(accessibleName() == QLatin1String("ContextMenuButton")) {
+    } else if(name == QLatin1String("ContextMenuButton")) {
         // the rows at the top of the context menu got their height from the
         // stylesheet (min-height: 32 * dpr); without it the layouts squeeze them
         // to nothing because the .ui files carry no geometry for these buttons
