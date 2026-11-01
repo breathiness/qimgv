@@ -491,9 +491,9 @@ void FloatingNavBar::showFitModeMenu(QPushButton *button) {
     const QString current = fitActionForMode(currentFitMode());
     QMenu menu(this);
     for(const QString &action : fitCycleActions()) {
-        QAction *entry = menu.addAction(fitActionName(action));
-        entry->setCheckable(true);
-        entry->setChecked(action == current);
+        const bool active = (action == current);
+        QAction *entry = menu.addAction(QIcon(radioIndicator(active, 14)), fitActionName(action));
+        // the dot already says which one is active; no check box on top of it
         connect(entry, &QAction::triggered, this, [this, action]() { applyFitAction(action); });
     }
     // above the button: the bar normally sits on the bottom edge, so a menu
@@ -567,9 +567,8 @@ void FloatingNavBar::showWheelModeMenu(QPushButton *button) {
     QMenu menu(this);
     for(int i = 0; i <= 2; i++) {
         const WheelMode mode = static_cast<WheelMode>(i);
-        QAction *entry = menu.addAction(wheelModeName(mode));
-        entry->setCheckable(true);
-        entry->setChecked(mode == current);
+        const bool active = (mode == current);
+        QAction *entry = menu.addAction(QIcon(radioIndicator(active, 14)), wheelModeName(mode));
         connect(entry, &QAction::triggered, this, [this, mode]() {
             settings->setWheelMode(mode);
             refreshWheelButton();
@@ -587,13 +586,38 @@ void FloatingNavBar::showWheelModeMenu(QPushButton *button) {
 QPixmap FloatingNavBar::themedIconPixmap(const QString &name, int iconPx) {
     if(name.isEmpty())
         return QPixmap();
-    // through QIcon: it knows how to render the svg resources
+    // through QIcon: it knows how to render the svg resources. Rendered at 2x for
+    // a crisp edge, then scaled to iconPx - the size the icons of the ordinary
+    // buttons end up at.
     QPixmap pixmap = QIcon(QStringLiteral(":/qlementine/icons/16/%1.svg").arg(name))
                          .pixmap(iconPx * 2, iconPx * 2);
     if(pixmap.isNull())
         return pixmap;
-    pixmap = pixmap.scaled(iconPx * 2, iconPx * 2, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    pixmap = pixmap.scaled(iconPx, iconPx, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     ImageLib::recolor(pixmap, settings->colorScheme().icons);
+    return pixmap;
+}
+
+// A radio dot for the menus of the mode buttons. Those entries are one out of
+// several rather than independent switches, so a check box would read wrong.
+QPixmap FloatingNavBar::radioIndicator(bool checked, int px) {
+    const qreal dpr = devicePixelRatioF();
+    QPixmap pixmap(QSize(int(px * dpr), int(px * dpr)));
+    pixmap.setDevicePixelRatio(dpr);
+    pixmap.fill(Qt::transparent);
+    const QColor color = settings->colorScheme().icons;
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    const QRectF circle(px * 0.28, px * 0.28, px * 0.44, px * 0.44);
+    painter.setPen(QPen(color, qMax(1.0, px * 0.06)));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawEllipse(circle);
+    if(checked) {
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(color);
+        painter.drawEllipse(circle.adjusted(px * 0.13, px * 0.13, -px * 0.13, -px * 0.13));
+    }
+    painter.end();
     return pixmap;
 }
 

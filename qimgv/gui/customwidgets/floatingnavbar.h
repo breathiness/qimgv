@@ -145,6 +145,8 @@ private:
     QPixmap iconForAction(const QString &action, const QString &configured, int iconPx);
     // vector icon of the icon set, tinted like the built-in ones
     QPixmap themedIconPixmap(const QString &name, int iconPx);
+    // radio dot for the menus of the mode buttons (filled when active)
+    QPixmap radioIndicator(bool checked, int px);
     // runs one of fitCycleActions() and refreshes the button afterwards
     void applyFitAction(const QString &action);
     void advanceFitMode();
