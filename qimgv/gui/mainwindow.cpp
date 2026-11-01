@@ -1,7 +1,29 @@
 #include "mainwindow.h"
 
+#include <QEventLoop>
 #include <QScreen>
+#include <QTimer>
+#include <functional>
 #include "sourcecontainers/imagestatic.h"
+
+// Runs the event loop until one of the connections added by `arm` quits it, or
+// until the timeout fires. Returns true when a condition fired first.
+// The startup code used to spin on processEvents() with a sleep instead, which
+// re-entered paint and layout every few milliseconds for as long as the wait
+// lasted.
+static bool waitForStartupCondition(int timeoutMs, const std::function<void(QEventLoop &)> &arm) {
+    if(timeoutMs <= 0)
+        return false;
+    QEventLoop loop;
+    QTimer deadline;
+    deadline.setSingleShot(true);
+    QObject::connect(&deadline, &QTimer::timeout, &loop, &QEventLoop::quit);
+    arm(loop);
+    deadline.start(timeoutMs);
+    loop.exec();
+    // still active: the loop was quit by a condition, not by the deadline
+    return deadline.isActive();
+}
 
 // TODO: nuke this and rewrite
 
@@ -293,6 +315,8 @@ void MW::preShowResize(QSize sz) {
 }
 
 void MW::showImage(std::unique_ptr<QPixmap> pixmap, QSize imageSize) {
+    mFirstImageReady = true;
+    emit firstImageReady();
     if(settings->autoResizeWindow())
         preShowResize(imageSize.isEmpty() ? pixmap->size() : imageSize);
     viewerWidget->showImage(std::move(pixmap));
@@ -466,10 +490,44 @@ void MW::restoreWindowGeometry() {
         geom.setHeight(qMin(geom.height(), avail.height()));
         geom.moveLeft(qBound(avail.left(), geom.left(), avail.right() - geom.width() + 1));
         geom.moveTop(qBound(avail.top(), geom.top(), avail.bottom() - geom.height() + 1));
+        // A "windowed" geometry that fills the usable area is what a maximized
+        // window looks like when it was saved by a build that did not consider
+        // itself maximized (the maximized state is tracked in a separate flag, so
+        // the two can get out of step). Restoring that and then maximizing asks
+        // the platform to resize the window twice for no visible reason, and the
+        // first of those two changes leaves a light 9 pixel edge along the left
+        // and top of the maximized window for about a second. When the window is
+        // going to be maximized anyway, the restored size is only used once the
+        // user restores the window, so make that an ordinary size.
+        if(settings->maximizedWindow()) {
+            const int slack = 2;
+            if(geom.width() >= avail.width() - slack && geom.height() >= avail.height() - slack) {
+                const QSize normal(qMin(1400, avail.width() * 4 / 5),
+                                   qMin(900, avail.height() * 4 / 5));
+                geom.setSize(normal);
+                geom.moveCenter(avail.center());
+            }
+        }
     }
-    this->setGeometry(geom);
-    if(settings->maximizedWindow())
+    windowedGeometry = geom;
+    if(settings->maximizedWindow()) {
+        // A window that is created already maximized spends about a second inside
+        // show() before the platform hands it the maximized size, and the first
+        // frames it paints are the windowed ones. Give a hidden window the size
+        // the maximized one is going to use, so those first frames are already
+        // full size - showWindowed() then waits for the first image before it
+        // shows the window at all. The size to restore to is kept in
+        // windowedGeometry, because the platform's own idea of it is now the
+        // screen rectangle.
+        // This applies to a folder view too. Skipping it there left the folder
+        // path free to paint a windowed-sized frame before the platform maximized
+        // it; the extra layout pass is a few milliseconds and buys the certainty.
+        if(!isVisible() && avail.isValid())
+            this->setGeometry(avail);
         this->setWindowState(Qt::WindowMaximized);
+    } else {
+        this->setGeometry(geom);
+    }
     updateCurrentDisplay();
     updatePreviewSizeHint();
 }
@@ -521,10 +579,18 @@ void MW::mouseMoveEvent(QMouseEvent *event) {
 }
 
 bool MW::event(QEvent *event) {
-    // only save maximized state if we are already visible
-    // this filter out out events while the window is still being set up
-    if(event->type() == QEvent::WindowStateChange && this->isVisible() && !this->isFullScreen())
-        maximized = isMaximized();
+    if(event->type() == QEvent::WindowStateChange) {
+        const bool nowMaximized = isMaximized();
+        // The window was given the screen rectangle before it was shown so that its
+        // first frames were already full size, which makes the platform restore to
+        // that rectangle. Put the size the user actually had back.
+        if(maximized && !nowMaximized && !isFullScreen() && windowedGeometry.isValid())
+            this->setGeometry(windowedGeometry);
+        // only save maximized state if we are already visible
+        // this filter out out events while the window is still being set up
+        if(this->isVisible() && !this->isFullScreen())
+            maximized = nowMaximized;
+    }
     if(event->type() == QEvent::Move || event->type() == QEvent::Resize)
         windowGeometryChangeTimer.start();
     return QWidget::event(event);
@@ -741,10 +807,33 @@ void MW::showFullScreen() {
     emit fullscreenStateChanged(true);
 }
 
+void MW::setExpectFirstImage(bool expect) {
+    mExpectFirstImage = expect;
+}
+
 void MW::showWindowed() {
     if(isFullScreen())
         QWidget::showNormal();
+    const bool startMaximized = settings->maximizedWindow() && !isVisible();
     restoreWindowGeometry();
+    // The window is about to be created at the maximized size; give the loader a
+    // moment to hand over the first image first, so the window appears with the
+    // picture in it instead of appearing empty (or showing a smaller picture that
+    // is replaced a second later). The wait is bounded so a slow or missing first
+    // image cannot keep the window hidden.
+    if(startMaximized && mExpectFirstImage && !isVisible() && !mFirstImageReady) {
+        waitForStartupCondition(900, [this](QEventLoop &loop) {
+            connect(this, &MW::firstImageReady, &loop, &QEventLoop::quit);
+        });
+    }
+    // Started without an image: a folder view has nothing to wait for. Mapping
+    // the window is what makes the view paint and start asking for thumbnails, so
+    // it is shown right away and the tiles fill in on their own. It used to be
+    // mapped invisible (setWindowOpacity(0)) and revealed once the first
+    // thumbnail arrived, bounded at 2.5 s: on a maximized start that kept the
+    // window invisible for about another second after it was already mapped,
+    // because most of that time is spent inside show() and was not covered by the
+    // wait at all.
     QWidget::show();
     // try to repaint sooner
     qApp->processEvents();

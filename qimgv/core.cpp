@@ -47,8 +47,12 @@ void Core::readSettings() {
 }
 
 void Core::showGui() {
-    if(mw && !mw->isVisible())
+    if(mw && !mw->isVisible()) {
+        // the window waits for the first image before it appears, but only if one
+        // is actually being loaded (a folder has no such image to wait for)
+        mw->setExpectFirstImage(!state.currentFilePath.isEmpty() || state.currentImg != nullptr);
         mw->showDefault();
+    }
     // TODO: this is unreliable.
     // how to make it wait until a window is shown?
     qApp->processEvents();

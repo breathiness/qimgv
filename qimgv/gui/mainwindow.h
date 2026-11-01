@@ -92,6 +92,10 @@ private:
     int currentDisplay;
 
     bool cropPanelActive, showInfoBarFullscreen, showInfoBarWindowed, maximized;
+    // size to put back when a window that was opened maximized is restored
+    QRect windowedGeometry;
+    bool mFirstImageReady = false;
+    bool mExpectFirstImage = false;
     std::shared_ptr<DocumentWidget> docWidget;
     std::shared_ptr<FolderViewProxy> folderView;
     std::shared_ptr<CentralWidget> centralWidget;
@@ -166,6 +170,9 @@ protected:
    // bool focusNextPrevChild(bool);
 signals:
     void opened(QString);
+    // the first image of a startup load is in the window: showWindowed() waits
+    // for this instead of polling
+    void firstImageReady();
     void fullscreenStateChanged(bool);
     void copyRequested(QString);
     void moveRequested(QString);
@@ -211,6 +218,7 @@ signals:
 public slots:
     void setupFullUi();
     void showDefault();
+    void setExpectFirstImage(bool expect);
     void showCropPanel();
     void hideCropPanel();
     void toggleFolderView();
