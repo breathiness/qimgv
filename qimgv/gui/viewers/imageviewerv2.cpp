@@ -851,22 +851,25 @@ void ImageViewerV2::fitWidth() {
     if(!pixmap)
         return;
     float scaleX = (float)viewport()->width() / pixmapLogicalSize().width();
-    if(!expandImage && scaleX > 1.0f)
-        scaleX = 1.0f;
+    // Fitting the width means just that: the image spans the viewport, so a page
+    // narrower than the window is scaled up here even when "expand images" is off
+    // (that preference still bounds how far, see expandLimit).
     if(scaleX > expandLimit)
         scaleX = expandLimit;
     if(currentScale() != scaleX) {
         swapToOriginalPixmap();
         doZoom(scaleX);
     }
-    centerIfNecessary();
-    // just center somewhere at the top then do snap
-    if(scaledSizeR().height() > viewport()->height()) {
-        QPointF centerTarget = mapToScene(viewport()->rect()).boundingRect().center();
-        centerTarget.setY(0);
-        centerOn(centerTarget);
-    }
-    snapToEdges();
+    // Centre it horizontally and start at the top. Doing this from the item's own
+    // rect rather than from the current view position is what keeps the next image
+    // from inheriting the scroll of the previous one.
+    auto imgRect = pixmapItem.sceneBoundingRect();
+    auto vport = mapToScene(viewport()->geometry()).boundingRect();
+    hs->setValue(pixmapItem.offset().x() - (int)(vport.width() - imgRect.width()) / 2);
+    if(imgRect.height() > vport.height())
+        vs->setValue(pixmapItem.offset().y());
+    else
+        vs->setValue(pixmapItem.offset().y() - (int)(vport.height() - imgRect.height()) / 2);
 }
 
 void ImageViewerV2::fitWindow() {
