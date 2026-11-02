@@ -155,5 +155,58 @@
         <file>res/icons/common/overlay/arrow_right_50.png</file>
         <file>res/icons/common/overlay/arrow_left_50@2x.png</file>
         <file>res/icons/common/overlay/arrow_right_50@2x.png</file>
+        <file>res/icons/lucide/app-window.svg</file>
+        <file>res/icons/lucide/arrow-left.svg</file>
+        <file>res/icons/lucide/arrow-left-right.svg</file>
+        <file>res/icons/lucide/arrow-right.svg</file>
+        <file>res/icons/lucide/arrow-up.svg</file>
+        <file>res/icons/lucide/bug.svg</file>
+        <file>res/icons/lucide/circle-check.svg</file>
+        <file>res/icons/lucide/circle-help.svg</file>
+        <file>res/icons/lucide/copy.svg</file>
+        <file>res/icons/lucide/crop.svg</file>
+        <file>res/icons/lucide/expand.svg</file>
+        <file>res/icons/lucide/file.svg</file>
+        <file>res/icons/lucide/flip-horizontal.svg</file>
+        <file>res/icons/lucide/flip-vertical.svg</file>
+        <file>res/icons/lucide/folder.svg</file>
+        <file>res/icons/lucide/folder-open.svg</file>
+        <file>res/icons/lucide/info.svg</file>
+        <file>res/icons/lucide/keyboard.svg</file>
+        <file>res/icons/lucide/layout-grid.svg</file>
+        <file>res/icons/lucide/maximize.svg</file>
+        <file>res/icons/lucide/maximize-2.svg</file>
+        <file>res/icons/lucide/move-vertical.svg</file>
+        <file>res/icons/lucide/palette.svg</file>
+        <file>res/icons/lucide/panel-top.svg</file>
+        <file>res/icons/lucide/play.svg</file>
+        <file>res/icons/lucide/printer.svg</file>
+        <file>res/icons/lucide/rotate-ccw.svg</file>
+        <file>res/icons/lucide/rotate-cw.svg</file>
+        <file>res/icons/lucide/scan.svg</file>
+        <file>res/icons/lucide/scissors.svg</file>
+        <file>res/icons/lucide/settings.svg</file>
+        <file>res/icons/lucide/stretch-horizontal.svg</file>
+        <file>res/icons/lucide/terminal.svg</file>
+        <file>res/icons/lucide/trash-2.svg</file>
+        <file>res/icons/lucide/x.svg</file>
+        <file>res/icons/lucide/zoom-in.svg</file>
+        <file>res/icons/lucide/zoom-out.svg</file>
+        <file>res/icons/lucide/arrow-left-to-line.svg</file>
+        <file>res/icons/lucide/arrow-right-to-line.svg</file>
+        <file>res/icons/lucide/arrow-up-down.svg</file>
+        <file>res/icons/lucide/chevron-down.svg</file>
+        <file>res/icons/lucide/circle-alert.svg</file>
+        <file>res/icons/lucide/hard-drive.svg</file>
+        <file>res/icons/lucide/house.svg</file>
+        <file>res/icons/lucide/panel-left.svg</file>
+        <file>res/icons/lucide/pause.svg</file>
+        <file>res/icons/lucide/pencil.svg</file>
+        <file>res/icons/lucide/pin.svg</file>
+        <file>res/icons/lucide/plus.svg</file>
+        <file>res/icons/lucide/skip-back.svg</file>
+        <file>res/icons/lucide/skip-forward.svg</file>
+        <file>res/icons/lucide/volume-2.svg</file>
+        <file>res/icons/lucide/volume-x.svg</file>
     </qresource>
 </RCC>

@@ -138,8 +138,7 @@ void IconWidget::loadIcon() {
         if(match.hasMatch())
             size = match.captured(1).toInt();
         const qreal scale = qMax(1.0, dpr);
-        QPixmap pm = QIcon(QStringLiteral(":/qlementine/icons/16/%1.svg").arg(themed))
-                         .pixmap(QSize(size, size) * scale);
+        QPixmap pm = UiStyle::vectorIcon(themed).pixmap(QSize(size, size) * scale);
         if(!pm.isNull()) {
             pm.setDevicePixelRatio(scale);
             pixmap = new QPixmap(pm);

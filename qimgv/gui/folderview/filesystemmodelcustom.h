@@ -16,6 +16,8 @@ public:
 protected:
     Qt::ItemFlags flags(const QModelIndex &index) const override;
 private:
+    void loadFolderIcon(qreal dpr);
+
     QPixmap folderIcon;
 };
 

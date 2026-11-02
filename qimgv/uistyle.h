@@ -4,6 +4,7 @@
 
 class QWidget;
 class QPainter;
+class QIcon;
 class QString;
 
 namespace UiStyle {
@@ -47,4 +48,9 @@ bool chromePalette(ChromePalette &palette);
 // name in the vector icon theme ("navigation/arrow-left"). Returns an empty
 // string when there is no equivalent, so callers keep the PNG.
 QString themedIconName(const QString &resourcePath);
+
+// Icon for one of those theme names. The Lucide set is preferred and the theme
+// that Qlementine ships with is the fallback for names it has no equivalent for,
+// so both look like one set.
+QIcon vectorIcon(const QString &themeName);
 }

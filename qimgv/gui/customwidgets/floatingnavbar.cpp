@@ -615,8 +615,7 @@ QPixmap FloatingNavBar::themedIconPixmap(const QString &name, int iconPx) {
     // through QIcon: it knows how to render the svg resources. Rendered at 2x for
     // a crisp edge, then scaled to iconPx - the size the icons of the ordinary
     // buttons end up at.
-    QPixmap pixmap = QIcon(QStringLiteral(":/qlementine/icons/16/%1.svg").arg(name))
-                         .pixmap(iconPx * 2, iconPx * 2);
+    QPixmap pixmap = UiStyle::vectorIcon(name).pixmap(iconPx * 2, iconPx * 2);
     if(pixmap.isNull())
         return pixmap;
     pixmap = pixmap.scaled(iconPx, iconPx, Qt::KeepAspectRatio, Qt::SmoothTransformation);
@@ -663,8 +662,8 @@ QPixmap FloatingNavBar::iconForAction(const QString &action, const QString &conf
     if(themed) {
         const QString name = userThemed ? configured.mid(6)
                                         : actionThemeIcons().value(action);
+        pixmap = UiStyle::vectorIcon(name).pixmap(iconPx * 2, iconPx * 2);
         iconPath = QStringLiteral(":/qlementine/icons/16/%1.svg").arg(name);
-        pixmap = QIcon(iconPath).pixmap(iconPx * 2, iconPx * 2);
     } else if(!iconPath.isEmpty()) {
         // built-in icons ship an @2x variant which stays crisp at this size
         if(!custom) {

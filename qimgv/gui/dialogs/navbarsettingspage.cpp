@@ -64,7 +64,7 @@ inline QPoint eventPos(const QDragMoveEvent *event) {
 QIcon themedIcon(const QString &name) {
     if(name.isEmpty())
         return QIcon();
-    return QIcon(QStringLiteral(":/qlementine/icons/16/%1.svg").arg(name));
+    return UiStyle::vectorIcon(name);
 }
 
 // Preview for a png resource; built-in icons are masks and have to be tinted to

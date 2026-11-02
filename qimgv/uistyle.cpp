@@ -6,6 +6,8 @@
 #include <QPalette>
 #include <QHash>
 #include <QString>
+#include <QIcon>
+#include <QFile>
 
 #ifdef USE_QLEMENTINE
 #include <oclero/qlementine/style/QlementineStyle.hpp>
@@ -142,5 +144,81 @@ QString themedIconName(const QString &resourcePath) {
     Q_UNUSED(resourcePath)
     return QString();
 #endif
+}
+
+// The vector set the application prefers. Lucide is ISC licensed; the files live
+// in qimgv/res/icons/lucide and are recoloured like the other mask icons.
+QIcon vectorIcon(const QString &themeName) {
+    static const QHash<QString, QString> lucide = {
+        {"action/close",                "x"},
+        {"action/close-small",          "x"},
+        {"action/copy",                 "copy"},
+        {"action/crop",                 "crop"},
+        {"action/cut",                  "scissors"},
+        {"action/flip-horizontal",      "flip-horizontal"},
+        {"action/flip-vertical",        "flip-vertical"},
+        {"action/print",                "printer"},
+        {"action/resize-bigger",        "maximize-2"},
+        {"action/resize-vertical",      "move-vertical"},
+        {"action/rotate-anticlockwise", "rotate-ccw"},
+        {"action/rotate-clockwise",     "rotate-cw"},
+        {"action/swap",                 "arrow-left-right"},
+        {"action/trash",                "trash-2"},
+        {"action/zoom-fit",             "maximize"},
+        {"action/zoom-in",              "zoom-in"},
+        {"action/zoom-original",        "scan"},
+        {"action/zoom-out",             "zoom-out"},
+        {"document/open",               "file"},
+        {"file/folder",                 "folder"},
+        {"file/folder-open",            "folder-open"},
+        {"hardware/keyboard",           "keyboard"},
+        {"media/play",                  "play"},
+        {"misc/color-swatch",           "palette"},
+        {"misc/debug",                  "bug"},
+        {"misc/dialog",                 "app-window"},
+        {"misc/faq",                    "circle-help"},
+        {"misc/grid",                   "layout-grid"},
+        {"misc/info",                   "info"},
+        {"misc/success",                "circle-check"},
+        {"navigation/arrow-left",       "arrow-left"},
+        {"navigation/arrow-right",      "arrow-right"},
+        {"navigation/arrow-up",         "arrow-up"},
+        {"navigation/settings",         "settings"},
+        {"navigation/ui-panel-top",     "panel-top"},
+        {"page/zoom-fit-page",          "stretch-horizontal"},
+        {"page/zoom-fit-screen",        "expand"},
+        {"software/command-line",       "terminal"},
+        {"buttons/panel-small/add-new12.png", "plus"},
+        {"buttons/panel-small/home12.png", "house"},
+        {"buttons/panel-small/root12.png", "hard-drive"},
+        {"buttons/panel/document-view20.png", "file"},
+        {"buttons/panel/open20.png",      "folder-open"},
+        {"buttons/panel/pin-panel20.png", "pin"},
+        {"buttons/panel/settings16.png",  "settings"},
+        {"buttons/panel/toggle-panel20.png", "panel-left"},
+        {"buttons/videocontrols/mute-off24.png", "volume-x"},
+        {"buttons/videocontrols/mute-on24.png", "volume-2"},
+        {"buttons/videocontrols/pause24.png", "pause"},
+        {"buttons/videocontrols/play24.png", "play"},
+        {"buttons/videocontrols/skip-backwards24.png", "skip-back"},
+        {"buttons/videocontrols/skip-forward24.png", "skip-forward"},
+        {"notifications/dir_start20.png", "arrow-left-to-line"},
+        {"notifications/dir_end20.png",   "arrow-right-to-line"},
+        {"notifications/error16.png",     "circle-alert"},
+        {"other/dropDownArrow.png",       "chevron-down"},
+        {"other/sorting-mode16.png",      "arrow-up-down"},
+        {"overlay/edit16.png",            "pencil"},
+        {"other/image-crop48.png",        "crop"},
+    };
+    if(themeName.isEmpty())
+        return QIcon();
+    const QString lucideName = lucide.value(themeName);
+    if(!lucideName.isEmpty()) {
+        const QString path = QStringLiteral(":/res/icons/lucide/%1.svg").arg(lucideName);
+        if(QFile::exists(path))
+            return QIcon(path);
+    }
+    // no Lucide equivalent: keep the set that ships with the style
+    return QIcon(QStringLiteral(":/qlementine/icons/16/%1.svg").arg(themeName));
 }
 }
