@@ -113,6 +113,7 @@ add_subdirectory(3rdparty/libdxfrw EXCLUDE_FROM_ALL)
 
 add_subdirectory(qimgv)
 add_subdirectory(qimgv/cad)
+add_subdirectory(qimgv/pdf)
 
 if(VIDEO_SUPPORT)
     add_subdirectory(plugins/player_mpv)
