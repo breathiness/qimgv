@@ -5,6 +5,7 @@
 #   - HEIC/HEIF/AVIF (libheif), JPEG XL (libjxl), camera raw (libraw), PSD/PSB
 #   - APNG animations
 #   - video: the mpv player plugin and the video frame grabber
+#   - pdf: the provider plugin (poppler) and its libraries, in a "pdf" folder
 #
 # Nothing here is required by the executable, so the pack can be installed,
 # updated or left out on its own.
@@ -60,8 +61,21 @@ for candidate in "$MPV_KIT/bin/libmpv-2.dll" "$MPV_KIT/lib/x86_64/libmpv-2.dll";
     fi
 done
 
+echo "pdf"
+# the provider plugin ships with poppler and its libraries in one folder, which is
+# what the app adds to the dll search path at runtime
+PDF_DIR="$TARGET/pdf"
+mkdir -p "$PDF_DIR"
+if [ -f "$BUILD/pdf/pdfprovider.dll" ]; then
+    cp -f "$BUILD/pdf/pdfprovider.dll" "$PDF_DIR/" && echo "  pdf/pdfprovider.dll (built)"
+else
+    echo "  !! pdfprovider.dll was not built (poppler-qt6 missing?)" >&2
+fi
+
 echo "dependencies"
 deploy_closure_of "$TARGET" "$TARGET"/imageformats/*.dll
 deploy_closure_of "$TARGET" "$TARGET"/plugins/*.dll
+# the pdf libraries go beside the plugin, not into the program folder
+deploy_closure_of "$PDF_DIR" "$PDF_DIR"/pdfprovider.dll
 
 echo "format pack -> $TARGET"
