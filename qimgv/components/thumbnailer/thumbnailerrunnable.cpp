@@ -1,5 +1,8 @@
 #include "thumbnailerrunnable.h"
 
+#include "cad/caddrawing.h"
+#include "utils/pdfprovider.h"
+
 #include <QDir>
 
 #ifdef USE_MPV
@@ -70,7 +73,10 @@ std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, 
             // QImageReader copies the format name, but keeping it alive for the
             // call beats relying on how long a temporary would last.
             const QByteArray format = imgInfo.format().toUtf8();
-            generated = createThumbnail(imgInfo.filePath(), format.constData(), size, crop);
+            if(imgInfo.isCad() || imgInfo.isPdf())
+                generated = createDocumentThumbnail(imgInfo.filePath(), imgInfo.type(), size, crop);
+            else
+                generated = createThumbnail(imgInfo.filePath(), format.constData(), size, crop);
         }
         const QSize originalSize = generated.originalSize;
         image = std::move(generated.image);
@@ -124,6 +130,57 @@ std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, 
 }
 
 ThumbnailerRunnable::~ThumbnailerRunnable() {
+}
+
+// Fast first: a dxf that carries its own preview is done in a single file read; a
+// drawing without one, or a pdf, is rendered straight at the thumbnail size, which
+// is small enough that the geometry work stays cheap. Nothing here renders at
+// screen size - that is the loader's job when the file is actually opened.
+ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createDocumentThumbnail(const QString &path,
+                                                                                DocumentType type, int size,
+                                                                                bool squared) {
+    ThumbnailImage result;
+    Q_UNUSED(type)
+    const int target = qMax(16, size) * 2;   // 2x for a little headroom when the grid scales
+    QImage source;
+
+    const QImage embedded = CadDrawing::embeddedThumbnail(path);
+    if(!embedded.isNull()) {
+        source = embedded;
+    } else if(path.endsWith(QStringLiteral(".pdf"), Qt::CaseInsensitive)) {
+        QString error;
+        std::shared_ptr<void> document = PdfProvider::instance().open(path, &error);
+        if(document) {
+            const QSizeF pageSize = PdfProvider::instance().pageSize(document.get(), 0);
+            if(!pageSize.isEmpty()) {
+                const double scale = double(target) / qMax(pageSize.width(), pageSize.height());
+                const QSize renderSize(qMax(16, int(pageSize.width() * scale)),
+                                       qMax(16, int(pageSize.height() * scale)));
+                source = PdfProvider::instance().renderPage(document.get(), 0, renderSize);
+            }
+        }
+    } else {
+        CadDrawing drawing;
+        if(drawing.load(path)) {
+            const QRectF bounds = drawing.bounds();
+            if(bounds.width() > 0 && bounds.height() > 0) {
+                const double scale = double(target) / qMax(bounds.width(), bounds.height());
+                source = drawing.render(qMax(16, int(bounds.width() * scale)),
+                                        qMax(16, int(bounds.height() * scale)));
+            }
+        }
+    }
+    if(source.isNull())
+        return result;
+
+    result.originalSize = source.size();
+    if(squared) {
+        const int side = qMin(source.width(), source.height());
+        source = source.copy((source.width() - side) / 2, (source.height() - side) / 2, side, side);
+    }
+    result.image.reset(new QImage(source.scaled(size, size, Qt::KeepAspectRatio,
+                                                Qt::SmoothTransformation)));
+    return result;
 }
 
 ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createThumbnail(const QString &path, const char *format, int size, bool squared) {
@@ -289,58 +346,28 @@ ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createShellThumbnail(co
 #endif
 
 ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createVideoThumbnail(const QString &path, int size, bool squared) {
-    // The frame is written to a real file before it can be read back, so this
-    // must not depend on the cache being writable: a cache directory the process
-    // cannot write to used to cost every video thumbnail, silently. The system
-    // temporary directory is always usable and gets cleaned up by the OS.
-    // Keyed by the thumbnail id rather than by the file name: two clips with the
-    // same name in different folders, or the same clip at another size, would
-    // otherwise write one temporary file from two worker threads at once.
-    const QString tmpFilePath = QDir::tempPath() + "/qimgv-"
-                                + generateIdString(path, size, squared) + ".png";
-    QFile tmpFile(tmpFilePath);
-
-    // One second in, so the frame shows something instead of a fade-in or a
-    // black lead-in. Clips shorter than that have no frame there, so fall back
-    // to the very beginning.
-#ifdef USE_MPV
-    if(!MpvFrameGrabber::grabFrame(path, 1.0, tmpFilePath)
-       && !MpvFrameGrabber::grabFrame(path, 0.0, tmpFilePath)) {
+    // One second in, so the frame shows something instead of a fade-in or a black
+    // lead-in. Clips shorter than that have no frame there, so fall back to the
+    // very beginning. The frame comes back as an image: the plugin used to write a
+    // temporary png, which failed wherever the temp directory was not writable.
+    QImage frame;
+    if(!MpvFrameGrabber::grabFrame(path, 1.0, &frame)
+       && !MpvFrameGrabber::grabFrame(path, 0.0, &frame)) {
         // without this a missing frame looks exactly like a video that has none
         qWarning() << "Thumbnailer: could not grab a frame from" << path;
-        // a grab that timed out can still have left a partial file behind
-        tmpFile.remove();
         return ThumbnailImage();
-    }
-#else
-    // built without video support: there is no libmpv to grab a frame with
-    return ThumbnailImage();
-#endif
-
-    QImageReader reader(tmpFilePath);
-    reader.setFormat("png");
-    Qt::AspectRatioMode ARMode = squared?
-                (Qt::KeepAspectRatioByExpanding):(Qt::KeepAspectRatio);
-
-    // scale & crop
-    QSize scaledSize = reader.size().scaled(size, size, ARMode);
-    reader.setScaledSize(scaledSize);
-    if(squared) {
-        QRect clip(0, 0, size, size);
-        QRect scaledRect(QPoint(0,0), scaledSize);
-        clip.moveCenter(scaledRect.center());
-        reader.setScaledClipRect(clip);
     }
 
     ThumbnailImage result;
-    result.originalSize = reader.size();
-    result.image = std::make_unique<QImage>(reader.read());
-
-    // force reader to close file so it can be deleted later
-    reader.setFileName("");
-
-    // remove temporary file
-    tmpFile.remove();
-
+    result.originalSize = frame.size();
+    const Qt::AspectRatioMode ARMode = squared ? Qt::KeepAspectRatioByExpanding
+                                               : Qt::KeepAspectRatio;
+    QImage scaled = frame.scaled(QSize(size, size), ARMode, Qt::SmoothTransformation);
+    if(squared && (scaled.width() > size || scaled.height() > size)) {
+        const int x = qMax(0, (scaled.width() - size) / 2);
+        const int y = qMax(0, (scaled.height() - size) / 2);
+        scaled = scaled.copy(x, y, qMin(size, scaled.width()), qMin(size, scaled.height()));
+    }
+    result.image = std::make_unique<QImage>(scaled);
     return result;
 }

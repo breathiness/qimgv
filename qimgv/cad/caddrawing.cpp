@@ -1,6 +1,7 @@
 #include "caddrawing.h"
 
 #include <QFont>
+#include <QFile>
 #include <QFileInfo>
 #include <QPainter>
 #include <QPainterPath>
@@ -554,6 +555,54 @@ void CadDrawing::tessellateCurve(const Prim &prim, const QTransform &worldToImag
                                                     std::sin(angle) * prim.radiusY);
         out << prim.transform.map(local);
     }
+}
+
+// The THUMBNAILIMAGE section holds the bitmap a CAD program saved with the file:
+// group 90 gives its size in bytes, then group 310 carries it as hex chunks. No
+// entities are touched, so this costs a file read.
+QImage CadDrawing::embeddedThumbnail(const QString &filePath) {
+    if(!filePath.endsWith(QStringLiteral(".dxf"), Qt::CaseInsensitive))
+        return QImage();
+    QFile file(filePath);
+    if(!file.open(QIODevice::ReadOnly))
+        return QImage();
+    // the section sits near the start of the file
+    constexpr qint64 kReadLimit = 2 * 1024 * 1024;
+    const QByteArray head = file.read(kReadLimit);
+    if(head.isEmpty())
+        return QImage();
+
+    QByteArray bitmap;
+    bool inSection = false;
+    int pendingCode = -1;
+    const QList<QByteArray> lines = head.split(static_cast<char>(10));
+    for(const QByteArray &rawLine : lines) {
+        const QByteArray line = rawLine.trimmed();
+        if(!inSection) {
+            if(line == "THUMBNAILIMAGE")
+                inSection = true;
+            continue;
+        }
+        if(line == "ENDSEC")
+            break;
+        if(pendingCode < 0) {
+            pendingCode = line.toInt();
+            continue;
+        }
+        if(pendingCode == 310) {
+            bitmap.append(QByteArray::fromHex(line));
+        } else if(pendingCode == 90 || pendingCode == 2 || pendingCode == 1) {
+            // size or name of the preview; the bytes are what matters
+        }
+        const bool endOfSection = (pendingCode == 0 && line == "ENDSEC");
+        pendingCode = -1;
+        if(endOfSection)
+            break;
+    }
+    if(bitmap.isEmpty())
+        return QImage();
+    QImage image = QImage::fromData(bitmap);
+    return image;
 }
 
 QImage CadDrawing::render(int width, int height, const QColor &background) const {

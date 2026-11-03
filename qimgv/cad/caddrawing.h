@@ -51,6 +51,11 @@ public:
     // fits the drawing into width x height, keeping the aspect ratio
     QImage render(int width, int height, const QColor &background = Qt::white) const;
 
+    // Fast path for thumbnails: the preview image a DXF file may carry in its
+    // THUMBNAILIMAGE section, without parsing a single entity. Null when the file
+    // has none.
+    static QImage embeddedThumbnail(const QString &filePath);
+
     // DRW_Interface: tables
     void addHeader(const DRW_Header *data) override { Q_UNUSED(data) }
     void addLType(const DRW_LType &data) override { Q_UNUSED(data) }

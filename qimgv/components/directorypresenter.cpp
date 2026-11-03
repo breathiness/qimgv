@@ -135,6 +135,8 @@ void DirectoryPresenter::setModel(std::shared_ptr<DirectoryModel> newModel) {
         return;
     model = newModel;
     populateView();
+    // a new folder invalidates whatever the old one still had queued
+    thumbnailer.clearTasks();
 
     // filesystem changes
     connect(model.get(), &DirectoryModel::fileRemoved,  this, &DirectoryPresenter::onFileRemoved);
@@ -283,7 +285,11 @@ QList<QString> DirectoryPresenter::selectedPaths() const {
 void DirectoryPresenter::generateThumbnails(QList<int> indexes, int size, bool crop, bool force) {
     if(!view || !model)
         return;
-    thumbnailer.clearTasks();
+    // No clear here. The view asks for the visible rows again whenever it scrolls
+    // or lays out, and clearing on every request threw away the batch that was
+    // still waiting in the pool: with slow entries (video frames, drawings) only
+    // the few tasks that had already started ever finished. Duplicates are
+    // filtered by runningTasks, and the queue is dropped when the folder changes.
     if(!mShowDirs) {
         for(int i : indexes)
             thumbnailer.getThumbnailAsync(model->filePathAt(i), size, crop, force);

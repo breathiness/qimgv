@@ -32,6 +32,9 @@ private:
 
     static ThumbnailImage createThumbnail(const QString &path, const char* format, int size, bool crop);
     static ThumbnailImage createVideoThumbnail(const QString &path, int size, bool crop);
+    // drawings and pdf pages have no image codec: they are rendered (or, for dxf,
+    // taken from the preview the file carries) instead of decoded
+    static ThumbnailImage createDocumentThumbnail(const QString &path, DocumentType type, int size, bool crop);
 #ifdef _WIN32
     // asks the Explorer shell for its cached thumbnail; much cheaper than
     // decoding the video ourselves
