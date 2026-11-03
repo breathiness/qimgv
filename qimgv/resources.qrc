@@ -208,5 +208,9 @@
         <file>res/icons/lucide/skip-forward.svg</file>
         <file>res/icons/lucide/volume-2.svg</file>
         <file>res/icons/lucide/volume-x.svg</file>
+        <file>res/icons/lucide/refresh-cw.svg</file>
+        <file>res/icons/lucide/bookmark-plus.svg</file>
+        <file>res/icons/lucide/ungroup.svg</file>
+        <file>res/icons/lucide/clipboard-paste.svg</file>
     </qresource>
 </RCC>

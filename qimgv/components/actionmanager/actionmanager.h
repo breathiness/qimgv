@@ -98,6 +98,9 @@ signals:
     void frameStepBack();
     void toggleFolderView();
     void moveToTrash();
+    void copySelection();
+    void cutSelection();
+    void pasteSelection();
     void reloadImage();
     void copyFileClipboard();
     void copyPathClipboard();

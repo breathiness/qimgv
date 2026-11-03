@@ -48,12 +48,17 @@ public slots:
 
 protected:
     void wheelEvent(QWheelEvent *event) override;
+    // right click: the folder view has its own menu, the document page uses the
+    // viewer's one
+    void contextMenuEvent(QContextMenuEvent *event) override;
     void focusInEvent(QFocusEvent *event) override;
     void paintEvent(QPaintEvent *) override;
     void resizeEvent(QResizeEvent *event) override;
 
 private:
     void paintChrome(QPainter &painter);
+    void showContextMenu(const QPoint &globalPos);
+    QString directoryPath() const;
 
 protected slots:
     void onThumbnailSizeChanged(int newSize);
@@ -68,6 +73,8 @@ signals:
     void directorySelected(QString path);
     void showFoldersChanged(bool mode);
     void copyUrlsRequested(QList<QString>, QString path);
+    // move everything out of the selected folder and delete it
+    void dissolveFolderRequested();
     void moveUrlsRequested(QList<QString>, QString path);
     void droppedInto(const QMimeData*, QObject*, int) override;
     void draggedOver(int) override;

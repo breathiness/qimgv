@@ -32,6 +32,7 @@ void FolderViewProxy::init() {
     connect(folderView.get(), &FolderView::directorySelected, this, &FolderViewProxy::directorySelected);
     connect(folderView.get(), &FolderView::draggedOut, this, &FolderViewProxy::draggedOut);
     connect(folderView.get(), &FolderView::copyUrlsRequested, this, &FolderViewProxy::copyUrlsRequested);
+    connect(folderView.get(), &FolderView::dissolveFolderRequested, this, &FolderViewProxy::dissolveFolderRequested);
     connect(folderView.get(), &FolderView::moveUrlsRequested, this, &FolderViewProxy::moveUrlsRequested);
     connect(folderView.get(), &FolderView::droppedInto, this, &FolderViewProxy::droppedInto);
     connect(folderView.get(), &FolderView::draggedOver, this, &FolderViewProxy::draggedOver);

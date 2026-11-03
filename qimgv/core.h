@@ -64,6 +64,9 @@ private:
     State state;
     bool loopSlideshow, slideshow, shuffle;
     FolderEndAction folderEndAction;
+    // see copySelection()/pasteSelection()
+    QList<QString> clipboardPaths;
+    bool clipboardCut;
 
     // components
     std::shared_ptr<DirectoryModel> model;
@@ -127,6 +130,14 @@ private slots:
     void interactiveCopy(QList<QString> paths, QString destDirectory);
     void interactiveMove(QList<QString> paths, QString destDirectory);
     void movePathsTo(QList<QString> paths, QString destDirectory);
+    // folder view: move the contents of the selected folder into its parent and
+    // remove the folder
+    void dissolveSelectedFolder();
+    // copy / cut / paste in the folder view (paths kept here, also mirrored to the
+    // system clipboard so other file managers can take them)
+    void copySelection();
+    void cutSelection();
+    void pasteSelection();
     FileOpResult removeFile(QString fileName, bool trash);
     void onFileRemoved(QString filePath, int index);
     void onFileRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo);

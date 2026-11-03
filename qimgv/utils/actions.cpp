@@ -68,6 +68,9 @@ void Actions::init() {
     mActions.insert("copyPathClipboard", QVersionNumber(0,7,80));
     mActions.insert("renameFile", QVersionNumber(0,7,80));
     mActions.insert("contextMenu", QVersionNumber(0,7,81));
+    mActions.insert("copySelection", QVersionNumber(1,0,3));
+    mActions.insert("cutSelection", QVersionNumber(1,0,3));
+    mActions.insert("pasteSelection", QVersionNumber(1,0,3));
     mActions.insert("toggleTransparencyGrid", QVersionNumber(0,7,82));
     mActions.insert("sortByName", QVersionNumber(0,7,83));
     mActions.insert("sortByTime", QVersionNumber(0,7,83));

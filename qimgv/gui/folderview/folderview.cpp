@@ -3,6 +3,15 @@
 #include "uistyle.h"
 
 #include <QFontMetrics>
+#include <QContextMenuEvent>
+#include <QMenu>
+#include <QActionGroup>
+#include <QApplication>
+#include <QClipboard>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QTimer>
+#include "utils/imagelib.h" 
 
 FolderView::FolderView(QWidget *parent) :
     FloatingWidgetContainer(parent),
@@ -438,4 +447,167 @@ void FolderView::resizeEvent(QResizeEvent *event) {
         ui->pathbarSpacer->changeSize(12, 20, QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
         ui->topBar->layout()->invalidate();
     }
+}
+
+// ----------------------------------------------------------------------------
+// menu icons come from the same vector set as the rest of the interface; they are
+// masks, so they are tinted with the icon colour of the theme here
+static QIcon folderMenuIcon(const QString &themeName) {
+    const qreal dpr = qApp->devicePixelRatio();
+    QPixmap pixmap = UiStyle::vectorIcon(themeName).pixmap(QSize(16, 16) * qMax(1.0, dpr));
+    if(pixmap.isNull())
+        return QIcon();
+    pixmap.setDevicePixelRatio(qMax(1.0, dpr));
+    ImageLib::recolor(pixmap, settings->colorScheme().icons);
+    return QIcon(pixmap);
+}
+
+QString FolderView::directoryPath() const {
+    return ui->pathLabel->text();
+}
+
+void FolderView::contextMenuEvent(QContextMenuEvent *event) {
+    showContextMenu(event->globalPos());
+    event->accept();
+}
+
+// Only what makes sense on this page: the viewer's menu (zoom, rotate, crop, ...)
+// has nothing to act on here.
+void FolderView::showContextMenu(const QPoint &globalPos) {
+    const QString path = directoryPath();
+    QMenu menu(this);
+
+    const int row = ui->thumbnailGrid->selection().isEmpty() ? -1 : ui->thumbnailGrid->lastSelected();
+    if(row >= 0) {
+        QAction *open = menu.addAction(folderMenuIcon("document/open"), tr("Open"));
+        connect(open, &QAction::triggered, this, [this, row]() { emit itemActivated(row); });
+        menu.addSeparator();
+    }
+
+    if(row >= 0) {
+        QAction *dissolve = menu.addAction(folderMenuIcon("action/ungroup"), tr("Dissolve folder"));
+        connect(dissolve, &QAction::triggered, this, [this]() {
+            // let the menu close before anything asks a question
+            QTimer::singleShot(0, this, [this]() { emit dissolveFolderRequested(); });
+        });
+    }
+
+    menu.addSeparator();
+
+    // file operations on the selection; the clipboard is kept by Core, so these
+    // are the same actions the shortcuts run
+    if(row >= 0) {
+        QAction *copy = menu.addAction(folderMenuIcon("action/copy"), tr("Copy"));
+        connect(copy, &QAction::triggered, this, []() { actionManager->invokeAction("copySelection"); });
+
+        QAction *cut = menu.addAction(folderMenuIcon("action/cut"), tr("Cut"));
+        connect(cut, &QAction::triggered, this, []() { actionManager->invokeAction("cutSelection"); });
+    }
+
+    QAction *paste = menu.addAction(folderMenuIcon("action/paste"), tr("Paste"));
+    connect(paste, &QAction::triggered, this, []() { actionManager->invokeAction("pasteSelection"); });
+
+    if(row >= 0) {
+        QAction *remove = menu.addAction(folderMenuIcon("action/trash"), tr("Delete"));
+        connect(remove, &QAction::triggered, this, []() { actionManager->invokeAction("moveToTrash"); });
+    }
+
+    menu.addSeparator();
+
+    QAction *showInFileManager = menu.addAction(folderMenuIcon("file/folder-open"), tr("Show in file manager"));
+    connect(showInFileManager, &QAction::triggered, this, [path]() {
+        if(!path.isEmpty())
+            QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+    });
+
+    QAction *copyPath = menu.addAction(folderMenuIcon("action/copy"), tr("Copy path"));
+    connect(copyPath, &QAction::triggered, this, [path]() {
+        if(!path.isEmpty())
+            QApplication::clipboard()->setText(path);
+    });
+
+    menu.addSeparator();
+
+    // ---- sorting: same entries as the combo box in the top bar ----
+    QMenu *sortMenu = menu.addMenu(folderMenuIcon("misc/grid"), tr("Sort by"));
+    auto *sortGroup = new QActionGroup(sortMenu);
+    sortGroup->setExclusive(true);
+    const QList<QPair<SortingMode, QString>> sortingModes = {
+        {SORT_NAME,        tr("A - Z")},
+        {SORT_NAME_DESC,   tr("Z - A")},
+        {SORT_SIZE,        tr("Size")},
+        {SORT_SIZE_DESC,   tr("Size (desc)")},
+        {SORT_TIME,        tr("Oldest")},
+        {SORT_TIME_DESC,   tr("Newest")},
+    };
+    const SortingMode currentSorting = settings->sortingMode();
+    for(const auto &entry : sortingModes) {
+        QAction *action = sortMenu->addAction(entry.second);
+        action->setCheckable(true);
+        action->setChecked(entry.first == currentSorting);
+        sortGroup->addAction(action);
+        const SortingMode mode = entry.first;
+        connect(action, &QAction::triggered, this, [this, mode]() {
+            ui->sortingComboBox->setCurrentIndex(mode);
+            emit sortingSelected(mode);
+        });
+    }
+
+    // ---- view mode ----
+    QMenu *viewMenu = menu.addMenu(folderMenuIcon("misc/grid"), tr("View"));
+    auto *viewGroup = new QActionGroup(viewMenu);
+    viewGroup->setExclusive(true);
+    const QList<QPair<FolderViewMode, QString>> viewModes = {
+        {FV_SIMPLE,      tr("Simple")},
+        {FV_EXTENDED,    tr("Extended")},
+        {FV_EXT_FOLDERS, tr("Extended + folders")},
+    };
+    const FolderViewMode currentView = settings->folderViewMode();
+    for(const auto &entry : viewModes) {
+        QAction *action = viewMenu->addAction(entry.second);
+        action->setCheckable(true);
+        action->setChecked(entry.first == currentView);
+        viewGroup->addAction(action);
+        const FolderViewMode mode = entry.first;
+        connect(action, &QAction::triggered, this, [this, mode]() { onViewModeSelected(mode); });
+    }
+
+    QAction *showHidden = menu.addAction(tr("Show hidden files"));
+    showHidden->setCheckable(true);
+    showHidden->setChecked(settings->showHiddenFiles());
+    connect(showHidden, &QAction::triggered, this, [this, path](bool checked) {
+        settings->setShowHiddenFiles(checked);
+        // the file list is built by the directory manager: ask for the same folder
+        // again so it is rescanned with the new setting
+        if(!path.isEmpty())
+            emit directorySelected(path);
+    });
+
+    menu.addSeparator();
+
+    QAction *addBookmark = menu.addAction(folderMenuIcon("action/bookmark-add"), tr("Add bookmark"));
+    connect(addBookmark, &QAction::triggered, this, [this, path]() {
+        if(!path.isEmpty())
+            ui->bookmarksWidget->addBookmark(path);
+    });
+
+    QAction *refresh = menu.addAction(folderMenuIcon("action/refresh"), tr("Refresh"));
+    connect(refresh, &QAction::triggered, this, [this, path]() {
+        if(!path.isEmpty())
+            emit directorySelected(path);
+    });
+
+    menu.addSeparator();
+
+    QAction *settingsAction = menu.addAction(folderMenuIcon("navigation/settings"), tr("Settings"));
+    connect(settingsAction, &QAction::triggered, this, []() {
+        actionManager->invokeAction("openSettings");
+    });
+
+    QAction *closeFolderView = menu.addAction(folderMenuIcon("action/close"), tr("Exit folder view"));
+    connect(closeFolderView, &QAction::triggered, this, []() {
+        actionManager->invokeAction("documentView");
+    });
+
+    menu.exec(globalPos);
 }

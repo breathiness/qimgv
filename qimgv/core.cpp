@@ -14,6 +14,7 @@
 Core::Core()
     : QObject(),
       folderEndAction(FOLDER_END_NO_ACTION),
+      clipboardCut(false),
       loopSlideshow(false),
       mDrag(nullptr),
       slideshow(false),
@@ -106,6 +107,10 @@ void Core::connectComponents() {
     connect(mw, &MW::moveRequested,         this, &Core::moveCurrentFile);
     connect(mw, &MW::copyUrlsRequested,     this, qOverload<QList<QString>, QString>(&Core::copyPathsTo));
     connect(mw, &MW::moveUrlsRequested,     this, &Core::movePathsTo);
+    connect(mw, &MW::dissolveFolderRequested, this, &Core::dissolveSelectedFolder);
+    connect(actionManager, &ActionManager::copySelection,  this, &Core::copySelection);
+    connect(actionManager, &ActionManager::cutSelection,   this, &Core::cutSelection);
+    connect(actionManager, &ActionManager::pasteSelection, this, &Core::pasteSelection);
     connect(mw, &MW::cropRequested,         this, &Core::crop);
     connect(mw, &MW::cropAndSaveRequested,  this, &Core::cropAndSave);
     connect(mw, &MW::saveAsClicked,         this, &Core::requestSavePath);
@@ -909,6 +914,189 @@ void Core::copyPathsTo(QList<QString> paths, QString destDirectory) {
 
 void Core::movePathsTo(QList<QString> paths, QString destDirectory) {
     interactiveMove(paths, destDirectory);
+}
+
+static QString freeNameNextTo(const QString &targetDir, const QString &fileName, bool isDir);
+
+// copies a file or a whole directory tree
+static bool copyEntryTo(const QString &source, const QString &target) {
+    const QFileInfo info(source);
+    if(!info.isDir())
+        return QFile::copy(source, target);
+    if(!QDir().mkpath(target))
+        return false;
+    const QFileInfoList entries = QDir(source).entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot
+                                                             | QDir::Hidden | QDir::System);
+    for(const auto &entry : entries) {
+        if(!copyEntryTo(entry.absoluteFilePath(), target + QDir::separator() + entry.fileName()))
+            return false;
+    }
+    return true;
+}
+
+// moves one entry, directory or not; rename covers both as long as the target is
+// on the same volume, the copy is the fallback for everything else
+static bool moveEntryTo(const QString &source, const QString &target) {
+    if(QFile::rename(source, target))
+        return true;
+    if(!copyEntryTo(source, target))
+        return false;
+    const QFileInfo info(source);
+    return info.isDir() ? QDir(source).removeRecursively() : QFile::remove(source);
+}
+
+// what other file managers read when the selection is pasted into them
+static void mirrorToSystemClipboard(const QStringList &paths, bool cut) {
+    if(paths.isEmpty())
+        return;
+    QMimeData *mimeData = new QMimeData();
+    QList<QUrl> urls;
+    for(const QString &path : paths)
+        urls << QUrl::fromLocalFile(path);
+    mimeData->setUrls(urls);
+    const QByteArray firstUrl = QUrl::fromLocalFile(paths.first()).toEncoded();
+    const QByteArray copied = cut ? QByteArray("cut\n") : QByteArray("copy\n");
+    mimeData->setData("x-special/gnome-copied-files", copied + firstUrl);
+    mimeData->setData("application/x-kde-cutselection", cut ? "1" : "0");
+    QApplication::clipboard()->setMimeData(mimeData);
+}
+
+void Core::copySelection() {
+    const QStringList paths = currentSelection();
+    if(paths.isEmpty())
+        return;
+    clipboardPaths = paths;
+    clipboardCut = false;
+    mirrorToSystemClipboard(paths, false);
+    mw->showMessage(tr("Copied %1 items").arg(paths.count()));
+}
+
+void Core::cutSelection() {
+    const QStringList paths = currentSelection();
+    if(paths.isEmpty())
+        return;
+    clipboardPaths = paths;
+    clipboardCut = true;
+    mirrorToSystemClipboard(paths, true);
+    mw->showMessage(tr("Cut %1 items").arg(paths.count()));
+}
+
+void Core::pasteSelection() {
+    if(clipboardPaths.isEmpty()) {
+        mw->showMessage(tr("Clipboard is empty"));
+        return;
+    }
+    const QString destination = model->directoryPath();
+    if(destination.isEmpty())
+        return;
+
+    int done = 0;
+    int failed = 0;
+    QStringList remaining;
+    for(const QString &source : clipboardPaths) {
+        // pasting a folder into itself or into one of its own folders makes no sense
+        if(destination == source || destination.startsWith(source + QDir::separator())) {
+            failed++;
+            continue;
+        }
+        const QFileInfo info(source);
+        if(!info.exists()) {
+            failed++;
+            continue;
+        }
+        const QString targetName = freeNameNextTo(destination, info.fileName(), info.isDir());
+        const QString target = destination + QDir::separator() + targetName;
+        const bool moved = clipboardCut ? moveEntryTo(source, target) : copyEntryTo(source, target);
+        if(moved) {
+            done++;
+        } else {
+            failed++;
+            remaining << source;
+        }
+    }
+    // a cut is consumed by the paste; whatever could not be moved stays on the
+    // clipboard so it can be retried
+    if(clipboardCut) {
+        clipboardPaths = remaining;
+        if(remaining.isEmpty())
+            clipboardCut = false;
+    }
+    if(done > 0)
+        mw->showMessageSuccess(tr("Pasted %1 items").arg(done));
+    if(failed > 0)
+        mw->showError(tr("Some items could not be pasted."));
+}
+
+// A name in the target directory that is still free: "name (2).ext" and so on.
+// Directories keep their whole name, files keep their extension.
+static QString freeNameNextTo(const QString &targetDir, const QString &fileName, bool isDir) {
+    const QString separator = QString(QDir::separator());
+    if(!QFileInfo::exists(targetDir + separator + fileName))
+        return fileName;
+    QString stem = fileName;
+    QString suffix;
+    if(!isDir) {
+        const int dot = fileName.lastIndexOf('.');
+        // a leading dot is part of the name (".bashrc"), not an extension
+        if(dot > 0) {
+            stem = fileName.left(dot);
+            suffix = fileName.mid(dot);
+        }
+    }
+    for(int i = 2; ; i++) {
+        const QString candidate = QStringLiteral("%1 (%2)%3").arg(stem).arg(i).arg(suffix);
+        if(!QFileInfo::exists(targetDir + separator + candidate))
+            return candidate;
+    }
+}
+
+void Core::dissolveSelectedFolder() {
+    const QStringList paths = currentSelection();
+    if(paths.isEmpty())
+        return;
+    const QString folderPath = paths.first();
+    const QFileInfo info(folderPath);
+    if(!info.isDir()) {
+        mw->showMessage(tr("Select a folder to dissolve."));
+        return;
+    }
+
+    QDir folder(folderPath);
+    const QFileInfoList entries = folder.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot
+                                                       | QDir::Hidden | QDir::System);
+    const QString parent = info.absolutePath();
+    const QString separator = QString(QDir::separator());
+
+    // Work out where every entry goes before touching anything, so the question
+    // can say which ones will be renamed.
+    QList<QPair<QString, QString>> moves;   // source path -> target path
+    QString firstRenamed;
+    for(const auto &entry : entries) {
+        const QString targetName = freeNameNextTo(parent, entry.fileName(), entry.isDir());
+        if(targetName != entry.fileName() && firstRenamed.isEmpty())
+            firstRenamed = targetName;
+        moves.append(qMakePair(entry.absoluteFilePath(), parent + separator + targetName));
+    }
+
+    QString question = entries.isEmpty()
+        ? tr("The folder is empty. Delete it?")
+        : tr("Move %1 items out of the folder and delete it?").arg(entries.count());
+    if(!firstRenamed.isEmpty())
+        question += QStringLiteral("\n")
+                    + tr("Names that already exist are numbered, for example: %1").arg(firstRenamed);
+    if(!mw->showConfirmation(tr("Dissolve folder"), question))
+        return;
+
+    int failed = 0;
+    for(const auto &move : moves) {
+        if(!QFile::rename(move.first, move.second))
+            failed++;
+    }
+    if(failed == 0 && QDir().rmdir(folderPath)) {
+        mw->showMessageSuccess(tr("Folder dissolved."));
+        return;
+    }
+    mw->showError(tr("Some items could not be moved; the folder was kept."));
 }
 
 void Core::moveCurrentFile(QString destDirectory) {

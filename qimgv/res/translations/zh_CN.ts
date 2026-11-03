@@ -319,6 +319,71 @@
         <source>Error: could not load image.</source>
         <translation>错误: 不能载入图片.</translation>
     </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>Select a folder to dissolve.</source>
+        <translation>请选择一个文件夹再解散。</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>Cannot dissolve: these already exist next to the folder:</source>
+        <translation>无法解散：文件夹旁边已存在同名项：</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>The folder is empty. Delete it?</source>
+        <translation>该文件夹是空的，要直接删除它吗？</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>Move %1 items out of the folder and delete it?</source>
+        <translation>把文件夹里的 %1 个项目移到上一级，然后删除该文件夹？</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>Folder dissolved.</source>
+        <translation>文件夹已解散。</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>Some items could not be moved; the folder was kept.</source>
+        <translation>部分项目无法移动，文件夹已保留。</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>Dissolve folder</source>
+        <translation>解散文件夹</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>Names that already exist are numbered, for example: %1</source>
+        <translation>同名项会自动编号，例如：%1</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>Copied %1 items</source>
+        <translation>已复制 %1 项</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>Cut %1 items</source>
+        <translation>已剪切 %1 项</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>Clipboard is empty</source>
+        <translation>剪贴板是空的</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>Pasted %1 items</source>
+        <translation>已粘贴 %1 项</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>Some items could not be pasted.</source>
+        <translation>部分项目无法粘贴。</translation>
+    </message>
 </context>
 <context>
     <name>CropPanel</name>
@@ -666,6 +731,96 @@ Left click: next mode - Right click: pick one</source>
         <location filename="../../gui/folderview/folderview.ui" line="611" />
         <source>FILESYSTEM</source>
         <translation>文件系统</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Open</source>
+        <translation>打开</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Show in file manager</source>
+        <translation>在文件管理器中显示</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Copy path</source>
+        <translation>复制路径</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Sort by</source>
+        <translation>排序方式</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>View</source>
+        <translation>视图</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Simple</source>
+        <translation>简单</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Extended</source>
+        <translation>扩展</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Extended + folders</source>
+        <translation>扩展 + 文件夹</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Show hidden files</source>
+        <translation>显示隐藏文件</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Add bookmark</source>
+        <translation>添加书签</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Refresh</source>
+        <translation>刷新</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Settings</source>
+        <translation>设置</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Exit folder view</source>
+        <translation>退出文件夹视图</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Dissolve folder</source>
+        <translation>解散文件夹</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Copy</source>
+        <translation>复制</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Cut</source>
+        <translation>剪切</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Paste</source>
+        <translation>粘贴</translation>
+    </message>
+    <message>
+        <location filename="../../gui/folderview/folderview.cpp" line="0" />
+        <source>Delete</source>
+        <translation>删除</translation>
     </message>
 </context>
 <context>
