@@ -41,6 +41,8 @@ public:
     // file extension (guessed from mime-type)
     QString format() const;
     int exifOrientation() const;
+    // DXF/DWG: no image codec, the drawing is rendered by the CAD code instead
+    bool isCad() const;
 
     QDateTime lastModified() const;
     void refresh();

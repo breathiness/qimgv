@@ -425,6 +425,8 @@ void Settings::fillVideoFormats() {
 QList<QByteArray> Settings::supportedFormats() {
     auto formats = QImageReader::supportedImageFormats();
     formats << "jfif";
+    // drawings are rendered by the CAD code, not by an image plugin
+    formats << "dxf" << "dwg";
     // formats from the optional image format plugin (HEIC, JPEG XL, camera raw,
     // PSD, APNG) are already in the list above: QImageReader reports the keys of
     // every installed plugin

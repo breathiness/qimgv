@@ -46,6 +46,11 @@ DocumentType DocumentInfo::type() const {
     return mDocumentType;
 }
 
+bool DocumentInfo::isCad() const {
+    const QString suffix = fileInfo.suffix().toLower();
+    return suffix == QStringLiteral("dxf") || suffix == QStringLiteral("dwg");
+}
+
 QMimeType DocumentInfo::mimeType() const {
     return mMimeType;
 }
@@ -78,6 +83,13 @@ void DocumentInfo::detectFormat() {
     mMimeType = mimeDb.mimeTypeForFile(fileInfo.filePath(), QMimeDatabase::MatchContent);
     auto mimeName = mMimeType.name().toUtf8();
     auto suffix = fileInfo.suffix().toLower().toUtf8();
+    // CAD drawings are not images: they are parsed and rendered by qimgv itself.
+    // Everything outside the loader treats them as static documents.
+    if(suffix == "dxf" || suffix == "dwg") {
+        mFormat = QString::fromUtf8(suffix);
+        mDocumentType = DocumentType::STATIC;
+        return;
+    }
     if(mimeName == "image/jpeg") {
         mFormat = "jpg";
         mDocumentType = DocumentType::STATIC;

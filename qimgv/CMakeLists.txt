@@ -98,6 +98,8 @@ set_target_properties(qimgv PROPERTIES CXX_EXTENSIONS OFF)
 
 # LINK STUFF
 target_link_libraries(qimgv PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Svg Qt${QT_VERSION_MAJOR}::PrintSupport)
+# CAD drawings: DXF/DWG rendering
+target_link_libraries(qimgv PRIVATE cadrenderer)
 if(QT_VERSION_MAJOR GREATER_EQUAL 6)
     target_link_libraries(qimgv PRIVATE Qt${QT_VERSION_MAJOR}::OpenGLWidgets)
 endif()

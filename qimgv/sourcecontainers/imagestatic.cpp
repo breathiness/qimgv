@@ -1,4 +1,6 @@
 #include "imagestatic.h"
+#include "cad/caddrawing.h"
+#include <QElapsedTimer>
 #include <time.h>
 
 // Two-pass loading policy: a preview pass only pays off for files that are big
@@ -64,6 +66,10 @@ void ImageStatic::load() {
     if(isLoaded()) {
         return;
     }
+    if(mDocInfo->isCad()) {
+        loadCad();
+        return;
+    }
     if(mDocInfo->mimeType().name() == "image/vnd.microsoft.icon") {
         loadICO();
         return;
@@ -101,7 +107,9 @@ bool ImageStatic::loadFull() {
             return false;
         mFullLoading = true;
     }
-    std::shared_ptr<const QImage> full = readImage(QSize());
+    std::shared_ptr<const QImage> full = mDocInfo->isCad()
+                                             ? renderCad(true)
+                                             : readImage(QSize());
     QMutexLocker lock(&mImageLock);
     mFullLoading = false;
     if(!full)
@@ -118,6 +126,68 @@ bool ImageStatic::loadFull() {
 bool ImageStatic::isPreviewOnly() const {
     QMutexLocker lock(&mImageLock);
     return mLoaded && !mFullLoaded;
+}
+
+// A drawing is rendered instead of decoded. The first pass is sized to the window
+// so it appears instantly; the detailed pass renders much larger and is requested
+// by the viewer through loadFull() once the image is zoomed in.
+void ImageStatic::loadCad() {
+    QSize detailedSize;
+    std::shared_ptr<const QImage> preview = renderCad(false, &detailedSize);
+    if(!preview) {
+        mLoaded = true;
+        return;
+    }
+    {
+        QMutexLocker lock(&mImageLock);
+        image = preview;
+        mFullLoaded = false;
+    }
+    // claim the area the detailed render will cover, so the viewer asks for it
+    // once the image is zoomed past the preview's own resolution
+    mSourceSize = detailedSize.isValid() ? detailedSize : preview->size();
+    mLoaded = true;
+}
+
+std::shared_ptr<const QImage> ImageStatic::renderCad(bool detailed, QSize *detailedSize) const {
+    CadDrawing drawing;
+    if(!drawing.load(mPath))
+        return nullptr;
+    const QRectF bounds = drawing.bounds();
+    if(bounds.width() <= 0 || bounds.height() <= 0)
+        return nullptr;
+
+    // the detailed pass is what the preview stands in for: its size tells the
+    // viewer when to ask for more pixels
+    const double aspectForSize = bounds.width() / bounds.height();
+    const double pixelsPerLongSideSquared = aspectForSize >= 1.0 ? 1.0 / aspectForSize : aspectForSize;
+    const qint64 budgetForSize = qint64(settings->memoryAllocationLimit()) * 1024 * 1024;
+    const double maxDetailedSide = std::sqrt(double(budgetForSize) / 4.0
+                                             / std::max(1e-6, pixelsPerLongSideSquared));
+    const int detailedLongSide = int(qBound(1200.0, std::min(6000.0, maxDetailedSide), 6000.0));
+    if(detailedSize) {
+        const double detailedScale = double(detailedLongSide) / qMax(bounds.width(), bounds.height());
+        *detailedSize = QSize(qMax(16, int(bounds.width() * detailedScale)),
+                              qMax(16, int(bounds.height() * detailedScale)));
+    }
+
+    int longSide = 0;
+    if(detailed) {
+        // the detailed pass has to stay sharp while zooming, so it aims at a much
+        // larger canvas than the window; the memory budget caps it for big sheets
+        longSide = detailedLongSide;
+    } else {
+        const QSize hint = g_previewSizeHint.isValid() ? g_previewSizeHint : QSize(2560, 1440);
+        longSide = qBound(900, qMax(hint.width(), hint.height()), 2600);
+    }
+
+    const double scale = double(longSide) / qMax(bounds.width(), bounds.height());
+    const int width = qMax(16, int(bounds.width() * scale));
+    const int height = qMax(16, int(bounds.height() * scale));
+    const QImage rendered = drawing.render(width, height);
+    if(rendered.isNull())
+        return nullptr;
+    return std::make_shared<const QImage>(rendered);
 }
 
 void ImageStatic::loadGeneric() {

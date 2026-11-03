@@ -51,6 +51,12 @@ private:
     void load();
     void loadGeneric();
     void loadICO();
+    // renders a DXF/DWG through the CAD code; a smaller preview first, the detailed
+    // one when the viewer asks for full resolution
+    void loadCad();
+    // renders the drawing; detailedSize receives the size the detailed pass would
+    // have, which is what the preview claims to stand in for
+    std::shared_ptr<const QImage> renderCad(bool detailed, QSize *detailedSize = nullptr) const;
     // decodes the file, optionally asking Qt for a downscaled copy
     std::unique_ptr<const QImage> readImage(QSize scaledTarget);
     std::shared_ptr<const QImage> currentImage() const;

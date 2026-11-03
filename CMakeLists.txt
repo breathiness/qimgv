@@ -108,7 +108,11 @@ if(QLEMENTINE)
     add_subdirectory(3rdparty/qlementine-icons EXCLUDE_FROM_ALL)
 endif()
 
+# CAD drawings: DXF/DWG parsing (vendored, GPL-2.0-or-later)
+add_subdirectory(3rdparty/libdxfrw EXCLUDE_FROM_ALL)
+
 add_subdirectory(qimgv)
+add_subdirectory(qimgv/cad)
 
 if(VIDEO_SUPPORT)
     add_subdirectory(plugins/player_mpv)
