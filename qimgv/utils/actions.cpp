@@ -1,5 +1,8 @@
 #include "actions.h"
 
+#include <QCoreApplication>
+#include <QHash>
+
 Actions *appActions = nullptr;
 
 Actions::Actions() {
@@ -96,3 +99,84 @@ void Actions::init() {
     mActions.insert("pasteFile", QVersionNumber(1,0,3));
 }
 
+QString Actions::displayName(const QString &action) const {
+    // shown in the shortcut pages; the ids are what the rest of the program uses
+    static const QHash<QString, const char *> names = {
+        {"closeFullScreenOrExit", QT_TR_NOOP("Close fullscreen or exit")},
+        {"contextMenu", QT_TR_NOOP("Context menu")},
+        {"copyFile", QT_TR_NOOP("Copy file")},
+        {"copyFileClipboard", QT_TR_NOOP("Copy image to clipboard")},
+        {"copyPathClipboard", QT_TR_NOOP("Copy path")},
+        {"copySelection", QT_TR_NOOP("Copy selection")},
+        {"crop", QT_TR_NOOP("Crop")},
+        {"cutSelection", QT_TR_NOOP("Cut selection")},
+        {"discardEdits", QT_TR_NOOP("Discard edits")},
+        {"documentView", QT_TR_NOOP("Document view")},
+        {"exit", QT_TR_NOOP("Exit")},
+        {"fitNormal", QT_TR_NOOP("Original size")},
+        {"fitWidth", QT_TR_NOOP("Fit width")},
+        {"fitWindow", QT_TR_NOOP("Fit window")},
+        {"fitWindowStretch", QT_TR_NOOP("Stretch to window")},
+        {"flipH", QT_TR_NOOP("Flip horizontally")},
+        {"flipV", QT_TR_NOOP("Flip vertically")},
+        {"folderView", QT_TR_NOOP("Folder view")},
+        {"frameStep", QT_TR_NOOP("Next frame")},
+        {"frameStepBack", QT_TR_NOOP("Previous frame")},
+        {"goUp", QT_TR_NOOP("Go up one folder")},
+        {"jumpToFirst", QT_TR_NOOP("Jump to first")},
+        {"jumpToLast", QT_TR_NOOP("Jump to last")},
+        {"lockView", QT_TR_NOOP("Lock view")},
+        {"lockZoom", QT_TR_NOOP("Lock zoom")},
+        {"moveFile", QT_TR_NOOP("Move file")},
+        {"moveToTrash", QT_TR_NOOP("Move to trash")},
+        {"nextDirectory", QT_TR_NOOP("Next folder")},
+        {"nextImage", QT_TR_NOOP("Next image")},
+        {"open", QT_TR_NOOP("Open")},
+        {"openSettings", QT_TR_NOOP("Open settings")},
+        {"pasteFile", QT_TR_NOOP("Open from clipboard")},
+        {"pasteSelection", QT_TR_NOOP("Paste selection")},
+        {"pauseVideo", QT_TR_NOOP("Pause video")},
+        {"prevDirectory", QT_TR_NOOP("Previous folder")},
+        {"prevImage", QT_TR_NOOP("Previous image")},
+        {"print", QT_TR_NOOP("Print")},
+        {"reloadImage", QT_TR_NOOP("Reload image")},
+        {"removeFile", QT_TR_NOOP("Delete permanently")},
+        {"renameFile", QT_TR_NOOP("Rename")},
+        {"resize", QT_TR_NOOP("Resize")},
+        {"rotateLeft", QT_TR_NOOP("Rotate left")},
+        {"rotateRight", QT_TR_NOOP("Rotate right")},
+        {"save", QT_TR_NOOP("Save")},
+        {"saveAs", QT_TR_NOOP("Save as")},
+        {"scrollDown", QT_TR_NOOP("Scroll down")},
+        {"scrollLeft", QT_TR_NOOP("Scroll left")},
+        {"scrollRight", QT_TR_NOOP("Scroll right")},
+        {"scrollUp", QT_TR_NOOP("Scroll up")},
+        {"seekVideoBackward", QT_TR_NOOP("Seek video backward")},
+        {"seekVideoForward", QT_TR_NOOP("Seek video forward")},
+        {"setWallpaper", QT_TR_NOOP("Set as wallpaper")},
+        {"showInDirectory", QT_TR_NOOP("Show in file manager")},
+        {"sortByName", QT_TR_NOOP("Sort by name")},
+        {"sortBySize", QT_TR_NOOP("Sort by size")},
+        {"sortByTime", QT_TR_NOOP("Sort by date")},
+        {"toggleFitMode", QT_TR_NOOP("Toggle fit mode")},
+        {"toggleFolderView", QT_TR_NOOP("Toggle folder view")},
+        {"toggleFullscreen", QT_TR_NOOP("Toggle fullscreen")},
+        {"toggleFullscreenInfoBar", QT_TR_NOOP("Toggle fullscreen info bar")},
+        {"toggleImageInfo", QT_TR_NOOP("Toggle image info")},
+        {"toggleMute", QT_TR_NOOP("Toggle mute")},
+        {"toggleScalingFilter", QT_TR_NOOP("Toggle scaling filter")},
+        {"toggleShuffle", QT_TR_NOOP("Toggle shuffle")},
+        {"toggleSlideshow", QT_TR_NOOP("Toggle slideshow")},
+        {"toggleTransparencyGrid", QT_TR_NOOP("Toggle transparency grid")},
+        {"volumeDown", QT_TR_NOOP("Volume down")},
+        {"volumeUp", QT_TR_NOOP("Volume up")},
+        {"zoomIn", QT_TR_NOOP("Zoom in")},
+        {"zoomInCursor", QT_TR_NOOP("Zoom in at cursor")},
+        {"zoomOut", QT_TR_NOOP("Zoom out")},
+        {"zoomOutCursor", QT_TR_NOOP("Zoom out at cursor")},
+    };
+    const auto it = names.constFind(action);
+    if(it == names.constEnd())
+        return action;
+    return QCoreApplication::translate("Actions", it.value());
+}

@@ -1,4 +1,5 @@
 #include "settingsdialog.h"
+#include "utils/actions.h"
 #include "ui_settingsdialog.h"
 #include "gui/dialogs/navbarsettingspage.h"
 #include "uistyle.h"
@@ -705,7 +706,10 @@ void SettingsDialog::addShortcutToTable(const QString &action, const QString &sh
         return;
 
     ui->shortcutsTableWidget->setRowCount(ui->shortcutsTableWidget->rowCount() + 1);
-    QTableWidgetItem *actionItem = new QTableWidgetItem(action);
+    // the table shows the readable name; the action id rides along in the item so
+    // saving does not depend on what is displayed
+    QTableWidgetItem *actionItem = new QTableWidgetItem(appActions->displayName(action));
+    actionItem->setData(Qt::UserRole, action);
     actionItem->setTextAlignment(Qt::AlignCenter);
     ui->shortcutsTableWidget->setItem(ui->shortcutsTableWidget->rowCount() - 1, 0, actionItem);
     QTableWidgetItem *shortcutItem = new QTableWidgetItem(shortcut);
@@ -775,8 +779,10 @@ void SettingsDialog::removeShortcut() {
 void SettingsDialog::saveShortcuts() {
     actionManager->removeAllShortcuts();
     for(int i = 0; i < ui->shortcutsTableWidget->rowCount(); i++) {
+        const QTableWidgetItem *actionItem = ui->shortcutsTableWidget->item(i, 0);
+        const QString action = actionItem->data(Qt::UserRole).toString();
         actionManager->addShortcut(ui->shortcutsTableWidget->item(i, 1)->text(),
-                                   ui->shortcutsTableWidget->item(i, 0)->text());
+                                   action.isEmpty() ? actionItem->text() : action);
     }
 }
 //------------------------------------------------------------------------------

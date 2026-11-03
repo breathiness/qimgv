@@ -2522,6 +2522,11 @@ li.checked::marker { content: "\2612"; }
         <source>[Enter shortcut]</source>
         <translation>[输入快捷方式]</translation>
     </message>
+    <message>
+        <location filename="../../gui/dialogs/shortcutcreatordialog.cpp" line="0" />
+        <source>This shortcut is already used for: %1. Replace?</source>
+        <translation>该快捷键已用于：%1，要替换吗？</translation>
+    </message>
 </context>
 <context>
     <name>main</name>
@@ -2554,6 +2559,369 @@ li.checked::marker { content: "\2612"; }
         <location filename="../../main.cpp" line="135" />
         <source>Show build options.</source>
         <translation>显示编译选项.</translation>
+    </message>
+</context>
+<context>
+    <name>Actions</name>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Close fullscreen or exit</source>
+        <translation>退出全屏或关闭</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Context menu</source>
+        <translation>右键菜单</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Copy file</source>
+        <translation>复制文件</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Copy image to clipboard</source>
+        <translation>复制图像到剪贴板</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Copy path</source>
+        <translation>复制路径</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Copy selection</source>
+        <translation>复制选中项</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Crop</source>
+        <translation>裁剪</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Cut selection</source>
+        <translation>剪切选中项</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Discard edits</source>
+        <translation>放弃修改</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Document view</source>
+        <translation>文档视图</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Exit</source>
+        <translation>退出</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Original size</source>
+        <translation>原始大小</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Fit width</source>
+        <translation>适应宽度</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Fit window</source>
+        <translation>适应窗口</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Stretch to window</source>
+        <translation>拉伸到窗口</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Flip horizontally</source>
+        <translation>水平翻转</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Flip vertically</source>
+        <translation>垂直翻转</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Folder view</source>
+        <translation>文件夹视图</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Next frame</source>
+        <translation>下一帧</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Previous frame</source>
+        <translation>上一帧</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Go up one folder</source>
+        <translation>上一级目录</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Jump to first</source>
+        <translation>跳到第一张</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Jump to last</source>
+        <translation>跳到最后一张</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Lock view</source>
+        <translation>锁定视图</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Lock zoom</source>
+        <translation>锁定缩放</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Move file</source>
+        <translation>移动文件</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Move to trash</source>
+        <translation>移到回收站</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Next folder</source>
+        <translation>下一个文件夹</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Next image</source>
+        <translation>下一张图片</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Open</source>
+        <translation>打开</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Open settings</source>
+        <translation>打开设置</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Open from clipboard</source>
+        <translation>从剪贴板打开</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Paste selection</source>
+        <translation>粘贴选中项</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Pause video</source>
+        <translation>暂停/播放视频</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Previous folder</source>
+        <translation>上一个文件夹</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Previous image</source>
+        <translation>上一张图片</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Print</source>
+        <translation>打印</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Reload image</source>
+        <translation>重新加载图像</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Delete permanently</source>
+        <translation>永久删除</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Rename</source>
+        <translation>重命名</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Resize</source>
+        <translation>调整大小</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Rotate left</source>
+        <translation>向左旋转</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Rotate right</source>
+        <translation>向右旋转</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Save</source>
+        <translation>保存</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Save as</source>
+        <translation>另存为</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Scroll down</source>
+        <translation>向下滚动</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Scroll left</source>
+        <translation>向左滚动</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Scroll right</source>
+        <translation>向右滚动</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Scroll up</source>
+        <translation>向上滚动</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Seek video backward</source>
+        <translation>视频后退</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Seek video forward</source>
+        <translation>视频快进</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Set as wallpaper</source>
+        <translation>设为壁纸</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Show in file manager</source>
+        <translation>在文件管理器中显示</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Sort by name</source>
+        <translation>按名称排序</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Sort by size</source>
+        <translation>按大小排序</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Sort by date</source>
+        <translation>按日期排序</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Toggle fit mode</source>
+        <translation>切换适应模式</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Toggle folder view</source>
+        <translation>切换文件夹视图</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Toggle fullscreen</source>
+        <translation>切换全屏</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Toggle fullscreen info bar</source>
+        <translation>切换全屏信息栏</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Toggle image info</source>
+        <translation>切换图像信息</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Toggle mute</source>
+        <translation>切换静音</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Toggle scaling filter</source>
+        <translation>切换缩放滤镜</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Toggle shuffle</source>
+        <translation>切换随机顺序</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Toggle slideshow</source>
+        <translation>切换幻灯片</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Toggle transparency grid</source>
+        <translation>切换透明网格</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Volume down</source>
+        <translation>减小音量</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Volume up</source>
+        <translation>增大音量</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Zoom in</source>
+        <translation>放大</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Zoom in at cursor</source>
+        <translation>在光标处放大</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Zoom out</source>
+        <translation>缩小</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Zoom out at cursor</source>
+        <translation>在光标处缩小</translation>
     </message>
 </context>
 </TS>
