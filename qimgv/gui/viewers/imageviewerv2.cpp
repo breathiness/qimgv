@@ -428,6 +428,10 @@ bool ImageViewerV2::isDisplaying() const {
     return (pixmap != nullptr);
 }
 
+void ImageViewerV2::scrollBy(int dx, int dy) {
+    scroll(dx, dy, false);
+}
+
 void ImageViewerV2::scrollUp() {
     scroll(0, -DEFAULT_SCROLL_DISTANCE, true);
 }
@@ -799,9 +803,24 @@ void ImageViewerV2::mouseMoveZoom(QMouseEvent *event) {
         imageFitMode = FIT_WINDOW_STRETCH;
 }
 
+void ImageViewerV2::setFitUnitSize(const QSize &size) {
+    mFitUnitSize = size;
+    if(pixmap)
+        updateFitWindowScale();
+}
+
+QSize ImageViewerV2::fitUnitSize() const {
+    return mFitUnitSize;
+}
+
 // scale at which current image fills the window
 void ImageViewerV2::updateFitWindowScale() {
-    const QSizeF logical = pixmapLogicalSize();
+    // A pdf strip is one tall image; fitting the whole thing would shrink the text
+    // to nothing, so it fits a single page instead (the height of the strip divided
+    // by its page count is not stored here - the caller passes one page's size).
+    QSizeF logical = pixmapLogicalSize();
+    if(mFitUnitSize.isValid() && !mFitUnitSize.isEmpty())
+        logical = QSizeF(mFitUnitSize);
     float scaleFitX = (float) viewport()->width()  / logical.width();
     float scaleFitY = (float) viewport()->height() / logical.height();
     if(scaleFitX < scaleFitY) {
@@ -875,6 +894,8 @@ void ImageViewerV2::fitWidth() {
 void ImageViewerV2::fitWindow() {
     if(!pixmap)
         return;
+    // a document opens at its first page, not in the middle of the stack
+    const bool documentStart = mFitUnitSize.isValid() && !mFitUnitSize.isEmpty();
     if(imageFits() && !expandImage) {
         fitNormal();
     } else {
@@ -888,6 +909,10 @@ void ImageViewerV2::fitWindow() {
         if(scrollBarWorkaround) {
             scrollBarWorkaround = false;
             QTimer::singleShot(0, this, SLOT(centerOnPixmap()));
+        } else if(documentStart) {
+            centerOnPixmap();
+            // land on the first page after the fit has been applied, and repaint
+            QTimer::singleShot(0, this, [this] { scrollToY(0); });
         } else {
             centerOnPixmap();
         }

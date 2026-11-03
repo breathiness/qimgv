@@ -19,6 +19,10 @@ class ViewerWidget : public FloatingWidgetContainer
 {
     Q_OBJECT
 public:
+    // what fit-window should size itself by (one pdf page in a strip)
+    void setFitUnitSize(const QSize &size);
+    // explicit scroll, used by the pdf strip
+    void scrollBy(int dx, int dy);
     explicit ViewerWidget(QWidget *parent = nullptr);
     QRect imageRect();
     float currentScale();

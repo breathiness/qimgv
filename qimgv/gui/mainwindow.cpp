@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 
 #include <QEventLoop>
+#include <QInputDialog>
+#include <QLineEdit>
 #include <QScreen>
 #include <QTimer>
 #include <functional>
@@ -1020,13 +1022,15 @@ void MW::closeFullScreenOrExit() {
 }
 
 // todo: this is crap, use shared state object
-void MW::setCurrentInfo(int _index, int _fileCount, QString _filePath, QString _fileName, QSize _imageSize, qint64 _fileSize, bool slideshow, bool shuffle, bool edited) {
+void MW::setCurrentInfo(int _index, int _fileCount, QString _filePath, QString _fileName, QSize _imageSize, qint64 _fileSize, int _pdfPage, int _pdfPageCount, bool slideshow, bool shuffle, bool edited) {
     info.index = _index;
     info.fileCount = _fileCount;
     info.fileName = _fileName;
     info.filePath = _filePath;
     info.imageSize = _imageSize;
     info.fileSize = _fileSize;
+    info.pdfPage = _pdfPage;
+    info.pdfPageCount = _pdfPageCount;
     info.slideshow = slideshow;
     info.shuffle = shuffle;
     info.edited = edited;
@@ -1044,6 +1048,9 @@ void MW::onInfoUpdated() {
     QString sizeString;
     if(info.fileSize)
         sizeString = this->locale().formattedDataSize(info.fileSize, 1);
+    QString pageString;
+    if(info.pdfPageCount > 1)
+        pageString = tr("page %1/%2").arg(info.pdfPage + 1).arg(info.pdfPageCount);
 
     if(renameOverlay)
         renameOverlay->setName(info.fileName);
@@ -1063,6 +1070,8 @@ void MW::onInfoUpdated() {
             windowTitle.prepend(posString + "  ");
             if(!resString.isEmpty())
                 windowTitle.append("  -  " + resString);
+            if(!pageString.isEmpty())
+                windowTitle.append("  -  " + pageString);
             if(!sizeString.isEmpty())
                 windowTitle.append("  -  " + sizeString);
         }
@@ -1083,8 +1092,12 @@ void MW::onInfoUpdated() {
         if(info.edited)
             windowTitle.prepend("* ");
 
-        infoBarFullscreen->setInfo(posString, info.fileName + (info.edited ? "  *" : ""), resString + "  " + sizeString);
-        infoBarWindowed->setInfo(posString, info.fileName + (info.edited ? "  *" : ""), resString + "  " + sizeString + " " + states);
+        const QString pageSuffix = pageString.isEmpty() ? QString()
+                                                        : QStringLiteral("  ") + pageString;
+        infoBarFullscreen->setInfo(posString, info.fileName + (info.edited ? "  *" : ""),
+                                   resString + pageSuffix + "  " + sizeString);
+        infoBarWindowed->setInfo(posString, info.fileName + (info.edited ? "  *" : ""),
+                                 resString + pageSuffix + "  " + sizeString + " " + states);
     }
     setWindowTitle(windowTitle);
 }
@@ -1163,6 +1176,13 @@ bool MW::showConfirmation(QString title, QString msg) {
         return true;
     else
         return false;
+}
+
+QString MW::getPassword(QString title, QString prompt) {
+    bool ok = false;
+    const QString password = QInputDialog::getText(this, title, prompt, QLineEdit::Password,
+                                                   QString(), &ok);
+    return ok ? password : QString();
 }
 
 void MW::readSettings() {
@@ -1247,3 +1267,11 @@ void MW::leaveEvent(QEvent *event) {
 //bool MW::focusNextPrevChild(bool) {
 //    return false;
 //}
+
+void MW::scrollBy(int dy) {
+    viewerWidget->scrollBy(0, dy);
+}
+
+void MW::setFitUnitSize(const QSize &size) {
+    viewerWidget->setFitUnitSize(size);
+}

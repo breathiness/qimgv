@@ -37,6 +37,11 @@ public:
     ImageViewerV2(QWidget* parent = nullptr);
     ~ImageViewerV2();
     virtual ImageFitMode fitMode() const;
+    // what "fit window" should size itself by; invalid means the whole image.
+    // A pdf strip sets this to one page, so the view opens readable instead of
+    // showing the entire document at a postage-stamp scale.
+    void setFitUnitSize(const QSize &size);
+    QSize fitUnitSize() const;
     virtual QRect scaledRectR() const;
     virtual float currentScale() const;
     virtual QSize sourceSize() const;
@@ -86,6 +91,8 @@ public slots:
     virtual void readSettings();
     virtual void scrollUp();
     virtual void scrollDown();
+    // explicit scroll, e.g. one page of a pdf strip
+    void scrollBy(int dx, int dy);
     virtual void scrollLeft();
     virtual void scrollRight();
     virtual void startAnimation();
@@ -196,6 +203,8 @@ private:
     void reset();
     void applyFitMode();
 
+    // one page of a pdf strip; empty means "the whole pixmap"
+    QSize mFitUnitSize;
     QTimeLine *scrollTimeLineX, *scrollTimeLineY;
     void stopPosAnimation();
     QPointF sceneRoundPos(QPointF scenePoint) const;

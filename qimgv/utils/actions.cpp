@@ -71,9 +71,11 @@ void Actions::init() {
     mActions.insert("copyPathClipboard", QVersionNumber(0,7,80));
     mActions.insert("renameFile", QVersionNumber(0,7,80));
     mActions.insert("contextMenu", QVersionNumber(0,7,81));
-    mActions.insert("copySelection", QVersionNumber(1,0,3));
-    mActions.insert("cutSelection", QVersionNumber(1,0,3));
-    mActions.insert("pasteSelection", QVersionNumber(1,0,3));
+    mActions.insert("copySelection", QVersionNumber(1,0,4));
+    mActions.insert("cutSelection", QVersionNumber(1,0,4));
+    mActions.insert("pasteSelection", QVersionNumber(1,0,4));
+    mActions.insert("pdfNextPage", QVersionNumber(1,0,4));
+    mActions.insert("pdfPrevPage", QVersionNumber(1,0,4));
     mActions.insert("toggleTransparencyGrid", QVersionNumber(0,7,82));
     mActions.insert("sortByName", QVersionNumber(0,7,83));
     mActions.insert("sortByTime", QVersionNumber(0,7,83));
@@ -135,6 +137,8 @@ QString Actions::displayName(const QString &action) const {
         {"openSettings", QT_TR_NOOP("Open settings")},
         {"pasteFile", QT_TR_NOOP("Open from clipboard")},
         {"pasteSelection", QT_TR_NOOP("Paste selection")},
+        {"pdfNextPage", QT_TR_NOOP("Next PDF page")},
+        {"pdfPrevPage", QT_TR_NOOP("Previous PDF page")},
         {"pauseVideo", QT_TR_NOOP("Pause video")},
         {"prevDirectory", QT_TR_NOOP("Previous folder")},
         {"prevImage", QT_TR_NOOP("Previous image")},

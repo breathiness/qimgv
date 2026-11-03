@@ -55,6 +55,9 @@ struct CurrentInfo {
     bool slideshow;
     bool shuffle;
     bool edited;
+    // pdf pages; pageCount is 0 for everything that is not multi-page
+    int pdfPage;
+    int pdfPageCount;
 };
 
 enum ActiveSidePanel {
@@ -66,6 +69,8 @@ class MW : public FloatingWidgetContainer
 {
     Q_OBJECT
 public:
+    // one page of a pdf strip; empty means the whole image
+    void setFitUnitSize(const QSize &size);
     explicit MW(QWidget *parent = nullptr);
     bool isCropPanelActive();
     void onScalingFinished(std::unique_ptr<QPixmap>scaled);
@@ -75,7 +80,9 @@ public:
     void showAnimation(std::shared_ptr<QMovie> movie);
     void showVideo(QString file);
 
-    void setCurrentInfo(int fileIndex, int fileCount, QString filePath, QString fileName, QSize imageSize, qint64 fileSize, bool slideshow, bool shuffle, bool edited);
+    // scrolls by an explicit amount, used by the pdf strip to move one page
+    void scrollBy(int dy);
+    void setCurrentInfo(int fileIndex, int fileCount, QString filePath, QString fileName, QSize imageSize, qint64 fileSize, int pdfPage, int pdfPageCount, bool slideshow, bool shuffle, bool edited);
     void setExifInfo(QMap<QString, QString>);
     std::shared_ptr<FolderViewProxy> getFolderView();
     std::shared_ptr<ThumbnailStripProxy> getThumbnailPanel();
@@ -83,6 +90,8 @@ public:
     ViewMode currentViewMode();
 
     bool showConfirmation(QString title, QString msg);
+    // asks for a password; empty string means the user cancelled
+    QString getPassword(QString title, QString prompt);
     DialogResult fileReplaceDialog(QString source, QString target, FileReplaceMode mode, bool multiple);
 
 private:

@@ -634,3 +634,12 @@ void ViewerWidget::leaveEvent(QEvent *event) {
     QWidget::leaveEvent(event);
     videoControls->hide();
 }
+
+// explicit scroll, used by the pdf strip to move one page down or up
+void ViewerWidget::scrollBy(int dx, int dy) {
+    imageViewer->scrollBy(dx, dy);
+}
+
+void ViewerWidget::setFitUnitSize(const QSize &size) {
+    imageViewer->setFitUnitSize(size);
+}

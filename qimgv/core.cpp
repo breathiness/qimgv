@@ -6,6 +6,7 @@
  */
 
 #include "core.h"
+#include "utils/pdfprovider.h"
 
 #ifdef __WIN32
 #include <tchar.h>
@@ -111,6 +112,8 @@ void Core::connectComponents() {
     connect(actionManager, &ActionManager::copySelection,  this, &Core::copySelection);
     connect(actionManager, &ActionManager::cutSelection,   this, &Core::cutSelection);
     connect(actionManager, &ActionManager::pasteSelection, this, &Core::pasteSelection);
+    connect(actionManager, &ActionManager::pdfNextPage, this, &Core::pdfNextPage);
+    connect(actionManager, &ActionManager::pdfPrevPage, this, &Core::pdfPrevPage);
     connect(mw, &MW::cropRequested,         this, &Core::crop);
     connect(mw, &MW::cropAndSaveRequested,  this, &Core::cropAndSave);
     connect(mw, &MW::saveAsClicked,         this, &Core::requestSavePath);
@@ -1027,6 +1030,45 @@ void Core::pasteSelection() {
         mw->showError(tr("Some items could not be pasted."));
 }
 
+// Changes the page of the pdf on screen. The pixmap is replaced in place so zoom
+// and scroll survive the switch; the detailed pass follows on the next zoom.
+void Core::changePdfPage(int delta) {
+    if(!state.currentImg)
+        return;
+    auto *img = dynamic_cast<ImageStatic *>(state.currentImg.get());
+    if(!img || !img->pdfIsStrip())
+        return;
+    // the pages are one tall image now, so a "page" step is a scroll of one page
+    if(img->pdfPageHeight() > 0)
+        mw->scrollBy(delta * img->pdfPageHeight());
+}
+
+void Core::maybeAskPdfPassword(std::shared_ptr<Image> img) {
+    auto *pdfImage = dynamic_cast<ImageStatic *>(img.get());
+    if(!pdfImage || !pdfImage->pdfNeedsPassword())
+        return;
+    for(int attempt = 0; attempt < 3; attempt++) {
+        const QString password = mw->getPassword(tr("Password required"),
+                                                 tr("This PDF is protected. Enter its password:"));
+        if(password.isEmpty())
+            return;   // cancelled
+        if(pdfImage->unlockPdf(password)) {
+            mw->refreshImage(pdfImage->getPixmap());
+            updateInfoString();
+            return;
+        }
+        mw->showError(tr("Wrong password."));
+    }
+}
+
+void Core::pdfNextPage() {
+    changePdfPage(1);
+}
+
+void Core::pdfPrevPage() {
+    changePdfPage(-1);
+}
+
 // A name in the target directory that is still free: "name (2).ext" and so on.
 // Directories keep their whole name, files keep their extension.
 static QString freeNameNextTo(const QString &targetDir, const QString &fileName, bool isDir) {
@@ -1471,6 +1513,11 @@ bool Core::setDirectory(QString path) {
 bool Core::loadFileIndex(int index, bool async, bool preload) {
     if(!model)
         return false;
+    // A pdf without the provider pack would otherwise open as an empty viewer.
+    if(index >= 0 && model->filePathAt(index).endsWith(QStringLiteral(".pdf"), Qt::CaseInsensitive)
+       && !PdfProvider::instance().available()) {
+        mw->showError(tr("PDF support is not installed. Unzip the extras pack into the qimgv folder (the pdf folder is missing)."));
+    }
     auto entry = model->fileEntryAt(index);
     if(entry.path.isEmpty())
         return false;
@@ -1689,6 +1736,7 @@ void Core::onFullResolutionNeeded() {
 void Core::onModelItemReady(std::shared_ptr<Image> img, const QString &path) {
     if(!img || path != state.currentFilePath)
         return;
+    maybeAskPdfPassword(img);
     const bool previewOnScreen = !state.previewPath.isEmpty()
                                  && state.previewPath == path
                                  && state.currentImg == img;
@@ -1746,6 +1794,15 @@ void Core::guiSetImage(std::shared_ptr<Image> img) {
     }
     DocumentType type = img->type();
     if(type == STATIC) {
+        // a pdf strip is one image of many pages: fit-window should fit one page
+        if(auto *staticImage = dynamic_cast<ImageStatic *>(img.get())) {
+            if(staticImage->pdfIsStrip() && staticImage->pdfPageHeight() > 0)
+                mw->setFitUnitSize(QSize(img->size().width(), staticImage->pdfPageHeight()));
+            else
+                mw->setFitUnitSize(QSize());
+        } else {
+            mw->setFitUnitSize(QSize());
+        }
         mw->showImage(img->getPixmap(), img->size());
     } else if(type == ANIMATED) {
         auto animated = dynamic_cast<ImageAnimated *>(img.get());
@@ -1778,12 +1835,29 @@ void Core::updateInfoString() {
         edited = state.currentImg->isEdited();
     }
     int index = model->indexOfFile(state.currentFilePath);
+    int pdfPage = 0;
+    int pdfPageCount = 0;
+    std::shared_ptr<Image> infoImg;
+    if(model->isLoaded(state.currentFilePath))
+        infoImg = model->getImage(state.currentFilePath);
+    else if(state.currentImg && state.currentImg->filePath() == state.currentFilePath)
+        infoImg = state.currentImg;
+    if(auto *staticImage = dynamic_cast<ImageStatic *>(infoImg.get())) {
+        // the strip already shows the whole document, so a "page x/y" label would
+        // only be in the way
+        if(!staticImage->pdfIsStrip() && staticImage->pdfPageCount() > 1) {
+            pdfPage = staticImage->pdfPage();
+            pdfPageCount = staticImage->pdfPageCount();
+        }
+    }
     mw->setCurrentInfo(index,
                        model->fileCount(),
                        model->filePathAt(index),
                        model->fileNameAt(index),
                        imageSize,
                        fileSize,
+                       pdfPage,
+                       pdfPageCount,
                        slideshow,
                        shuffle,
                        edited);

@@ -19,6 +19,8 @@ ActionManager *ActionManager::getInstance() {
 }
 //------------------------------------------------------------------------------
 void ActionManager::initDefaults() {
+    actionManager->defaults.insert("PgDown", "pdfNextPage");
+    actionManager->defaults.insert("PgUp", "pdfPrevPage");
     actionManager->defaults.insert("Right", "nextImage");
     actionManager->defaults.insert("Left", "prevImage");
     actionManager->defaults.insert("XButton2", "nextImage");

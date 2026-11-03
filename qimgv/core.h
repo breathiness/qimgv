@@ -138,6 +138,12 @@ private slots:
     void copySelection();
     void cutSelection();
     void pasteSelection();
+    // pdf page navigation (no-ops for anything that is not a pdf)
+    void pdfNextPage();
+    void pdfPrevPage();
+    void changePdfPage(int delta);
+    // asks for a password when the loaded pdf reported itself as protected
+    void maybeAskPdfPassword(std::shared_ptr<Image> img);
     FileOpResult removeFile(QString fileName, bool trash);
     void onFileRemoved(QString filePath, int index);
     void onFileRenamed(QString fromPath, int indexFrom, QString toPath, int indexTo);

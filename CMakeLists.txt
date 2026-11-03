@@ -1,7 +1,7 @@
 # qimgv root
 cmake_minimum_required(VERSION 3.13)
 project(qimgv
-    VERSION 1.0.3
+    VERSION 1.0.4
     HOMEPAGE_URL "https://github.com/easymodo/qimgv"
     LANGUAGES CXX)
 
@@ -121,5 +121,8 @@ endif()
 # image format plugins: APNG, and the optional pack with HEIC/AVIF, JPEG XL,
 # camera raw and PSD. Keeping them out of the executable means they can be
 # distributed separately, and a missing pack only removes formats.
+# PDF pages: optional provider plugin built when poppler's Qt6 bindings are there
+add_subdirectory(plugins/pdf)
+
 add_subdirectory(plugins/imageformats/apng)
 add_subdirectory(plugins/imageformats/formats)

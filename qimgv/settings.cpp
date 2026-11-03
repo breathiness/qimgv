@@ -1,4 +1,5 @@
 #include "settings.h"
+#include "utils/pdfprovider.h"
 #include "uistyle.h"
 #include "uitheme.h"
 #include <QMimeDatabase>
@@ -427,12 +428,15 @@ QList<QByteArray> Settings::supportedFormats() {
     formats << "jfif";
     // drawings are rendered by the CAD code, not by an image plugin
     formats << "dxf" << "dwg";
+    // pdf pages come from the optional provider plugin. The files stay listed
+    // even when it is missing: opening one then explains what is absent, which is
+    // friendlier than a file that silently does not exist.
+    formats << "pdf";
     // formats from the optional image format plugin (HEIC, JPEG XL, camera raw,
     // PSD, APNG) are already in the list above: QImageReader reports the keys of
     // every installed plugin
     if(videoPlayback())
         formats << mVideoFormatsMap.values();
-    formats.removeAll("pdf");
     return formats;
 }
 //------------------------------------------------------------------------------

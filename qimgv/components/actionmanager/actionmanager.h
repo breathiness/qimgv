@@ -101,6 +101,8 @@ signals:
     void copySelection();
     void cutSelection();
     void pasteSelection();
+    void pdfNextPage();
+    void pdfPrevPage();
     void reloadImage();
     void copyFileClipboard();
     void copyPathClipboard();

@@ -43,6 +43,8 @@ public:
     int exifOrientation() const;
     // DXF/DWG: no image codec, the drawing is rendered by the CAD code instead
     bool isCad() const;
+    // PDF: rendered page by page through the optional provider plugin
+    bool isPdf() const;
 
     QDateTime lastModified() const;
     void refresh();

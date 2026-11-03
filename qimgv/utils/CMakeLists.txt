@@ -12,4 +12,6 @@ target_sources(qimgv PRIVATE
     stuff.cpp
     wallpapersetter.cpp
     fileoperations.cpp
+    pdfprovider.cpp
+    pdfprovider.h
 )

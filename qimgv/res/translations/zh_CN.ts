@@ -384,6 +384,21 @@
         <source>Some items could not be pasted.</source>
         <translation>部分项目无法粘贴。</translation>
     </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>Password required</source>
+        <translation>需要密码</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>This PDF is protected. Enter its password:</source>
+        <translation>这个 PDF 受密码保护，请输入密码：</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="0" />
+        <source>Wrong password.</source>
+        <translation>密码错误。</translation>
+    </message>
 </context>
 <context>
     <name>CropPanel</name>
@@ -878,6 +893,11 @@ Left click: next mode - Right click: pick one</source>
         <location filename="../../gui/mainwindow.cpp" line="927" />
         <source>Fit 1:1</source>
         <translation>适应 1:1</translation>
+    </message>
+    <message>
+        <location filename="../../gui/mainwindow.cpp" line="0" />
+        <source>page %1/%2</source>
+        <translation>第 %1/%2 页</translation>
     </message>
 </context>
 <context>
@@ -2922,6 +2942,16 @@ li.checked::marker { content: "\2612"; }
         <location filename="../../utils/actions.cpp" line="0" />
         <source>Zoom out at cursor</source>
         <translation>在光标处缩小</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Next PDF page</source>
+        <translation>下一页 PDF</translation>
+    </message>
+    <message>
+        <location filename="../../utils/actions.cpp" line="0" />
+        <source>Previous PDF page</source>
+        <translation>上一页 PDF</translation>
     </message>
 </context>
 </TS>

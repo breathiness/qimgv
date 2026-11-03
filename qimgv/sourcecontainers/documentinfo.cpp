@@ -46,6 +46,10 @@ DocumentType DocumentInfo::type() const {
     return mDocumentType;
 }
 
+bool DocumentInfo::isPdf() const {
+    return fileInfo.suffix().compare(QStringLiteral("pdf"), Qt::CaseInsensitive) == 0;
+}
+
 bool DocumentInfo::isCad() const {
     const QString suffix = fileInfo.suffix().toLower();
     return suffix == QStringLiteral("dxf") || suffix == QStringLiteral("dwg");

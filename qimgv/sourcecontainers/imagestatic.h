@@ -6,6 +6,7 @@
 #include <QCryptographicHash>
 #include <QMutex>
 #include <QIcon>
+#include <QSizeF>
 #include "image.h"
 #include "utils/imagelib.h"
 #include <settings.h>
@@ -31,6 +32,18 @@ public:
     int width();
     QSize size();
 
+    // pdf: the pages are rendered one below the other into a single tall image, so
+    // scrolling reads the document like a long page. Page navigation then means
+    // "scroll by one page".
+    int pdfPageCount() const { return mPdfPageCount; }
+    int pdfPage() const { return mPdfPage; }
+    bool pdfIsStrip() const { return mPdfDocument && mPdfPageCount > 1; }
+    int pdfPageHeight() const { return mPdfPageHeight; }
+    int pdfRenderedPages() const { return mPdfRenderedPages; }
+    // a protected document opens without pages until it is unlocked
+    bool pdfNeedsPassword() const { return mPdfNeedsPassword; }
+    bool unlockPdf(const QString &password);
+
     bool setEditedImage(std::unique_ptr<const QImage> imageEditedNew);
     bool discardEditedImage();
 
@@ -54,6 +67,9 @@ private:
     // renders a DXF/DWG through the CAD code; a smaller preview first, the detailed
     // one when the viewer asks for full resolution
     void loadCad();
+    // pdf: pages are rendered by the optional provider plugin
+    void loadPdf();
+    std::shared_ptr<const QImage> renderPdfStrip();
     // renders the drawing; detailedSize receives the size the detailed pass would
     // have, which is what the preview claims to stand in for
     std::shared_ptr<const QImage> renderCad(bool detailed, QSize *detailedSize = nullptr) const;
@@ -69,5 +85,14 @@ private:
     bool mFullLoaded = false;
     bool mFullLoading = false;
     QSize mPreviewTarget;
+    // pdf state: the open document, its page count and the page on screen
+    std::shared_ptr<void> mPdfDocument;
+    int mPdfPageCount = 0;
+    bool mPdfNeedsPassword = false;
+    // pixels of one page inside the strip, and how many pages the strip holds
+    int mPdfPageHeight = 0;
+    int mPdfRenderedPages = 0;
+    int mPdfPage = 0;
+    QSizeF mPdfPageSize;
     mutable QMutex mImageLock;
 };
