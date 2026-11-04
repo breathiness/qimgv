@@ -1,7 +1,6 @@
 # Paged pdf view
 #
-# The model and the widget are a small library so the application and the
-# standalone test below can share them. The test target is not installed.
+# The model and the widget are a small library the application links.
 
 add_library(pdfpages STATIC
     pdfpagemodel.cpp
@@ -22,5 +21,3 @@ target_include_directories(pdfpages PUBLIC
 )
 set_target_properties(pdfpages PROPERTIES AUTOMOC ON)
 
-add_executable(pdfviewtest pdfviewtest.cpp)
-target_link_libraries(pdfviewtest PRIVATE pdfpages)
