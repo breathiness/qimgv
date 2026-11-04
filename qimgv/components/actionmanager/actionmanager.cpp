@@ -77,6 +77,7 @@ void ActionManager::initDefaults() {
     actionManager->defaults.insert("F5", "reloadImage");
     actionManager->defaults.insert(InputMap::keyNameCtrl() + "+C", "copyFileClipboard");
     actionManager->defaults.insert(InputMap::keyNameCtrl() + "+" + InputMap::keyNameShift() + "+C", "copyPathClipboard");
+    actionManager->defaults.insert(InputMap::keyNameCtrl() + "+" + InputMap::keyNameAlt() + "+C", "copyImage");
     actionManager->defaults.insert("F2", "renameFile");
     actionManager->defaults.insert("RMB", "contextMenu");
     actionManager->defaults.insert("Menu", "contextMenu");

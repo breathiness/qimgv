@@ -77,6 +77,7 @@ public:
     void pdfPrevPage();
     int pdfCurrentPage();
     int pdfPageCount();
+    QImage pdfCurrentPageImage();
     explicit MW(QWidget *parent = nullptr);
     bool isCropPanelActive();
     void onScalingFinished(std::unique_ptr<QPixmap>scaled);

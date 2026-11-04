@@ -41,6 +41,9 @@ public:
     ImageFitMode imageFitMode() const;
     // the page in the middle of the view, rendered at the current zoom
     QImage currentPageImage();
+    // fullscreen uses the theme's fullscreen background, like the image viewer
+    void setFullscreenMode(bool mode);
+    void refreshColors();
 
     int pageCount() const;
     int currentPage() const;
@@ -89,6 +92,7 @@ private:
     int mGap = 12;
     int mMargin = 8;
     int mLastPage = -1;
+    bool mFullscreen = false;
     // the first frame after opening starts at the first page
     bool mResetScrollOnNextPaint = false;
     // pages that were asked for but not delivered yet

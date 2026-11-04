@@ -75,6 +75,7 @@ PdfView::PdfView(QWidget *parent)
     viewport()->setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
     setBackgroundRole(QPalette::Dark);
+    refreshColors();
 }
 
 PdfView::~PdfView() {
@@ -84,6 +85,28 @@ PdfView::~PdfView() {
         delete mWorker;
         mWorker = nullptr;
     }
+}
+
+void PdfView::refreshColors() {
+    // same background as the image viewer, so switching between a picture and a
+    // document does not change the look of the window
+    QColor background = mFullscreen ? settings->colorScheme().background_fullscreen
+                                    : settings->colorScheme().background;
+    background.setAlphaF(1.0);
+    QPalette pal = palette();
+    pal.setColor(QPalette::Dark, background);
+    pal.setColor(QPalette::Window, background);
+    pal.setColor(QPalette::Text, settings->colorScheme().text);
+    setPalette(pal);
+    viewport()->setAutoFillBackground(true);
+    viewport()->update();
+}
+
+void PdfView::setFullscreenMode(bool mode) {
+    if(mFullscreen == mode)
+        return;
+    mFullscreen = mode;
+    refreshColors();
 }
 
 void PdfView::setModel(std::shared_ptr<PdfPageModel> model) {
@@ -317,7 +340,7 @@ void PdfView::requestVisiblePages() {
 
 void PdfView::paintEvent(QPaintEvent *event) {
     QPainter painter(viewport());
-    painter.fillRect(event->rect(), palette().brush(QPalette::Dark));
+    painter.fillRect(event->rect(), palette().color(QPalette::Dark));
 
     if(!mModel || mModel->pageCount() <= 0) {
         painter.setPen(palette().color(QPalette::Text));

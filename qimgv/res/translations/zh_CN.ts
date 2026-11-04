@@ -200,9 +200,19 @@
         <translation>文件已拷贝</translation>
     </message>
     <message>
-        <location filename="../../core.cpp" line="471" />
+        <location filename="../../core.cpp" line="485" />
         <source>Path copied</source>
         <translation>目录已拷贝</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="487" />
+        <source>Nothing to copy</source>
+        <translation>没有可复制的内容</translation>
+    </message>
+    <message>
+        <location filename="../../core.cpp" line="492" />
+        <source>Image copied to clipboard</source>
+        <translation>图像已复制到剪贴板</translation>
     </message>
     <message>
         <location filename="../../core.cpp" line="645" />
@@ -2945,6 +2955,10 @@ li.checked::marker { content: "\2612"; }
     </message>
     <message>
         <location filename="../../utils/actions.cpp" line="0" />
+        <source>Copy image</source>
+        <translation>复制图像</translation>
+    </message>
+    <message>
         <source>Next PDF page</source>
         <translation>下一页 PDF</translation>
     </message>

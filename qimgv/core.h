@@ -168,6 +168,8 @@ private slots:
     void reloadImage();
     void reloadImage(QString fileName);
     void copyFileClipboard();
+    // puts the picture on screen on the clipboard; a pdf contributes its page
+    void copyImageToClipboard();
     void copyPathClipboard();
     void openFromClipboard();
     void renameCurrentSelection(QString newName);

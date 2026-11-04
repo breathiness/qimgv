@@ -105,6 +105,7 @@ signals:
     void pdfPrevPage();
     void reloadImage();
     void copyFileClipboard();
+    void copyImage();
     void copyPathClipboard();
     void renameFile();
     void contextMenu();

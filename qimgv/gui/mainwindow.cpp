@@ -1308,6 +1308,10 @@ int MW::pdfCurrentPage() {
     return viewerWidget ? viewerWidget->pdfCurrentPage() : 0;
 }
 
+QImage MW::pdfCurrentPageImage() {
+    return viewerWidget ? viewerWidget->pdfCurrentPageImage() : QImage();
+}
+
 int MW::pdfPageCount() {
     return viewerWidget->pdfPageCount();
 }

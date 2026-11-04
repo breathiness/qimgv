@@ -74,6 +74,7 @@ void Actions::init() {
     mActions.insert("copySelection", QVersionNumber(1,0,4));
     mActions.insert("cutSelection", QVersionNumber(1,0,4));
     mActions.insert("pasteSelection", QVersionNumber(1,0,4));
+    mActions.insert("copyImage", QVersionNumber(1,0,5));
     mActions.insert("pdfNextPage", QVersionNumber(1,0,4));
     mActions.insert("pdfPrevPage", QVersionNumber(1,0,4));
     mActions.insert("toggleTransparencyGrid", QVersionNumber(0,7,82));
@@ -137,6 +138,7 @@ QString Actions::displayName(const QString &action) const {
         {"openSettings", QT_TR_NOOP("Open settings")},
         {"pasteFile", QT_TR_NOOP("Open from clipboard")},
         {"pasteSelection", QT_TR_NOOP("Paste selection")},
+        {"copyImage", QT_TR_NOOP("Copy image")},
         {"pdfNextPage", QT_TR_NOOP("Next PDF page")},
         {"pdfPrevPage", QT_TR_NOOP("Previous PDF page")},
         {"pauseVideo", QT_TR_NOOP("Pause video")},

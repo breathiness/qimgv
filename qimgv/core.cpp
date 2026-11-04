@@ -111,6 +111,7 @@ void Core::connectComponents() {
     connect(mw, &MW::moveUrlsRequested,     this, &Core::movePathsTo);
     connect(mw, &MW::dissolveFolderRequested, this, &Core::dissolveSelectedFolder);
     connect(actionManager, &ActionManager::copySelection,  this, &Core::copySelection);
+    connect(actionManager, &ActionManager::copyImage,      this, &Core::copyImageToClipboard);
     connect(actionManager, &ActionManager::cutSelection,   this, &Core::cutSelection);
     connect(actionManager, &ActionManager::pasteSelection, this, &Core::pasteSelection);
     connect(actionManager, &ActionManager::pdfNextPage, this, &Core::pdfNextPage);
@@ -480,6 +481,24 @@ void Core::copyFileClipboard() {
 
     QApplication::clipboard()->setMimeData(mimeData);
     mw->showMessage(tr("File copied"));
+}
+
+void Core::copyImageToClipboard() {
+    QImage image;
+    if(mw->isPdfView()) {
+        // a pdf page is not a file image, so the view renders the one on screen
+        image = mw->pdfCurrentPageImage();
+    } else if(state.currentImg) {
+        const std::shared_ptr<const QImage> current = state.currentImg->getImage();
+        if(current)
+            image = *current;
+    }
+    if(image.isNull()) {
+        mw->showMessage(tr("Nothing to copy"));
+        return;
+    }
+    QApplication::clipboard()->setImage(image);
+    mw->showMessage(tr("Image copied to clipboard"));
 }
 
 void Core::copyPathClipboard() {

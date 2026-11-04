@@ -649,6 +649,8 @@ void ViewerWidget::showContextMenu(QPoint pos) {
 
 void ViewerWidget::onFullscreenModeChanged(bool mode) {
     imageViewer->onFullscreenModeChanged(mode);
+    if(pdfView)
+        pdfView->setFullscreenMode(mode);
     mIsFullscreen = mode;
 }
 
