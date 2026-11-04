@@ -2,6 +2,8 @@
 
 #include "gui/customwidgets/overlaywidget.h"
 #include "gui/customwidgets/entryinfoitem.h"
+#include "gui/customwidgets/sectioninfoitem.h"
+#include "utils/imageinfo.h"
 #include <QWheelEvent>
 
 namespace Ui {
@@ -15,7 +17,8 @@ class ImageInfoOverlay : public OverlayWidget
 public:
     explicit ImageInfoOverlay(FloatingWidgetContainer *parent = nullptr);
     ~ImageInfoOverlay();
-    void setExifInfo(QMap<QString, QString>);
+    // Entries arrive grouped: each section gets a heading before its rows.
+    void setInfo(const QList<ImageInfoSection> &info);
 
 public slots:
     void show();
@@ -23,7 +26,8 @@ public slots:
 protected:
     void wheelEvent(QWheelEvent *event);
 private:
+    void clearItems();
     Ui::ImageInfoOverlay *ui;
-    QList<EntryInfoItem*> entries;
+    QList<QWidget *> items;
     QLabel entryStub;
 };

@@ -1831,7 +1831,21 @@ void Core::guiSetImage(std::shared_ptr<Image> img) {
         mw->showVideo(video->filePath());
     }
     img->isEdited() ? mw->showSaveOverlay() : mw->hideSaveOverlay();
-    mw->setExifInfo(img->getExifTags());
+    {
+        // the decoded pixels say more than the file does (depth, colour space,
+        // dpi); a pdf or a video has none of that
+        // getPreviewImage when the file only has a preview so far: asking for the
+        // full image here would undo the fast preview while flipping through a
+        // folder, and the preview already carries the facts worth showing.
+        std::shared_ptr<const QImage> decoded;
+        if(auto *staticImage = dynamic_cast<ImageStatic *>(img.get()))
+            decoded = staticImage->getPreviewImage();
+        else
+            decoded = img->getImage();
+        const QImage *image = (decoded && !decoded->isNull()) ? decoded.get() : nullptr;
+        mw->setImageInfo(gatherImageInfo(img->filePath(), image ? *image : QImage(),
+                                         img->getExifTags()));
+    }
 }
 
 void Core::updateInfoString() {

@@ -2968,4 +2968,273 @@ li.checked::marker { content: "\2612"; }
         <translation>上一页 PDF</translation>
     </message>
 </context>
+    <context>
+        <name>ImageInfo</name>
+        <message>
+            <source>File</source>
+            <translation>文件</translation>
+        </message>
+        <message>
+            <source>Image</source>
+            <translation>图像</translation>
+        </message>
+        <message>
+            <source>Embedded text</source>
+            <translation>内嵌文本</translation>
+        </message>
+        <message>
+            <source>Camera</source>
+            <translation>拍摄信息</translation>
+        </message>
+        <message>
+            <source>Name</source>
+            <translation>名称</translation>
+        </message>
+        <message>
+            <source>Folder</source>
+            <translation>所在位置</translation>
+        </message>
+        <message>
+            <source>Size</source>
+            <translation>大小</translation>
+        </message>
+        <message>
+            <source>Modified</source>
+            <translation>修改时间</translation>
+        </message>
+        <message>
+            <source>Created</source>
+            <translation>创建时间</translation>
+        </message>
+        <message>
+            <source>Dimensions</source>
+            <translation>尺寸</translation>
+        </message>
+        <message>
+            <source>Megapixels</source>
+            <translation>像素数</translation>
+        </message>
+        <message>
+            <source>Aspect ratio</source>
+            <translation>宽高比</translation>
+        </message>
+        <message>
+            <source>Format</source>
+            <translation>格式</translation>
+        </message>
+        <message>
+            <source>Pixels</source>
+            <translation>像素</translation>
+        </message>
+        <message>
+            <source>Alpha</source>
+            <translation>透明通道</translation>
+        </message>
+        <message>
+            <source>Colour space</source>
+            <translation>色彩空间</translation>
+        </message>
+        <message>
+            <source>Resolution</source>
+            <translation>分辨率</translation>
+        </message>
+        <message>
+            <source>Frames</source>
+            <translation>帧数</translation>
+        </message>
+        <message>
+            <source>animated</source>
+            <translation>动画</translation>
+        </message>
+        <message>
+            <source>not set</source>
+            <translation>未设置</translation>
+        </message>
+        <message>
+            <source>unknown</source>
+            <translation>未知</translation>
+        </message>
+        <message>
+            <source>yes</source>
+            <translation>是</translation>
+        </message>
+        <message>
+            <source>%1-colour palette</source>
+            <translation>%1 色调色板</translation>
+        </message>
+        <message>
+            <source>1-bit monochrome</source>
+            <translation>1 位单色</translation>
+        </message>
+        <message>
+            <source>8-bit alpha only</source>
+            <translation>仅 8 位透明通道</translation>
+        </message>
+        <message>
+            <source>8-bit grayscale</source>
+            <translation>8 位灰度</translation>
+        </message>
+        <message>
+            <source>16-bit grayscale</source>
+            <translation>16 位灰度</translation>
+        </message>
+        <message>
+            <source>16-bit RGB</source>
+            <translation>16 位 RGB</translation>
+        </message>
+        <message>
+            <source>16-bit per channel</source>
+            <translation>每通道 16 位</translation>
+        </message>
+        <message>
+            <source>24-bit RGB</source>
+            <translation>24 位 RGB</translation>
+        </message>
+        <message>
+            <source>24-bit RGB, no padding</source>
+            <translation>24 位 RGB（无填充）</translation>
+        </message>
+        <message>
+            <source>32-bit RGBA</source>
+            <translation>32 位 RGBA</translation>
+        </message>
+    </context>
+    <context>
+        <name>ImageInfoOverlay</name>
+        <message>
+            <source>&lt;no metadata found&gt;</source>
+            <translation>&lt;未找到元数据&gt;</translation>
+        </message>
+    </context>
+    <context>
+        <name>ExifReader</name>
+        <message>
+            <source>sec</source>
+            <translation>秒</translation>
+        </message>
+        <message>
+            <source>Pattern</source>
+            <translation>评价测光</translation>
+        </message>
+        <message>
+            <source>Center-weighted average</source>
+            <translation>中央重点平均测光</translation>
+        </message>
+        <message>
+            <source>Spot</source>
+            <translation>点测光</translation>
+        </message>
+        <message>
+            <source>Multi-spot</source>
+            <translation>多点测光</translation>
+        </message>
+        <message>
+            <source>Average</source>
+            <translation>平均测光</translation>
+        </message>
+        <message>
+            <source>Partial</source>
+            <translation>局部测光</translation>
+        </message>
+        <message>
+            <source>Auto white balance</source>
+            <translation>自动白平衡</translation>
+        </message>
+        <message>
+            <source>Manual white balance</source>
+            <translation>手动白平衡</translation>
+        </message>
+        <message>
+            <source>Flash did not fire</source>
+            <translation>未闪光</translation>
+        </message>
+        <message>
+            <source>Flash fired</source>
+            <translation>已闪光</translation>
+        </message>
+        <message>
+            <source>Flash fired, auto mode</source>
+            <translation>自动闪光</translation>
+        </message>
+        <message>
+            <source>Make</source>
+            <translation>相机厂商</translation>
+        </message>
+        <message>
+            <source>Model</source>
+            <translation>机型</translation>
+        </message>
+        <message>
+            <source>Lens</source>
+            <translation>镜头</translation>
+        </message>
+        <message>
+            <source>Software</source>
+            <translation>软件</translation>
+        </message>
+        <message>
+            <source>Taken</source>
+            <translation>拍摄时间</translation>
+        </message>
+        <message>
+            <source>Exposure</source>
+            <translation>快门</translation>
+        </message>
+        <message>
+            <source>Aperture</source>
+            <translation>光圈</translation>
+        </message>
+        <message>
+            <source>ISO</source>
+            <translation>ISO</translation>
+        </message>
+        <message>
+            <source>Exposure bias</source>
+            <translation>曝光补偿</translation>
+        </message>
+        <message>
+            <source>Metering</source>
+            <translation>测光模式</translation>
+        </message>
+        <message>
+            <source>Flash</source>
+            <translation>闪光灯</translation>
+        </message>
+        <message>
+            <source>White balance</source>
+            <translation>白平衡</translation>
+        </message>
+        <message>
+            <source>Focal length</source>
+            <translation>焦距</translation>
+        </message>
+        <message>
+            <source>35mm equivalent</source>
+            <translation>35mm 等效</translation>
+        </message>
+        <message>
+            <source>Artist</source>
+            <translation>作者</translation>
+        </message>
+        <message>
+            <source>Copyright</source>
+            <translation>版权</translation>
+        </message>
+        <message>
+            <source>Description</source>
+            <translation>描述</translation>
+        </message>
+        <message>
+            <source>Location</source>
+            <translation>位置</translation>
+        </message>
+        <message>
+            <source>Altitude</source>
+            <translation>海拔</translation>
+        </message>
+        <message>
+            <source>%1 m</source>
+            <translation>%1 米</translation>
+        </message>
+    </context>
 </TS>

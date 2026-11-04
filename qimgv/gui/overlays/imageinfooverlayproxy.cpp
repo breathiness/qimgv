@@ -25,16 +25,16 @@ void ImageInfoOverlayProxy::init() {
     if(overlay)
         return;
     overlay = new ImageInfoOverlay(container);
-    overlay->setExifInfo(stateBuf.info);
+    overlay->setInfo(stateBuf.info);
 }
 
 bool ImageInfoOverlayProxy::isHidden() {
     return overlay ? overlay->isHidden() : true;
 }
 
-void ImageInfoOverlayProxy::setExifInfo(QMap<QString, QString> _info) {
+void ImageInfoOverlayProxy::setInfo(const QList<ImageInfoSection> &_info) {
     if(overlay)
-        overlay->setExifInfo(_info);
+        overlay->setInfo(_info);
     else
         stateBuf.info = _info;
 }

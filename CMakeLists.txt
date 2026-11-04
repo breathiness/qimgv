@@ -65,6 +65,17 @@ if(EXIV2)
     pkg_check_modules(Exiv2 REQUIRED IMPORTED_TARGET exiv2)
 endif()
 
+# exif tags without exiv2: libexif is available on more toolchains and is enough
+# for the tags a photo browser shows
+option(LIBEXIF "Read exif tags through libexif when exiv2 is unavailable" ON)
+if(LIBEXIF AND NOT EXIV2)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(LibExif IMPORTED_TARGET libexif)
+    if(NOT LibExif_FOUND)
+        message(STATUS "libexif not found: the info panel will show no camera tags")
+    endif()
+endif()
+
 if(KDE_SUPPORT)
     find_package(KF6WindowSystem REQUIRED)
 endif()

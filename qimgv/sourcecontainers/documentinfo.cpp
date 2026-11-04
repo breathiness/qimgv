@@ -1,5 +1,7 @@
 #include "documentinfo.h"
 
+#include "utils/exifreader.h"
+
 DocumentInfo::DocumentInfo(QString path)
     : mDocumentType(DocumentType::NONE),
       mOrientation(0),
@@ -217,6 +219,10 @@ void DocumentInfo::loadExifTags() {
         return;
     exifLoaded = true;
     exifTags.clear();
+#ifdef USE_LIBEXIF
+    // libexif is the fallback when the build has no exiv2
+    exifTags = readExifTags(fileInfo.filePath());
+#endif
 #ifdef USE_EXIV2
     try {
         std::unique_ptr<Exiv2::Image> image;

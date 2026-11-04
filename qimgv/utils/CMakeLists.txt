@@ -5,6 +5,8 @@ target_sources(qimgv PRIVATE
     cmdoptionsrunner.cpp
     imagefactory.cpp
     imagelib.cpp
+    imageinfo.cpp
+    exifreader.cpp
     inputmap.cpp
     randomizer.cpp
     script.cpp

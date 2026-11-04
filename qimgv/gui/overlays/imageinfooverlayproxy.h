@@ -3,7 +3,7 @@
 #include "gui/overlays/imageinfooverlay.h"
 
 struct ImageInfoOverlayStateBuffer {
-    QMap<QString, QString> info;
+    QList<ImageInfoSection> info;
 };
 
 class ImageInfoOverlayProxy {
@@ -14,7 +14,7 @@ public:
     void show();
     void hide();
 
-    void setExifInfo(QMap<QString, QString> info);
+    void setInfo(const QList<ImageInfoSection> &info);
     bool isHidden();
 private:
     FloatingWidgetContainer *container;

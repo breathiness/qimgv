@@ -15,6 +15,8 @@ target_sources(qimgv PRIVATE
     customwidgets/floatingwidgetcontainer.cpp
     customwidgets/floatingnavbar.cpp
     customwidgets/grouppanel.cpp
+    customwidgets/sectioninfoitem.cpp
+    customwidgets/sectioninfoitem.h
     customwidgets/iconbutton.cpp
     customwidgets/iconwidget.cpp
     customwidgets/keysequenceedit.cpp
