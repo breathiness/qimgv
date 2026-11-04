@@ -213,5 +213,8 @@
         <file>res/icons/lucide/bookmark-plus.svg</file>
         <file>res/icons/lucide/ungroup.svg</file>
         <file>res/icons/lucide/clipboard-paste.svg</file>
+        <file>res/icons/lucide/square-code.svg</file>
+        <file>res/icons/lucide/scaling.svg</file>
+        <file>res/icons/lucide/aperture.svg</file>
     </qresource>
 </RCC>

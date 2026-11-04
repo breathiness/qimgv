@@ -38,6 +38,7 @@
 
 class QHBoxLayout;
 class QPushButton;
+class QMenu;
 
 class FloatingNavBar : public QWidget {
     Q_OBJECT
@@ -92,6 +93,8 @@ public:
     // image viewer, so the button icon follows the mode that is really active
     // instead of remembering the last one it set itself.
     void setFitModeProvider(std::function<ImageFitMode()> provider);
+    // a paged document has no "stretch to window"; its cycle is shorter
+    void setPdfProvider(std::function<bool()> provider);
     // A video has no zoom of its own: the picture is either scaled to the widget
     // or shown at its own size, so the button cycles just those two states there.
     void setVideoStateProvider(std::function<bool()> isVideo,
@@ -157,6 +160,7 @@ private:
     // the one of them that is active now
     QString activeFitAction() const;
     bool showingVideo() const;
+    bool showingPdf() const;
     // runs one of fitCycleActions() and refreshes the button afterwards
     void applyFitAction(const QString &action);
     void advanceFitMode();
@@ -195,7 +199,12 @@ private:
     QPushButton *wheelButton;
     // true while the fit mode menu is on screen (it runs its own event loop)
     bool mMenuOpen;
+    // One menu per cycle button, reused. Building a fresh QMenu for every
+    // right-click churned the widget style's bookkeeping enough to crash it.
+    QMenu *fitMenu = nullptr;
+    QMenu *wheelMenu = nullptr;
     std::function<ImageFitMode()> mFitModeProvider;
+    std::function<bool()> mPdfProvider;
     std::function<bool()> mVideoProvider;
     std::function<bool()> mVideoScaledProvider;
 };

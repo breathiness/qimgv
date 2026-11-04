@@ -97,6 +97,17 @@ const QMap<QString, QString> &actionThemeIcons() {
     return icons;
 }
 
+// Actions whose icon comes from the vector set that ships here, whatever the UI
+// style is. The fit modes are drawn this way so they match each other.
+const QMap<QString, QString> &actionVectorIcons() {
+    static const QMap<QString, QString> icons = {
+        {"fitWidth",         "fit/width"},
+        {"fitWindowStretch", "fit/stretch"},
+        {"fitNormal",        "fit/original"},
+    };
+    return icons;
+}
+
 // action name -> icon resource. Anything not listed falls back to a text button
 // showing the shortcut itself.
 const QMap<QString, QString> &actionIcons() {
@@ -411,8 +422,9 @@ bool FloatingNavBar::isFitCycle(const QString &shortcut) {
 }
 
 QStringList FloatingNavBar::fitCycleActions() {
-    return {QStringLiteral("fitWindow"), QStringLiteral("fitWidth"),
-            QStringLiteral("fitNormal"), QStringLiteral("fitWindowStretch")};
+    // "fit window" is how a file opens, not a step in the cycle
+    return {QStringLiteral("fitWidth"), QStringLiteral("fitNormal"),
+            QStringLiteral("fitWindowStretch")};
 }
 
 QString FloatingNavBar::fitActionForMode(ImageFitMode mode) {
@@ -465,7 +477,20 @@ bool FloatingNavBar::showingVideo() const {
 QStringList FloatingNavBar::activeFitActions() const {
     if(showingVideo())
         return {QStringLiteral("fitWindow"), QStringLiteral("fitNormal")};
+    // A document is a stack of pages: stretching it to the window makes no sense,
+    // and offering the action would leave the cycle stuck on a mode that does
+    // nothing when clicked.
+    if(showingPdf())
+        return {QStringLiteral("fitWidth"), QStringLiteral("fitNormal")};
     return fitCycleActions();
+}
+
+bool FloatingNavBar::showingPdf() const {
+    return mPdfProvider && mPdfProvider();
+}
+
+void FloatingNavBar::setPdfProvider(std::function<bool()> provider) {
+    mPdfProvider = std::move(provider);
 }
 
 QString FloatingNavBar::activeFitAction() const {
@@ -478,7 +503,13 @@ QString FloatingNavBar::activeFitAction() const {
 void FloatingNavBar::refreshFitCycleIcon() {
     if(!fitButton)
         return;
-    const QString action = activeFitAction();
+    QString action = activeFitAction();
+    // The mode on screen may be one the cycle no longer offers ("fit window" is how
+    // a file opens). Show what a click would apply instead of an icon that belongs
+    // to no step.
+    const QStringList cycle = activeFitActions();
+    if(!cycle.contains(action) && !cycle.isEmpty())
+        action = cycle.first();
     // the icon is the one the mode itself has: no per-mode configuration
     const QPixmap pixmap = iconForAction(action, QString(), 28);
     if(!pixmap.isNull()) {
@@ -515,19 +546,23 @@ void FloatingNavBar::showFitModeMenu(QPushButton *button) {
     if(!button || mMenuOpen)
         return;
     const QString current = activeFitAction();
-    QMenu menu(this);
+    if(!fitMenu) {
+        fitMenu = new QMenu(this);
+        fitMenu->setAttribute(Qt::WA_DeleteOnClose, false);
+    }
+    fitMenu->clear();
     for(const QString &action : activeFitActions()) {
         const bool active = (action == current);
-        QAction *entry = menu.addAction(QIcon(radioIndicator(active, 14)), fitActionName(action));
+        QAction *entry = fitMenu->addAction(QIcon(radioIndicator(active, 14)), fitActionName(action));
         // the dot already says which one is active; no check box on top of it
         connect(entry, &QAction::triggered, this, [this, action]() { applyFitAction(action); });
     }
     // above the button: the bar normally sits on the bottom edge, so a menu
     // dropped below the cursor would run off the screen
     const QPoint anchor = button->mapToGlobal(QPoint(button->width() / 2, 0));
-    const QSize hint = menu.sizeHint();
+    const QSize hint = fitMenu->sizeHint();
     mMenuOpen = true;
-    menu.exec(QPoint(qMax(0, anchor.x() - hint.width() / 2), anchor.y() - hint.height() - 4));
+    fitMenu->exec(QPoint(qMax(0, anchor.x() - hint.width() / 2), anchor.y() - hint.height() - 4));
     mMenuOpen = false;
 }
 
@@ -590,20 +625,24 @@ void FloatingNavBar::showWheelModeMenu(QPushButton *button) {
     if(!button || mMenuOpen)
         return;
     const WheelMode current = settings->wheelMode();
-    QMenu menu(this);
+    if(!wheelMenu) {
+        wheelMenu = new QMenu(this);
+        wheelMenu->setAttribute(Qt::WA_DeleteOnClose, false);
+    }
+    wheelMenu->clear();
     for(int i = 0; i <= 2; i++) {
         const WheelMode mode = static_cast<WheelMode>(i);
         const bool active = (mode == current);
-        QAction *entry = menu.addAction(QIcon(radioIndicator(active, 14)), wheelModeName(mode));
+        QAction *entry = wheelMenu->addAction(QIcon(radioIndicator(active, 14)), wheelModeName(mode));
         connect(entry, &QAction::triggered, this, [this, mode]() {
             settings->setWheelMode(mode);
             refreshWheelButton();
         });
     }
     const QPoint anchor = button->mapToGlobal(QPoint(button->width() / 2, 0));
-    const QSize hint = menu.sizeHint();
+    const QSize hint = wheelMenu->sizeHint();
     mMenuOpen = true;
-    menu.exec(QPoint(qMax(0, anchor.x() - hint.width() / 2), anchor.y() - hint.height() - 4));
+    wheelMenu->exec(QPoint(qMax(0, anchor.x() - hint.width() / 2), anchor.y() - hint.height() - 4));
     mMenuOpen = false;
 }
 
@@ -655,6 +694,16 @@ QPixmap FloatingNavBar::iconForAction(const QString &action, const QString &conf
     bool custom = !configured.isEmpty();
     const QString customPath = userThemed ? QString() : configured;
     QString iconPath = custom ? customPath : actionIcons().value(action);
+    if(!custom && !userThemed && actionVectorIcons().contains(action)) {
+        QPixmap vector = UiStyle::vectorIcon(actionVectorIcons().value(action))
+                             .pixmap(iconPx * 2, iconPx * 2);
+        if(!vector.isNull()) {
+            // the svgs are drawn in black: tint them like every other mask icon
+            vector = vector.scaled(iconPx, iconPx, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            ImageLib::recolor(vector, settings->colorScheme().icons);
+            return vector;
+        }
+    }
     bool themed = userThemed
                   || (!custom && UiStyle::useQlementine() && actionThemeIcons().contains(action));
     QPixmap pixmap;

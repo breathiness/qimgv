@@ -138,6 +138,7 @@ void MW::setupUi() {
     // the fit-mode button shows the mode the viewer is actually in, not the last
     // one the bar set itself
     navBar->setFitModeProvider([this]() { return viewerWidget->fitMode(); });
+    navBar->setPdfProvider([this]() { return viewerWidget && viewerWidget->isPdf(); });
     navBar->setVideoStateProvider([this]() { return viewerWidget->isVideo(); },
                                   [this]() { return viewerWidget->videoScaled(); });
     // add / remove / edit: the bar already rebuilt itself, just persist the list
