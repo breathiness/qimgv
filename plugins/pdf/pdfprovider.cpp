@@ -70,12 +70,15 @@ void qimgv_pdf_close(qimgv_pdf *document) {
 int qimgv_pdf_page_count(qimgv_pdf *document) {
     if(!document || !document->document)
         return 0;
-    // an encrypted document reports 0 pages until it is unlocked
+    // Poppler reads the page tree lazily and crashes on a locked document, so the
+    // count stays 0 until the password arrives.
+    if(document->document->isLocked())
+        return 0;
     return document->document->numPages();
 }
 
 int qimgv_pdf_page_size(qimgv_pdf *document, int page, double *widthPt, double *heightPt) {
-    if(!document || !document->document)
+    if(!document || !document->document || document->document->isLocked())
         return 1;
     std::unique_ptr<Poppler::Page> pdfPage(document->document->page(page));
     if(!pdfPage)
@@ -91,7 +94,9 @@ int qimgv_pdf_page_size(qimgv_pdf *document, int page, double *widthPt, double *
 int qimgv_pdf_is_encrypted(qimgv_pdf *document) {
     if(!document || !document->document)
         return 0;
-    return document->document->isEncrypted() ? 1 : 0;
+    // isEncrypted() says no for a document that was opened without its password;
+    // isLocked() is the one that tells us a password is still missing.
+    return (document->document->isEncrypted() || document->document->isLocked()) ? 1 : 0;
 }
 
 int qimgv_pdf_unlock(qimgv_pdf *document, const char *utf8Password) {
@@ -99,12 +104,17 @@ int qimgv_pdf_unlock(qimgv_pdf *document, const char *utf8Password) {
         return 1;
     const QByteArray password(utf8Password ? utf8Password : "");
     // Poppler wants both; the user password is what a document asks for
-    return document->document->unlock(password, password) ? 0 : 1;
+    document->document->unlock(password, password);
+    // Its return value lies - it reports false for a password that worked - so the
+    // lock state is what tells us whether to keep asking.
+    return document->document->isLocked() ? 1 : 0;
 }
 
 int qimgv_pdf_render(qimgv_pdf *document, int page, int width, int height, unsigned char *rgba) {
     if(!document || !document->document || !rgba || width <= 0 || height <= 0)
         return 1;
+    if(document->document->isLocked())
+        return 5;
     std::unique_ptr<Poppler::Page> pdfPage(document->document->page(page));
     if(!pdfPage)
         return 2;

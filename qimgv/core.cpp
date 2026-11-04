@@ -1070,8 +1070,13 @@ void Core::maybeAskPdfPassword(std::shared_ptr<Image> img) {
         if(password.isEmpty())
             return;   // cancelled
         if(pdfImage->unlockPdf(password)) {
-            mw->refreshImage(pdfImage->getPixmap());
-            updateInfoString();
+            // A pdf has no pixmap to refresh: hand the unlocked document back to
+            // the paged view so it picks up the page count it could not read
+            // before.
+            if(pdfImage->pdfModel() && mw->showPdf(pdfImage->pdfModel(), pdfImage->filePath()))
+                updateInfoString();
+            else
+                mw->refreshImage(pdfImage->getPixmap());
             return;
         }
         mw->showError(tr("Wrong password."));

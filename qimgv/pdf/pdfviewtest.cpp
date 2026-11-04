@@ -7,10 +7,20 @@
 #include "pdfpagemodel.h"
 #include "pdfview.h"
 
+#include "settings.h"
+
 #include <QApplication>
 #include <QImage>
 #include <QTextStream>
 #include <QTimer>
+
+// The view asks the application's settings for the window background. This tool is
+// not the application, so the pointer stays null and the view falls back to its
+// palette.
+Settings *settings = nullptr;
+static ColorScheme testColorScheme;
+ColorScheme::ColorScheme() : tid(0) {}
+const ColorScheme &Settings::colorScheme() { return testColorScheme; }
 
 int main(int argc, char **argv) {
     QApplication app(argc, argv);

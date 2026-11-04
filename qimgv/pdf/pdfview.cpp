@@ -90,13 +90,16 @@ PdfView::~PdfView() {
 void PdfView::refreshColors() {
     // same background as the image viewer, so switching between a picture and a
     // document does not change the look of the window
-    QColor background = mFullscreen ? settings->colorScheme().background_fullscreen
-                                    : settings->colorScheme().background;
+    QColor background = palette().color(QPalette::Window);
+    if(settings)   // the standalone test tool runs without the application's settings
+        background = mFullscreen ? settings->colorScheme().background_fullscreen
+                                 : settings->colorScheme().background;
     background.setAlphaF(1.0);
     QPalette pal = palette();
     pal.setColor(QPalette::Dark, background);
     pal.setColor(QPalette::Window, background);
-    pal.setColor(QPalette::Text, settings->colorScheme().text);
+    if(settings)
+        pal.setColor(QPalette::Text, settings->colorScheme().text);
     setPalette(pal);
     viewport()->setAutoFillBackground(true);
     viewport()->update();

@@ -19,6 +19,8 @@ bool PdfPageModel::open(const QString &path, QString *error) {
         return false;
     }
     mNeedsPassword = PdfProvider::instance().isEncrypted(mDocument.get());
+    if(mNeedsPassword)
+        return true;   // poppler reads a locked document's pages unsafely
     readPageSizes();
     if(mPageCount <= 0 && !mNeedsPassword) {
         if(error)
@@ -40,6 +42,10 @@ void PdfPageModel::close() {
 }
 
 void PdfPageModel::readPageSizes() {
+    // Poppler hands out a document whose page tree is empty until it is unlocked,
+    // and reading pages through it crashes: wait for the password.
+    if(mNeedsPassword)
+        return;
     mPageSizes.clear();
     mMaxPageSize = QSizeF();
     mPageCount = mDocument ? PdfProvider::instance().pageCount(mDocument.get()) : 0;
