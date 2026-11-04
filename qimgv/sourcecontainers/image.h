@@ -16,6 +16,8 @@ public:
     virtual std::unique_ptr<QPixmap> getPixmap() = 0;
     virtual std::shared_ptr<const QImage> getImage() = 0;
     DocumentType type() const;
+    // a pdf has no pixels of its own; the paged viewer draws it
+    bool isPdfFile() const;
     QString filePath() const;
     virtual int height() = 0;
     virtual int width() = 0;

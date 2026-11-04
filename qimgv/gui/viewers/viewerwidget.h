@@ -4,6 +4,7 @@
 #include <QVBoxLayout>
 #include "gui/viewers/imageviewerv2.h"
 #include "gui/viewers/videoplayerinitproxy.h"
+#include "pdf/pdfview.h"
 #include "gui/overlays/videocontrolsproxy.h"
 #include "gui/overlays/zoomindicatoroverlayproxy.h"
 #include "gui/overlays/clickzoneoverlay.h"
@@ -12,6 +13,7 @@
 enum CurrentWidget {
     IMAGEVIEWER,
     VIDEOPLAYER,
+    PDFVIEW,
     UNSET
 };
 
@@ -19,10 +21,17 @@ class ViewerWidget : public FloatingWidgetContainer
 {
     Q_OBJECT
 public:
-    // what fit-window should size itself by (one pdf page in a strip)
+    // what fit-window should size itself by, when the whole image is not the unit
     void setFitUnitSize(const QSize &size);
-    // explicit scroll, used by the pdf strip
+    // explicit scroll, used when a page step moves the pdf view
     void scrollBy(int dx, int dy);
+    // paged documents (pdf) get their own viewer, which renders on demand
+    bool showPdf(std::shared_ptr<PdfPageModel> model);
+    bool isPdf() const { return currentWidget == PDFVIEW; }
+    void pdfNextPage();
+    void pdfPrevPage();
+    int pdfCurrentPage() const;
+    int pdfPageCount() const;
     explicit ViewerWidget(QWidget *parent = nullptr);
     QRect imageRect();
     float currentScale();
@@ -49,14 +58,17 @@ public:
 private:
     QVBoxLayout layout;
     std::unique_ptr<ImageViewerV2> imageViewer;
+    std::unique_ptr<PdfView> pdfView;
     std::unique_ptr<VideoPlayerInitProxy> videoPlayer;
     std::unique_ptr<ContextMenu> contextMenu;
     VideoControlsProxyWrapper *videoControls;
     ZoomIndicatorOverlayProxy *zoomIndicator;
     ClickZoneOverlay *clickZoneOverlay;
 
+    void connectPdfSignals();
     void enableImageViewer();
     void enableVideoPlayer();
+    void enablePdfView();
 
     CurrentWidget currentWidget;
     // what setVideoUnscaled() was last given; the video player has no getter
@@ -68,6 +80,7 @@ private:
 
     void disableImageViewer();
     void disableVideoPlayer();
+    void disablePdfView();
 
     QRect videoControlsArea();
 
@@ -99,6 +112,7 @@ signals:
     void setFilterBilinear();
     void setScalingFilter(ScalingFilter filter);
     void playbackFinished();
+    void currentPageChanged();
     void toggleLockZoom();
     void toggleLockView();
     void showScriptSettings();

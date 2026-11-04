@@ -27,6 +27,10 @@ bool Image::isLoaded() const {
     return mLoaded;
 }
 
+bool Image::isPdfFile() const {
+    return mDocInfo && mDocInfo->isPdf();
+}
+
 DocumentType Image::type() const {
     return mDocInfo->type();
 }

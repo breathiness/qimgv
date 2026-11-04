@@ -6,6 +6,7 @@
  */
 
 #include "core.h"
+
 #include "utils/pdfprovider.h"
 
 #ifdef __WIN32
@@ -113,6 +114,8 @@ void Core::connectComponents() {
     connect(actionManager, &ActionManager::cutSelection,   this, &Core::cutSelection);
     connect(actionManager, &ActionManager::pasteSelection, this, &Core::pasteSelection);
     connect(actionManager, &ActionManager::pdfNextPage, this, &Core::pdfNextPage);
+    // scrolling to another page of a document updates the title
+    connect(mw, &MW::pdfPageChanged, this, &Core::updateInfoString);
     connect(actionManager, &ActionManager::pdfPrevPage, this, &Core::pdfPrevPage);
     connect(mw, &MW::cropRequested,         this, &Core::crop);
     connect(mw, &MW::cropAndSaveRequested,  this, &Core::cropAndSave);
@@ -1030,17 +1033,12 @@ void Core::pasteSelection() {
         mw->showError(tr("Some items could not be pasted."));
 }
 
-// Changes the page of the pdf on screen. The pixmap is replaced in place so zoom
-// and scroll survive the switch; the detailed pass follows on the next zoom.
+// Moves one page in the paged pdf view.
 void Core::changePdfPage(int delta) {
-    if(!state.currentImg)
-        return;
-    auto *img = dynamic_cast<ImageStatic *>(state.currentImg.get());
-    if(!img || !img->pdfIsStrip())
-        return;
-    // the pages are one tall image now, so a "page" step is a scroll of one page
-    if(img->pdfPageHeight() > 0)
-        mw->scrollBy(delta * img->pdfPageHeight());
+    if(delta > 0)
+        mw->pdfNextPage();
+    else if(delta < 0)
+        mw->pdfPrevPage();
 }
 
 void Core::maybeAskPdfPassword(std::shared_ptr<Image> img) {
@@ -1794,15 +1792,15 @@ void Core::guiSetImage(std::shared_ptr<Image> img) {
     }
     DocumentType type = img->type();
     if(type == STATIC) {
-        // a pdf strip is one image of many pages: fit-window should fit one page
+        // a pdf has no pixmap: the paged viewer draws the pages itself
         if(auto *staticImage = dynamic_cast<ImageStatic *>(img.get())) {
-            if(staticImage->pdfIsStrip() && staticImage->pdfPageHeight() > 0)
-                mw->setFitUnitSize(QSize(img->size().width(), staticImage->pdfPageHeight()));
-            else
-                mw->setFitUnitSize(QSize());
-        } else {
-            mw->setFitUnitSize(QSize());
+            if(staticImage->pdfModel()
+               && mw->showPdf(staticImage->pdfModel(), img->filePath())) {
+                updateInfoString();
+                return;
+            }
         }
+        mw->setFitUnitSize(QSize());
         mw->showImage(img->getPixmap(), img->size());
     } else if(type == ANIMATED) {
         auto animated = dynamic_cast<ImageAnimated *>(img.get());
@@ -1842,13 +1840,10 @@ void Core::updateInfoString() {
         infoImg = model->getImage(state.currentFilePath);
     else if(state.currentImg && state.currentImg->filePath() == state.currentFilePath)
         infoImg = state.currentImg;
-    if(auto *staticImage = dynamic_cast<ImageStatic *>(infoImg.get())) {
-        // the strip already shows the whole document, so a "page x/y" label would
-        // only be in the way
-        if(!staticImage->pdfIsStrip() && staticImage->pdfPageCount() > 1) {
-            pdfPage = staticImage->pdfPage();
-            pdfPageCount = staticImage->pdfPageCount();
-        }
+    if(infoImg && infoImg->isPdfFile()) {
+        // the paged viewer knows which page it is on
+        pdfPage = mw->pdfCurrentPage();
+        pdfPageCount = mw->pdfPageCount();
     }
     mw->setCurrentInfo(index,
                        model->fileCount(),

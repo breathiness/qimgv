@@ -23,6 +23,7 @@ class PdfView : public QAbstractScrollArea {
 public:
     enum class FitMode { None, Page, Width };
 
+
     explicit PdfView(QWidget *parent = nullptr);
     ~PdfView() override;
 
@@ -43,6 +44,16 @@ public:
 
     // vertical offset of a page inside the document, in device pixels
     int pageTop(int page) const;
+
+public slots:
+    // the same vocabulary the image viewer uses, so the actions bind to either
+    void setFitWindow() { fitPage(); }
+    void setFitWidth() { fitWidth(); }
+    void setFitOriginal() { setZoom(1.0); }
+    void zoomIn() { setZoom(mZoom * 1.15); }
+    void zoomOut() { setZoom(mZoom / 1.15); }
+    void scrollUp();
+    void scrollDown();
 
 signals:
     void zoomChanged(qreal zoom);
@@ -72,6 +83,9 @@ private:
     int mGap = 12;
     int mMargin = 8;
     int mLastPage = -1;
+    // a freshly opened document starts at its first page, whatever fit runs first
+    bool mJustOpened = false;
+    bool mResetScrollOnNextPaint = false;
     // pages that were asked for but not delivered yet
     QList<int> mPending;
 };

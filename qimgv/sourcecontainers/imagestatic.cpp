@@ -1,6 +1,6 @@
 #include "imagestatic.h"
 #include "cad/caddrawing.h"
-#include "utils/pdfprovider.h"
+#include "pdf/pdfpagemodel.h"
 #include <QElapsedTimer>
 #include <time.h>
 
@@ -197,123 +197,38 @@ std::shared_ptr<const QImage> ImageStatic::renderCad(bool detailed, QSize *detai
     return std::make_shared<const QImage>(rendered);
 }
 
-// A pdf is drawn as one tall image: the pages follow each other top to bottom, so
-// scrolling reads the document instead of paging through it. The width and the
-// number of pages are chosen so the image stays inside the memory budget - a 350
-// page book cannot be a single bitmap at a readable size, and the strip ends where
-// the budget does.
+// A pdf carries no pixels of its own: the pages are drawn by PdfView, which asks
+// this model for the ones on screen. Loading therefore only opens the document and
+// records how many pages there are, which is what makes a 351 page book open in the
+// same instant as a one page letter.
 void ImageStatic::loadPdf() {
+    mPdfModel = std::make_shared<PdfPageModel>();
     QString error;
-    mPdfDocument = PdfProvider::instance().open(mPath, &error);
-    if(!mPdfDocument) {
+    if(!mPdfModel->open(mPath, &error)) {
+        mPdfNeedsPassword = mPdfModel->isEncrypted();
+        mPdfModel.reset();
         mLoaded = true;
         return;
     }
-    mPdfPageCount = PdfProvider::instance().pageCount(mPdfDocument.get());
-    if(mPdfPageCount <= 0) {
-        mPdfNeedsPassword = PdfProvider::instance().isEncrypted(mPdfDocument.get());
-        mLoaded = true;
-        return;
-    }
-    mPdfPage = 0;
-
-    std::shared_ptr<const QImage> strip = renderPdfStrip();
-    if(!strip) {
-        mLoaded = true;
-        return;
-    }
-    {
-        QMutexLocker lock(&mImageLock);
-        image = strip;
-        mFullLoaded = true;
-    }
-    mSourceSize = strip->size();
+    mPdfNeedsPassword = mPdfModel->isEncrypted();
+    // a page is what this document shows, so that is the size worth reporting
+    const QSizeF pageSize = mPdfModel->maxPageSize();
+    mSourceSize = QSize(qRound(pageSize.width()), qRound(pageSize.height()));
     mLoaded = true;
 }
 
-std::shared_ptr<const QImage> ImageStatic::renderPdfStrip() {
-    if(!mPdfDocument || mPdfPageCount <= 0)
-        return nullptr;
-
-    // page geometry; pages of one document are usually identical
-    const QSizeF firstPage = PdfProvider::instance().pageSize(mPdfDocument.get(), 0);
-    if(firstPage.isEmpty())
-        return nullptr;
-    const double aspect = firstPage.height() / firstPage.width();
-
-    // 4 bytes per pixel, and never more than a quarter of the configured limit so a
-    // big book cannot push the viewer into swapping
-    const qint64 budgetBytes = qint64(settings->memoryAllocationLimit()) * 1024 * 1024 / 4;
-    const qint64 maxPixels = budgetBytes / 4;
-
-    int pages = mPdfPageCount;
-    int width = 1400;
-    // shrink the pages first (still readable), then cut the strip short
-    while(pages > 1) {
-        const qint64 totalPixels = qint64(width) * qint64(width * aspect) * pages;
-        if(totalPixels <= maxPixels)
-            break;
-        if(width > 700) {
-            width -= 100;
-            continue;
-        }
-        pages--;
-    }
-    pages = qMax(1, pages);
-    const int pageHeight = qMax(16, int(width * aspect));
-    const int totalHeight = pageHeight * pages;
-
-    QImage strip(width, totalHeight, QImage::Format_RGB32);
-    if(strip.isNull())
-        return nullptr;
-    strip.fill(Qt::white);
-
-    QPainter painter(&strip);
-    int y = 0;
-    int rendered = 0;
-    for(int page = 0; page < pages; page++) {
-        const QImage pageImage = PdfProvider::instance().renderPage(mPdfDocument.get(), page,
-                                                                   QSize(width, pageHeight));
-        if(pageImage.isNull())
-            break;
-        painter.drawImage(0, y, pageImage);
-        y += pageHeight;
-        rendered++;
-    }
-    painter.end();
-    mPdfPageHeight = pageHeight;
-    mPdfRenderedPages = rendered;
-    if(rendered == 0)
-        return nullptr;
-    if(rendered < pages) {
-        // drop the unused tail if a page failed to render
-        const QImage trimmed = strip.copy(0, 0, width, pageHeight * rendered);
-        return std::make_shared<const QImage>(trimmed);
-    }
-    return std::make_shared<const QImage>(strip);
+int ImageStatic::pdfPageCount() const {
+    return mPdfModel ? mPdfModel->pageCount() : 0;
 }
 
-// Unlocks a protected document and renders it. Called from the gui thread once the
-// password is known.
+// Unlocks a protected document. The view then re-reads the page list from the model.
 bool ImageStatic::unlockPdf(const QString &password) {
-    if(!mPdfDocument || !mPdfNeedsPassword)
+    if(!mPdfModel || !mPdfNeedsPassword)
         return false;
-    if(!PdfProvider::instance().unlock(mPdfDocument.get(), password))
+    if(!mPdfModel->unlock(password))
         return false;
-    mPdfPageCount = PdfProvider::instance().pageCount(mPdfDocument.get());
-    if(mPdfPageCount <= 0)
-        return false;
-    std::shared_ptr<const QImage> strip = renderPdfStrip();
-    if(!strip)
-        return false;
-    {
-        QMutexLocker lock(&mImageLock);
-        image = strip;
-        mFullLoaded = true;
-    }
-    mSourceSize = strip->size();
     mPdfNeedsPassword = false;
-    return true;
+    return mPdfModel->pageCount() > 0;
 }
 
 void ImageStatic::loadGeneric() {

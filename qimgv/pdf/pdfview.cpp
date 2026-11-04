@@ -3,6 +3,7 @@
 #include "pdfpagemodel.h"
 
 #include <QPainter>
+#include <QTimer>
 #include <QPaintEvent>
 #include <QScrollBar>
 #include <QWheelEvent>
@@ -102,8 +103,23 @@ void PdfView::setModel(std::shared_ptr<PdfPageModel> model) {
                     applyPendingImage(page, image, target);
                 });
         mWorker->start();
+        mJustOpened = true;
+        mResetScrollOnNextPaint = true;
         fitPage();
         verticalScrollBar()->setValue(0);
+        // the widget may not have its final size yet; fit again once it does
+        QTimer::singleShot(0, this, [this] {
+            if(mFitMode == FitMode::Page)
+                fitPage();
+            else if(mFitMode == FitMode::Width)
+                fitWidth();
+            verticalScrollBar()->setValue(0);
+        });
+        // the window applies its own fit mode shortly after; keep the promise that
+        // a freshly opened document shows its first page until it settles
+        QTimer::singleShot(600, this, [this] {
+            mJustOpened = false;
+        });
     }
     updateScrollBars();
     viewport()->update();
@@ -197,6 +213,8 @@ void PdfView::fitPage() {
     const qreal fitY = (viewport()->height() - mMargin * 2) / size.height();
     mZoom = qBound(qreal(0.1), qMin(fitX, fitY), qreal(8.0));
     mFitMode = FitMode::Page;
+    if(mJustOpened)
+        verticalScrollBar()->setValue(0);
     mPending.clear();
     updateScrollBars();
     emit zoomChanged(mZoom);
@@ -212,6 +230,8 @@ void PdfView::fitWidth() {
         return;
     mZoom = qBound(qreal(0.1), (viewport()->width() - mMargin * 2) / size.width(), qreal(8.0));
     mFitMode = FitMode::Width;
+    if(mJustOpened)
+        verticalScrollBar()->setValue(0);
     mPending.clear();
     updateScrollBars();
     emit zoomChanged(mZoom);
@@ -298,6 +318,11 @@ void PdfView::paintEvent(QPaintEvent *event) {
         return;
     }
 
+    if(mResetScrollOnNextPaint) {
+        mResetScrollOnNextPaint = false;
+        verticalScrollBar()->setValue(0);
+        horizontalScrollBar()->setValue(0);
+    }
     const int dx = horizontalScrollBar()->value();
     const int dy = verticalScrollBar()->value();
     const QRect viewRect = event->rect();
@@ -340,6 +365,14 @@ void PdfView::scrollContentsBy(int dx, int dy) {
         emit currentPageChanged(page);
     }
     requestVisiblePages();
+}
+
+void PdfView::scrollUp() {
+    verticalScrollBar()->setValue(verticalScrollBar()->value() - viewport()->height() * 4 / 5);
+}
+
+void PdfView::scrollDown() {
+    verticalScrollBar()->setValue(verticalScrollBar()->value() + viewport()->height() * 4 / 5);
 }
 
 void PdfView::wheelEvent(QWheelEvent *event) {

@@ -5,6 +5,8 @@
 
 #include "viewerwidget.h"
 
+#include "pdf/pdfpagemodel.h"
+
 ViewerWidget::ViewerWidget(QWidget *parent)
     : FloatingWidgetContainer(parent),
       imageViewer(nullptr),
@@ -41,6 +43,10 @@ ViewerWidget::ViewerWidget(QWidget *parent)
     connect(this, &ViewerWidget::setFilterBilinear,      imageViewer.get(), &ImageViewerV2::setFilterBilinear);
     connect(this, &ViewerWidget::setScalingFilter,       imageViewer.get(), &ImageViewerV2::setScalingFilter);
 
+
+    pdfView.reset(new PdfView(this));
+    layout.addWidget(pdfView.get());
+    pdfView->hide();
 
     videoPlayer.reset(new VideoPlayerInitProxy(this));
     layout.addWidget(videoPlayer.get());
@@ -88,6 +94,65 @@ QSize ViewerWidget::sourceSize() {
 }
 
 // hide videoPlayer, show imageViewer
+// show the paged viewer for a pdf; the pages are drawn by it, so there is no pixmap
+bool ViewerWidget::showPdf(std::shared_ptr<PdfPageModel> model) {
+    if(!model || !model->isOpen())
+        return false;
+    if(currentWidget != PDFVIEW) {
+        disableImageViewer();
+        disableVideoPlayer();
+        connectPdfSignals();
+        pdfView->show();
+        pdfView->setFocus();
+        currentWidget = PDFVIEW;
+    }
+    pdfView->setModel(model);
+    emit currentPageChanged();
+    return true;
+}
+
+void ViewerWidget::pdfNextPage() {
+    if(pdfView && currentWidget == PDFVIEW)
+        pdfView->nextPage();
+}
+
+void ViewerWidget::pdfPrevPage() {
+    if(pdfView && currentWidget == PDFVIEW)
+        pdfView->prevPage();
+}
+
+int ViewerWidget::pdfCurrentPage() const {
+    return (pdfView && currentWidget == PDFVIEW) ? pdfView->currentPage() : 0;
+}
+
+int ViewerWidget::pdfPageCount() const {
+    return (pdfView && currentWidget == PDFVIEW) ? pdfView->pageCount() : 0;
+}
+
+void ViewerWidget::connectPdfSignals() {
+    connect(this, &ViewerWidget::zoomIn,      pdfView.get(), &PdfView::zoomIn);
+    connect(this, &ViewerWidget::zoomOut,     pdfView.get(), &PdfView::zoomOut);
+    connect(this, &ViewerWidget::scrollUp,    pdfView.get(), &PdfView::scrollUp);
+    connect(this, &ViewerWidget::scrollDown,  pdfView.get(), &PdfView::scrollDown);
+    connect(this, &ViewerWidget::fitWindow,   pdfView.get(), &PdfView::setFitWindow);
+    connect(this, &ViewerWidget::fitWidth,    pdfView.get(), &PdfView::setFitWidth);
+    connect(this, &ViewerWidget::fitOriginal, pdfView.get(), &PdfView::setFitOriginal);
+    connect(pdfView.get(), &PdfView::currentPageChanged, this, &ViewerWidget::currentPageChanged);
+}
+
+void ViewerWidget::disablePdfView() {
+    if(!pdfView)
+        return;
+    disconnect(this, &ViewerWidget::zoomIn,      pdfView.get(), &PdfView::zoomIn);
+    disconnect(this, &ViewerWidget::zoomOut,     pdfView.get(), &PdfView::zoomOut);
+    disconnect(this, &ViewerWidget::scrollUp,    pdfView.get(), &PdfView::scrollUp);
+    disconnect(this, &ViewerWidget::scrollDown,  pdfView.get(), &PdfView::scrollDown);
+    disconnect(this, &ViewerWidget::fitWindow,   pdfView.get(), &PdfView::setFitWindow);
+    disconnect(this, &ViewerWidget::fitWidth,    pdfView.get(), &PdfView::setFitWidth);
+    disconnect(this, &ViewerWidget::fitOriginal, pdfView.get(), &PdfView::setFitOriginal);
+    pdfView->hide();
+}
+
 void ViewerWidget::enableImageViewer() {
     if(currentWidget != IMAGEVIEWER) {
         disableVideoPlayer();

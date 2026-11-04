@@ -69,8 +69,16 @@ class MW : public FloatingWidgetContainer
 {
     Q_OBJECT
 public:
-    // one page of a pdf strip; empty means the whole image
+    bool mPdfPageConnected = false;
+    // one page of a pdf; empty means the whole image
     void setFitUnitSize(const QSize &size);
+    // paged documents own their pixels; the window hands them to the viewer
+    bool showPdf(std::shared_ptr<PdfPageModel> model, const QString &path);
+    bool isPdfView();
+    void pdfNextPage();
+    void pdfPrevPage();
+    int pdfCurrentPage();
+    int pdfPageCount();
     explicit MW(QWidget *parent = nullptr);
     bool isCropPanelActive();
     void onScalingFinished(std::unique_ptr<QPixmap>scaled);
@@ -178,6 +186,8 @@ protected:
 
    // bool focusNextPrevChild(bool);
 signals:
+    // the paged viewer moved to another page; the title follows
+    void pdfPageChanged();
     void opened(QString);
     // the first image of a startup load is in the window: showWindowed() waits
     // for this instead of polling

@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 
+
 #include <QEventLoop>
 #include <QInputDialog>
 #include <QLineEdit>
@@ -1274,4 +1275,40 @@ void MW::scrollBy(int dy) {
 
 void MW::setFitUnitSize(const QSize &size) {
     viewerWidget->setFitUnitSize(size);
+}
+
+bool MW::showPdf(std::shared_ptr<PdfPageModel> model, const QString &path) {
+    Q_UNUSED(path)
+    if(!mPdfPageConnected && viewerWidget) {
+        // the paged viewer is a child that outlives individual documents
+        connect(viewerWidget.get(), &ViewerWidget::currentPageChanged,
+                this, &MW::pdfPageChanged);
+        mPdfPageConnected = true;
+    }
+    const bool shown = viewerWidget->showPdf(model);
+    if(shown) {
+        navBar->refreshFitCycleIcon();
+        updateCropPanelData();
+    }
+    return shown;
+}
+
+bool MW::isPdfView() {
+    return viewerWidget && viewerWidget->isPdf();
+}
+
+void MW::pdfNextPage() {
+    viewerWidget->pdfNextPage();
+}
+
+void MW::pdfPrevPage() {
+    viewerWidget->pdfPrevPage();
+}
+
+int MW::pdfCurrentPage() {
+    return viewerWidget ? viewerWidget->pdfCurrentPage() : 0;
+}
+
+int MW::pdfPageCount() {
+    return viewerWidget->pdfPageCount();
 }
