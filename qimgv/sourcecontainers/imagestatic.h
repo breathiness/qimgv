@@ -38,7 +38,6 @@ public:
 
     // pdf: pages are drawn by the paged view, which gets them from this model; the
     // image itself carries no pixels
-    int pdfPageCount() const;
     std::shared_ptr<PdfPageModel> pdfModel() const { return mPdfModel; }
     // a protected document opens without pages until it is unlocked
     bool pdfNeedsPassword() const { return mPdfNeedsPassword; }

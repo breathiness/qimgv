@@ -21,10 +21,6 @@ class ViewerWidget : public FloatingWidgetContainer
 {
     Q_OBJECT
 public:
-    // what fit-window should size itself by, when the whole image is not the unit
-    void setFitUnitSize(const QSize &size);
-    // explicit scroll, used when a page step moves the pdf view
-    void scrollBy(int dx, int dy);
     // paged documents (pdf) get their own viewer, which renders on demand
     bool showPdf(std::shared_ptr<PdfPageModel> model);
     bool isPdf() const { return currentWidget == PDFVIEW; }

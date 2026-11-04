@@ -70,8 +70,6 @@ class MW : public FloatingWidgetContainer
     Q_OBJECT
 public:
     bool mPdfPageConnected = false;
-    // one page of a pdf; empty means the whole image
-    void setFitUnitSize(const QSize &size);
     // paged documents own their pixels; the window hands them to the viewer
     bool showPdf(std::shared_ptr<PdfPageModel> model, const QString &path);
     bool isPdfView();
@@ -88,8 +86,6 @@ public:
     void showAnimation(std::shared_ptr<QMovie> movie);
     void showVideo(QString file);
 
-    // scrolls by an explicit amount, used by the pdf strip to move one page
-    void scrollBy(int dy);
     void setCurrentInfo(int fileIndex, int fileCount, QString filePath, QString fileName, QSize imageSize, qint64 fileSize, int pdfPage, int pdfPageCount, bool slideshow, bool shuffle, bool edited);
     void setExifInfo(QMap<QString, QString>);
     std::shared_ptr<FolderViewProxy> getFolderView();

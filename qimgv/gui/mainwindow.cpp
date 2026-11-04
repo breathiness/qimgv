@@ -1269,13 +1269,7 @@ void MW::leaveEvent(QEvent *event) {
 //    return false;
 //}
 
-void MW::scrollBy(int dy) {
-    viewerWidget->scrollBy(0, dy);
-}
 
-void MW::setFitUnitSize(const QSize &size) {
-    viewerWidget->setFitUnitSize(size);
-}
 
 bool MW::showPdf(std::shared_ptr<PdfPageModel> model, const QString &path) {
     Q_UNUSED(path)

@@ -217,10 +217,6 @@ void ImageStatic::loadPdf() {
     mLoaded = true;
 }
 
-int ImageStatic::pdfPageCount() const {
-    return mPdfModel ? mPdfModel->pageCount() : 0;
-}
-
 // Unlocks a protected document. The view then re-reads the page list from the model.
 bool ImageStatic::unlockPdf(const QString &password) {
     if(!mPdfModel || !mPdfNeedsPassword)

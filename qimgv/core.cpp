@@ -1800,7 +1800,6 @@ void Core::guiSetImage(std::shared_ptr<Image> img) {
                 return;
             }
         }
-        mw->setFitUnitSize(QSize());
         mw->showImage(img->getPixmap(), img->size());
     } else if(type == ANIMATED) {
         auto animated = dynamic_cast<ImageAnimated *>(img.get());
