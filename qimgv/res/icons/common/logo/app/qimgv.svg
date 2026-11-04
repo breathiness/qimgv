@@ -1,13 +1,83 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <!-- Full-bleed surface: the dark square reaches all four edges, with only the
-       corners rounded, and nothing is drawn outside it. -->
-  <rect x="0" y="0" width="512" height="512" rx="37" fill="#373737"/>
+  <!-- Built the way the Sorcery pack draws its icons: a card inset in the canvas,
+       a tone break across it, film holes punched through it, a hard 45-degree
+       shadow that runs to the card's edge, and the mark sitting on top with a
+       small halo. The mark itself keeps its sharp corners. -->
+  <defs>
+    <linearGradient id="card-tone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#373737"/>
+      <stop offset="0.5244140625" stop-color="#373737"/>
+      <stop offset="0.5244140625" stop-color="#424242"/>
+      <stop offset="1" stop-color="#424242"/>
+    </linearGradient>
 
-  <g transform="scale(60.4833)" fill="#E6E6E6">
-    <rect x="5.82083" y="2.11667" width="1.05833" height="4.23334"/>
-    <path d="M 1.32292,5.55625 H 2.38125 V 2.11666 H 1.32292 Z
-             M 2.38125,5.55624 h 1.85208 V 4.49791 H 2.38125 Z
-             M 2.38125,3.17501 h 1.85208 V 2.11667 H 2.38125 Z
-             M 4.23333,6.35001 h 1.05833 V 2.11667 H 4.23333 Z"/>
+    <!-- card shadow, plus the light top rim and dark bottom rim; the rims also
+         land on the holes (dark at their top edge, light at their bottom edge),
+         which is what makes them read as punched through a thick card. -->
+    <filter id="card-fx" x="-15%" y="-15%" width="130%" height="130%"
+            color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="dropBlur"/>
+      <feOffset in="dropBlur" dx="0" dy="5" result="dropOffset"/>
+      <feFlood flood-color="#000000" flood-opacity="0.35" result="dropColor"/>
+      <feComposite in="dropColor" in2="dropOffset" operator="in" result="drop"/>
+
+      <feOffset in="SourceAlpha" dx="0" dy="4" result="down"/>
+      <feComposite in="SourceAlpha" in2="down" operator="out" result="topRimMask"/>
+      <feFlood flood-color="#3D3D3D" flood-opacity="1" result="rimLightColor"/>
+      <feComposite in="rimLightColor" in2="topRimMask" operator="in" result="topRim"/>
+
+      <feOffset in="SourceAlpha" dx="0" dy="-4" result="up"/>
+      <feComposite in="SourceAlpha" in2="up" operator="out" result="bottomRimMask"/>
+      <feFlood flood-color="#353535" flood-opacity="1" result="rimDarkColor"/>
+      <feComposite in="rimDarkColor" in2="bottomRimMask" operator="in" result="bottomRim"/>
+
+      <feMerge>
+        <feMergeNode in="drop"/>
+        <feMergeNode in="SourceGraphic"/>
+        <feMergeNode in="topRim"/>
+        <feMergeNode in="bottomRim"/>
+      </feMerge>
+    </filter>
+
+    <filter id="mark-halo" x="-20%" y="-20%" width="140%" height="140%"
+            color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="haloBlur"/>
+      <feFlood flood-color="#000000" flood-opacity="0.14" result="haloColor"/>
+      <feComposite in="haloColor" in2="haloBlur" operator="in" result="halo"/>
+      <feMerge>
+        <feMergeNode in="halo"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- holes: white keeps everything, black punches the card and its shadow -->
+    <mask id="holes" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+      <rect x="0" y="0" width="512" height="512" fill="#ffffff"/>
+      <rect x="45.33" y="114.67" width="40.00" height="37.33" rx="8.00" fill="#000000"/>
+      <rect x="426.67" y="114.67" width="40.00" height="37.33" rx="8.00" fill="#000000"/>
+      <rect x="45.33" y="178.67" width="40.00" height="37.33" rx="8.00" fill="#000000"/>
+      <rect x="426.67" y="178.67" width="40.00" height="37.33" rx="8.00" fill="#000000"/>
+      <rect x="45.33" y="242.67" width="40.00" height="37.33" rx="8.00" fill="#000000"/>
+      <rect x="426.67" y="242.67" width="40.00" height="37.33" rx="8.00" fill="#000000"/>
+      <rect x="45.33" y="306.67" width="40.00" height="37.33" rx="8.00" fill="#000000"/>
+      <rect x="426.67" y="306.67" width="40.00" height="37.33" rx="8.00" fill="#000000"/>
+      <rect x="45.33" y="370.67" width="40.00" height="37.33" rx="8.00" fill="#000000"/>
+      <rect x="426.67" y="370.67" width="40.00" height="37.33" rx="8.00" fill="#000000"/>
+    </mask>
+  </defs>
+
+  <path fill="url(#card-tone)" fill-rule="evenodd" filter="url(#card-fx)" d="M 21.33,112.00 A 26.67,26.67 0 0 1 48.00,85.33 L 464.00,85.33 A 26.67,26.67 0 0 1 490.67,112.00 L 490.67,400.00 A 26.67,26.67 0 0 1 464.00,426.67 L 48.00,426.67 A 26.67,26.67 0 0 1 21.33,400.00 Z M 45.33,122.67 A 8.00,8.00 0 0 1 53.33,114.67 L 77.33,114.67 A 8.00,8.00 0 0 1 85.33,122.67 L 85.33,144.00 A 8.00,8.00 0 0 1 77.33,152.00 L 53.33,152.00 A 8.00,8.00 0 0 1 45.33,144.00 Z M 426.67,122.67 A 8.00,8.00 0 0 1 434.67,114.67 L 458.67,114.67 A 8.00,8.00 0 0 1 466.67,122.67 L 466.67,144.00 A 8.00,8.00 0 0 1 458.67,152.00 L 434.67,152.00 A 8.00,8.00 0 0 1 426.67,144.00 Z M 45.33,186.67 A 8.00,8.00 0 0 1 53.33,178.67 L 77.33,178.67 A 8.00,8.00 0 0 1 85.33,186.67 L 85.33,208.00 A 8.00,8.00 0 0 1 77.33,216.00 L 53.33,216.00 A 8.00,8.00 0 0 1 45.33,208.00 Z M 426.67,186.67 A 8.00,8.00 0 0 1 434.67,178.67 L 458.67,178.67 A 8.00,8.00 0 0 1 466.67,186.67 L 466.67,208.00 A 8.00,8.00 0 0 1 458.67,216.00 L 434.67,216.00 A 8.00,8.00 0 0 1 426.67,208.00 Z M 45.33,250.67 A 8.00,8.00 0 0 1 53.33,242.67 L 77.33,242.67 A 8.00,8.00 0 0 1 85.33,250.67 L 85.33,272.00 A 8.00,8.00 0 0 1 77.33,280.00 L 53.33,280.00 A 8.00,8.00 0 0 1 45.33,272.00 Z M 426.67,250.67 A 8.00,8.00 0 0 1 434.67,242.67 L 458.67,242.67 A 8.00,8.00 0 0 1 466.67,250.67 L 466.67,272.00 A 8.00,8.00 0 0 1 458.67,280.00 L 434.67,280.00 A 8.00,8.00 0 0 1 426.67,272.00 Z M 45.33,314.67 A 8.00,8.00 0 0 1 53.33,306.67 L 77.33,306.67 A 8.00,8.00 0 0 1 85.33,314.67 L 85.33,336.00 A 8.00,8.00 0 0 1 77.33,344.00 L 53.33,344.00 A 8.00,8.00 0 0 1 45.33,336.00 Z M 426.67,314.67 A 8.00,8.00 0 0 1 434.67,306.67 L 458.67,306.67 A 8.00,8.00 0 0 1 466.67,314.67 L 466.67,336.00 A 8.00,8.00 0 0 1 458.67,344.00 L 434.67,344.00 A 8.00,8.00 0 0 1 426.67,336.00 Z M 45.33,378.67 A 8.00,8.00 0 0 1 53.33,370.67 L 77.33,370.67 A 8.00,8.00 0 0 1 85.33,378.67 L 85.33,400.00 A 8.00,8.00 0 0 1 77.33,408.00 L 53.33,408.00 A 8.00,8.00 0 0 1 45.33,400.00 Z M 426.67,378.67 A 8.00,8.00 0 0 1 434.67,370.67 L 458.67,370.67 A 8.00,8.00 0 0 1 466.67,378.67 L 466.67,400.00 A 8.00,8.00 0 0 1 458.67,408.00 L 434.67,408.00 A 8.00,8.00 0 0 1 426.67,400.00 Z"/>
+
+  <g mask="url(#holes)">
+    <path fill="#2F2F2F" d="M 337.25,268.50 L 337.25,156.00 L 387.25,156.00 L 490.67,259.42 L 490.67,268.50 Z M 124.75,268.50 L 124.75,156.00 L 174.75,156.00 L 287.25,268.50 Z M 174.75,156.00 L 262.25,156.00 L 374.75,268.50 L 237.25,268.50 L 174.75,206.00 Z M 262.25,268.50 L 262.25,156.00 L 312.25,156.00 L 424.75,268.50 Z M 174.75,268.50 L 174.75,268.50 L 262.25,268.50 L 262.25,268.50 Z"/>
+    <path fill="#393939" d="M 337.25,268.50 L 490.67,268.50 L 490.67,400.00 L 490.44,403.48 L 489.76,406.90 L 488.64,410.21 L 487.10,413.33 L 485.16,416.24 L 482.86,418.86 L 480.24,421.16 L 477.33,423.10 L 474.21,424.64 L 470.90,425.76 L 467.48,426.44 L 464.00,426.67 L 407.92,426.67 L 337.25,356.00 Z M 124.75,268.50 L 287.25,268.50 L 445.42,426.67 L 232.92,426.67 L 124.75,318.50 Z M 374.75,268.50 L 490.67,384.42 L 490.67,400.00 L 490.44,403.48 L 489.76,406.90 L 488.64,410.21 L 487.10,413.33 L 485.16,416.24 L 482.86,418.86 L 480.24,421.16 L 477.33,423.10 L 474.21,424.64 L 470.90,425.76 L 467.48,426.44 L 464.00,426.67 L 395.42,426.67 L 237.25,268.50 Z M 262.25,268.50 L 424.75,268.50 L 490.67,334.42 L 490.67,400.00 L 490.44,403.48 L 489.76,406.90 L 488.64,410.21 L 487.10,413.33 L 485.16,416.24 L 482.86,418.86 L 480.24,421.16 L 477.33,423.10 L 474.21,424.64 L 470.90,425.76 L 467.48,426.44 L 464.00,426.67 L 332.92,426.67 L 262.25,356.00 Z M 174.75,268.50 L 262.25,268.50 L 420.42,426.67 L 282.92,426.67 L 174.75,318.50 Z"/>
+  </g>
+
+  <g filter="url(#mark-halo)">
+    <g transform="translate(62.250,56.000) scale(0.78125)">
+      <g transform="scale(60.4833)">
+        <path fill="#FFFFFF" d="M 5.82083,2.11667 H 6.87916 V 6.35001 H 5.82083 Z M 1.32292,5.55625 H 2.38125 V 2.11666 H 1.32292 Z M 2.38125,5.55624 h 1.85208 V 4.49791 H 2.38125 Z M 2.38125,3.17501 h 1.85208 V 2.11667 H 2.38125 Z M 4.23333,6.35001 h 1.05833 V 2.11667 H 4.23333 Z"/>
+      </g>
+    </g>
   </g>
 </svg>
