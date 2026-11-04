@@ -125,6 +125,10 @@ int ViewerWidget::pdfCurrentPage() const {
     return (pdfView && currentWidget == PDFVIEW) ? pdfView->currentPage() : 0;
 }
 
+QImage ViewerWidget::pdfCurrentPageImage() {
+    return (pdfView && currentWidget == PDFVIEW) ? pdfView->currentPageImage() : QImage();
+}
+
 int ViewerWidget::pdfPageCount() const {
     return (pdfView && currentWidget == PDFVIEW) ? pdfView->pageCount() : 0;
 }
@@ -138,6 +142,9 @@ void ViewerWidget::connectPdfSignals() {
     connect(this, &ViewerWidget::fitWidth,    pdfView.get(), &PdfView::setFitWidth);
     connect(this, &ViewerWidget::fitOriginal, pdfView.get(), &PdfView::setFitOriginal);
     connect(pdfView.get(), &PdfView::currentPageChanged, this, &ViewerWidget::currentPageChanged);
+    // the zoom overlay speaks the same language as the image viewer's
+    connect(pdfView.get(), &PdfView::zoomChanged, this, &ViewerWidget::onScaleChanged);
+    connect(pdfView.get(), &PdfView::zoomChanged, this, &ViewerWidget::pdfZoomChanged);
 }
 
 void ViewerWidget::disablePdfView() {
@@ -357,6 +364,8 @@ void ViewerWidget::setFitMode(ImageFitMode mode) {
 }
 
 ImageFitMode ViewerWidget::fitMode() {
+    if(currentWidget == PDFVIEW && pdfView)
+        return pdfView->imageFitMode();
     return imageViewer->fitMode();
 }
 

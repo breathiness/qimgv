@@ -1277,6 +1277,11 @@ bool MW::showPdf(std::shared_ptr<PdfPageModel> model, const QString &path) {
         // the paged viewer is a child that outlives individual documents
         connect(viewerWidget.get(), &ViewerWidget::currentPageChanged,
                 this, &MW::pdfPageChanged);
+        // the fit button follows the zoom the paged viewer ends up at
+        connect(viewerWidget.get(), &ViewerWidget::pdfZoomChanged, this, [this] {
+            if(navBar)
+                navBar->refreshFitCycleIcon();
+        });
         mPdfPageConnected = true;
     }
     const bool shown = viewerWidget->showPdf(model);

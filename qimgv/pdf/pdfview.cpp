@@ -103,7 +103,6 @@ void PdfView::setModel(std::shared_ptr<PdfPageModel> model) {
                     applyPendingImage(page, image, target);
                 });
         mWorker->start();
-        mJustOpened = true;
         mResetScrollOnNextPaint = true;
         fitPage();
         verticalScrollBar()->setValue(0);
@@ -115,14 +114,31 @@ void PdfView::setModel(std::shared_ptr<PdfPageModel> model) {
                 fitWidth();
             verticalScrollBar()->setValue(0);
         });
-        // the window applies its own fit mode shortly after; keep the promise that
-        // a freshly opened document shows its first page until it settles
-        QTimer::singleShot(600, this, [this] {
-            mJustOpened = false;
-        });
     }
     updateScrollBars();
     viewport()->update();
+}
+
+ImageFitMode PdfView::imageFitMode() const {
+    switch(mFitMode) {
+    case FitMode::Page:  return FIT_WINDOW;
+    case FitMode::Width: return FIT_WIDTH;
+    default: break;
+    }
+    return qFuzzyCompare(mZoom, qreal(1.0)) ? FIT_ORIGINAL : FIT_FREE;
+}
+
+QImage PdfView::currentPageImage() {
+    if(!mModel || mModel->pageCount() <= 0)
+        return QImage();
+    const int page = currentPage();
+    const QSize target = pageRenderSize(page);
+    QImage image = mModel->cachedPage(page, target);
+    if(image.isNull()) {
+        image = mModel->renderPage(page, target);
+        mModel->cachePage(page, image, target);
+    }
+    return image;
 }
 
 int PdfView::pageCount() const {
@@ -213,8 +229,6 @@ void PdfView::fitPage() {
     const qreal fitY = (viewport()->height() - mMargin * 2) / size.height();
     mZoom = qBound(qreal(0.1), qMin(fitX, fitY), qreal(8.0));
     mFitMode = FitMode::Page;
-    if(mJustOpened)
-        verticalScrollBar()->setValue(0);
     mPending.clear();
     updateScrollBars();
     emit zoomChanged(mZoom);
@@ -230,8 +244,6 @@ void PdfView::fitWidth() {
         return;
     mZoom = qBound(qreal(0.1), (viewport()->width() - mMargin * 2) / size.width(), qreal(8.0));
     mFitMode = FitMode::Width;
-    if(mJustOpened)
-        verticalScrollBar()->setValue(0);
     mPending.clear();
     updateScrollBars();
     emit zoomChanged(mZoom);

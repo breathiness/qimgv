@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QAbstractScrollArea>
+
+#include "settings.h"
 #include <QImage>
 #include <QList>
 #include <QMutex>
@@ -35,6 +37,10 @@ public:
     void fitPage();
     void fitWidth();
     FitMode fitMode() const { return mFitMode; }
+    // the mode in the vocabulary the window and the nav bar use
+    ImageFitMode imageFitMode() const;
+    // the page in the middle of the view, rendered at the current zoom
+    QImage currentPageImage();
 
     int pageCount() const;
     int currentPage() const;
@@ -83,8 +89,7 @@ private:
     int mGap = 12;
     int mMargin = 8;
     int mLastPage = -1;
-    // a freshly opened document starts at its first page, whatever fit runs first
-    bool mJustOpened = false;
+    // the first frame after opening starts at the first page
     bool mResetScrollOnNextPaint = false;
     // pages that were asked for but not delivered yet
     QList<int> mPending;

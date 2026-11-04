@@ -28,6 +28,7 @@ public:
     void pdfPrevPage();
     int pdfCurrentPage() const;
     int pdfPageCount() const;
+    QImage pdfCurrentPageImage();
     explicit ViewerWidget(QWidget *parent = nullptr);
     QRect imageRect();
     float currentScale();
@@ -109,6 +110,8 @@ signals:
     void setScalingFilter(ScalingFilter filter);
     void playbackFinished();
     void currentPageChanged();
+    // the paged viewer scaled; the nav bar shows the new fit state
+    void pdfZoomChanged();
     void toggleLockZoom();
     void toggleLockView();
     void showScriptSettings();
