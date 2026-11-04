@@ -1396,7 +1396,9 @@ void Settings::setPanelCenterSelection(bool mode) {
 }
 //------------------------------------------------------------------------------
 QString Settings::language() {
-    return settingsConf->value("language", "en_US").toString();
+    // A fresh install follows the system language; the dialog offers "system" as
+    // its first choice, and a locale without a translation simply stays english.
+    return settingsConf->value("language", "system").toString();
 }
 
 void Settings::setLanguage(QString lang) {

@@ -10,6 +10,7 @@
 .dir*
 *.orig
 build
+build*/
 dist
 # libmpv for the Windows build (headers, import library, runtime dll). It lives
 # in the source tree so MPV_DIR defaults to it, but the dev kit is ~80 MB and is
