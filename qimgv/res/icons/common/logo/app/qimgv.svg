@@ -1,32 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <defs>
-    <!-- Material Design 1 elevation, built from primitives: a wide ambient shadow
-         and a tighter key shadow, both black, composited under the surface. -->
-    <filter id="elevation" x="-40%" y="-40%" width="180%" height="190%"
-            color-interpolation-filters="sRGB">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="11" result="ambientBlur"/>
-      <feOffset in="ambientBlur" dx="0" dy="7" result="ambientOffset"/>
-      <feFlood flood-color="#000000" flood-opacity="0.20" result="ambientColor"/>
-      <feComposite in="ambientColor" in2="ambientOffset" operator="in" result="ambient"/>
+  <!-- Full-bleed surface: the dark square reaches all four edges, with only the
+       corners rounded, and nothing is drawn outside it. -->
+  <rect x="0" y="0" width="512" height="512" rx="37" fill="#373737"/>
 
-      <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="keyBlur"/>
-      <feOffset in="keyBlur" dx="0" dy="3" result="keyOffset"/>
-      <feFlood flood-color="#000000" flood-opacity="0.32" result="keyColor"/>
-      <feComposite in="keyColor" in2="keyOffset" operator="in" result="key"/>
-
-      <feMerge>
-        <feMergeNode in="ambient"/>
-        <feMergeNode in="key"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
-
-  <g filter="url(#elevation)">
-    <rect x="48" y="44" width="416" height="416" rx="30" fill="#373737"/>
-  </g>
-
-  <g transform="translate(48,44) scale(49.1426)" fill="#E6E6E6">
+  <g transform="scale(60.4833)" fill="#E6E6E6">
     <rect x="5.82083" y="2.11667" width="1.05833" height="4.23334"/>
     <path d="M 1.32292,5.55625 H 2.38125 V 2.11666 H 1.32292 Z
              M 2.38125,5.55624 h 1.85208 V 4.49791 H 2.38125 Z

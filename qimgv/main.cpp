@@ -1,4 +1,8 @@
 #include <QApplication>
+#include <QIcon>
+#include <QPainter>
+#include <QPixmap>
+#include <QSvgRenderer>
 #include <QCommandLineParser>
 #include <QStyleFactory>
 #include <QEvent>
@@ -39,6 +43,23 @@ QDataStream& operator>>(QDataStream& in, Script& v) {
     return in;
 }
 //------------------------------------------------------------------------------
+// The window icon is drawn from the vector logo at each size the platform asks
+// for, instead of scaling one bitmap: taskbar, title bar and the task switcher get
+// a crisp icon on high dpi screens too.
+static QIcon makeWindowIcon() {
+    QSvgRenderer renderer(QStringLiteral(":/res/icons/common/logo/app/qimgv.svg"));
+    QIcon icon;
+    for(int size : {16, 22, 24, 32, 48, 64, 128, 256}) {
+        QPixmap pixmap(size, size);
+        pixmap.fill(Qt::transparent);
+        QPainter painter(&pixmap);
+        renderer.render(&painter);
+        painter.end();
+        icon.addPixmap(pixmap);
+    }
+    return icon;
+}
+
 int main(int argc, char *argv[]) {
 
     // force some env variables
@@ -101,6 +122,8 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setOrganizationDomain("github.com/easymodo/qimgv");
     QCoreApplication::setApplicationName("qimgv");
     QCoreApplication::setApplicationVersion(appVersion.toString());
+    // the same icon in the title bar and the task bar, drawn from the svg
+    a.setWindowIcon(makeWindowIcon());
 
 #ifndef __APPLE__
     // The widget style is picked before anything else exists, so it is chosen
