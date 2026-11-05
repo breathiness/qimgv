@@ -14,10 +14,21 @@
 #
 # usage: scripts/package-extras.sh [output-dir] [app-dir]
 #
-# app-dir is the program folder of the release (for example the one deploy-app.sh
-# just filled). Files it already contains are left out of the archive, so the pack
-# only adds what is missing; without it everything is included and the archive is
-# noticeably larger.
+# app-dir is what the archive is cut against: every file it already contains is
+# left out, so the pack only carries what the program package does not ship. It
+# must therefore be a CLEAN install of the release program package - unzip
+# qimgv-<version>-win64.zip into a temporary folder and pass that.
+#
+# Do not pass a working installation that already had the extras applied: its
+# libmpv-2.dll, libheif/jxl/raw, libwebp/tiff and friends would all be treated as
+# "already there" and dropped, leaving an archive with plugins that have no
+# libraries. That pack installs without an error and then quietly offers no video,
+# no HEIC and no WebP. Without app-dir nothing is dropped, which is always correct
+# but makes the archive ~60 MB larger.
+#
+# The script refuses an app-dir that looks like it already has the extras; set
+# QIMGV_PACK_FROM_POPULATED=1 to build the delta anyway (for example to update an
+# archive for users who already installed a previous one).
 
 set -uo pipefail
 
@@ -80,6 +91,20 @@ deploy_closure_of "$STAGE" "$STAGE"/plugins/*.dll
 deploy_closure_of "$STAGE/pdf" "$STAGE/pdf"/pdfprovider.dll
 
 if [ -n "$APP_DIR" ] && [ -d "$APP_DIR" ]; then
+    # A program folder that already carries the extras is the wrong reference: its
+    # libraries would be dropped and the archive would ship plugins without them.
+    pop=()
+    [ -f "$APP_DIR/libmpv-2.dll" ] && pop+=("libmpv-2.dll")
+    [ -f "$APP_DIR/pdf/pdfprovider.dll" ] && pop+=("pdf/")
+    [ -f "$APP_DIR/plugins/player_mpv.dll" ] && pop+=("plugins/")
+    [ -f "$APP_DIR/imageformats/qwebp.dll" ] && pop+=("imageformats/")
+    if [ ${#pop[@]} -gt 0 ] && [ "${QIMGV_PACK_FROM_POPULATED:-0}" != "1" ]; then
+        echo "error: $APP_DIR already contains the extras (${pop[*]})." >&2
+        echo "       Cut the archive against a clean unzip of the program package" >&2
+        echo "       instead, or set QIMGV_PACK_FROM_POPULATED=1 to mean it." >&2
+        exit 1
+    fi
+
     echo "dropping what the program folder already has"
     dropped=0
     while IFS= read -r f; do
