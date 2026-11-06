@@ -96,6 +96,9 @@ inline bool VideoPlayerInitProxy::initPlayer() {
 bool VideoPlayerInitProxy::showVideo(QString file) {
     if(!initPlayer())
         return false;
+    // The option used to be read only when the player was created, so changing
+    // "expand image" had no effect until a restart.
+    player->setVideoUnscaled(!settings->expandImage());
     return player->showVideo(file);
 }
 

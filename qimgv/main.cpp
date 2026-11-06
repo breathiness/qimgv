@@ -240,9 +240,11 @@ int main(int argc, char *argv[]) {
     if(parser.positionalArguments().count()) {
         core.loadPath(parser.positionalArguments().at(0));
     } else {
-        // started without a file: open the folder view instead of an empty
-        // viewer, at the home directory
-        core.loadPath(QDir::homePath());
+        // started without a file: reopen the folder that was open last time, and
+        // fall back to home when there is none (or it is gone)
+        const QString lastFolder = settings->lastFolder();
+        core.loadPath(!lastFolder.isEmpty() && QDir(lastFolder).exists() ? lastFolder
+                                                                        : QDir::homePath());
     }
 
     // wait for event queue to catch up before showing window

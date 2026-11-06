@@ -406,9 +406,13 @@ void MW::onSortingChanged(SortingMode mode) {
 
 void MW::setDirectoryPath(QString path) {
     //closeImage();
+    settings->setLastFolder(path);
     info.directoryPath = path;
     info.directoryName = path.split("/").last();
     folderView->setDirectoryPath(path);
+    // The bar belongs to the image viewer; a fit-mode change could leave it
+    // active while the folder view is on screen.
+    updateNavBarVisibility();
     onInfoUpdated();
 }
 

@@ -192,6 +192,8 @@ public:
     void setSmoothAnimatedImages(bool mode);
     bool panelFullscreenOnly();
     void setPanelFullscreenOnly(bool mode);
+    QString lastFolder();
+    void setLastFolder(const QString &path);
     QVersionNumber lastVersion();
     void setLastVersion(QVersionNumber &ver);
     void setShowChangelogs(bool mode);

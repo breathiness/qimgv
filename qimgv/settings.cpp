@@ -533,6 +533,15 @@ void Settings::setUiStyle(UiStyleMode mode) {
     settings->settingsConf->setValue("uiStyle", static_cast<int>(mode));
 }
 //------------------------------------------------------------------------------
+QString Settings::lastFolder() {
+    return settings->stateConf->value("lastFolder").toString();
+}
+
+void Settings::setLastFolder(const QString &path) {
+    if(!path.isEmpty())
+        settings->stateConf->setValue("lastFolder", path);
+}
+
 QVersionNumber Settings::lastVersion() {
     int vmajor = settings->settingsConf->value("lastVerMajor", 0).toInt();
     int vminor = settings->settingsConf->value("lastVerMinor", 0).toInt();
