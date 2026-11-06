@@ -180,6 +180,9 @@ void UiTheme::apply(ColorScheme &scheme, bool followSystem, bool tintAccent) {
         font.setPixelSize(pixelSize);
         font.setWeight(weight);
     };
+    // Qlementine paints some text (menus, item rows) from this int rather than
+    // from the QFont objects, so it has to move with the scale or those stay 12.
+    appliedTheme.fontSize = 14;
     applyFont(appliedTheme.fontRegular, 14, QFont::Normal);
     applyFont(appliedTheme.fontBold, 14, QFont::Medium);
     applyFont(appliedTheme.fontCaption, 12, QFont::Normal);

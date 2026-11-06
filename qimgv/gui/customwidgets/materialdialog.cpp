@@ -15,9 +15,10 @@
 #endif
 
 namespace {
-// MD1 asks for a 24dp elevation, but the margin has to fit on screen: the
-// settings dialog is already close to full height at 125%, so it gets 16.
-constexpr int kShadowMargin = 16;
+// No margin: this window is not reliably translucent, so anything painted
+// outside the card shows as a flat band instead of a shadow (the same problem
+// the context menu hit). The card is full-bleed with a 1px border instead.
+constexpr int kShadowMargin = 0;
 constexpr int kTitleBarHeight = 44;
 constexpr int kResizeBorder = 5;
 constexpr int kShadowQuantization = 16;
@@ -128,12 +129,6 @@ void MaterialDialog::paintEvent(QPaintEvent *event) {
     if(card.width() <= 0 || card.height() <= 0)
         return;
 
-    QColor shadowColor(0, 0, 0);
-    shadowColor.setAlphaF(0.9);
-    const QPixmap shadow = dialogShadow(card.size().toSize(), pal.radius, shadowColor);
-    const QSizeF shadowSize = shadow.deviceIndependentSize();
-    painter.drawPixmap(QPointF(card.x() - (shadowSize.width() - card.width()) / 2.0,
-                               card.y() - (shadowSize.height() - card.height()) / 2.0), shadow);
 
     painter.setPen(QPen(pal.surfaceLine, 1));
     painter.setBrush(pal.surface);

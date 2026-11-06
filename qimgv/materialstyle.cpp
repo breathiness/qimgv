@@ -2,6 +2,8 @@
 
 #include <QPainter>
 #include <QStyleOptionButton>
+#include <QStyleOptionMenuItem>
+#include <QTreeView>
 #include <QStyleOptionSlider>
 #include <QPainterPath>
 #include <QFontMetrics>
@@ -31,6 +33,10 @@ constexpr qreal kLetterSpacing = 0.04;
 constexpr int kShadowMargin = 3;
 // MD1 list row.
 constexpr int kListItemHeight = 48;
+constexpr int kTreeRowHeight = 40;
+// MD1 menu row / icon.
+constexpr int kMenuItemHeight = 32;
+constexpr int kMenuIconSize = 20;
 // MD1 text field.
 constexpr int kFieldHeight = 48;
 constexpr int kFieldPadding = 16;
@@ -213,6 +219,8 @@ int MaterialStyle::pixelMetric(PixelMetric metric, const QStyleOption *option,
             case PM_ExclusiveIndicatorWidth:
             case PM_ExclusiveIndicatorHeight:
                 return 18;
+            case PM_SmallIconSize:
+                return kMenuIconSize;
             default:
                 break;
         }
@@ -226,6 +234,15 @@ QSize MaterialStyle::sizeFromContents(ContentsType type, const QStyleOption *opt
     if(!materialThemeActive())
         return contents;
 
+    if(type == CT_MenuItem) {
+        // MD1 menu rows are 32dp; Qlementine derives them from the font metrics.
+        // Separators are CT_MenuItem too and must keep their thin line height.
+        const auto *item = qstyleoption_cast<const QStyleOptionMenuItem *>(option);
+        if(!item || item->menuItemType != QStyleOptionMenuItem::Separator)
+            contents.setHeight(kMenuItemHeight);
+        return contents;
+    }
+
     if(type == CT_LineEdit) {
         // MD1 text fields are 48dp tall.
         contents.setHeight(qMax<int>(contents.height(), kFieldHeight));
@@ -233,9 +250,10 @@ QSize MaterialStyle::sizeFromContents(ContentsType type, const QStyleOption *opt
     }
 
     if(type == CT_ItemViewItem) {
-        // MD1 lists are 48dp rows; Qlementine sizes them from the font and the
-        // theme spacing, which lands around 32dp.
-        contents.setHeight(qMax<int>(contents.height(), kListItemHeight));
+        // MD1 lists are 48dp rows, but a file tree at that pitch reads as airy
+        // next to 14px text: the tree gets a desktop density instead.
+        const bool tree = qobject_cast<const QTreeView *>(widget) != nullptr;
+        contents.setHeight(qMax<int>(contents.height(), tree ? kTreeRowHeight : kListItemHeight));
         return contents;
     }
 
