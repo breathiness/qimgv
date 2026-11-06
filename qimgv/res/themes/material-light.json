@@ -1,0 +1,117 @@
+{
+  "meta": {
+    "author": "qimgv",
+    "name": "Material Light",
+    "version": "1.0"
+  },
+
+  "backgroundColorMain1": "#ffffff",
+  "backgroundColorMain2": "#f5f5f5",
+  "backgroundColorMain3": "#eeeeee",
+  "backgroundColorMain4": "#e4e4e4",
+  "backgroundColorMainTransparent": "#ffffff00",
+
+  "backgroundColorWorkspace": "#e0e0e0",
+  "backgroundColorTabBar": "#eeeeee",
+
+  "borderColor": "#e0e0e0",
+  "borderColorHovered": "#bdbdbd",
+  "borderColorPressed": "#9e9e9e",
+  "borderColorDisabled": "#f0f0f0",
+  "borderColorTransparent": "#e0e0e000",
+
+  "focusColor": "#6200ee66",
+
+  "neutralColor": "#eeeeee",
+  "neutralColorHovered": "#e3e3e3",
+  "neutralColorPressed": "#d6d6d6",
+  "neutralColorDisabled": "#f5f5f5",
+  "neutralColorTransparent": "#eeeeee00",
+
+  "primaryColor": "#6200ee",
+  "primaryColorHovered": "#6f14ef",
+  "primaryColorPressed": "#7824f0",
+  "primaryColorDisabled": "#c39ef9",
+  "primaryColorTransparent": "#6200ee00",
+
+  "primaryAlternativeColor": "#3700b3",
+  "primaryAlternativeColorHovered": "#4714b9",
+  "primaryAlternativeColorPressed": "#5324be",
+  "primaryAlternativeColorDisabled": "#b39ee2",
+  "primaryAlternativeColorTransparent": "#3700b300",
+
+  "primaryColorForeground": "#ffffff",
+  "primaryColorForegroundHovered": "#ffffff",
+  "primaryColorForegroundPressed": "#ffffff",
+  "primaryColorForegroundDisabled": "#f3ecfd",
+  "primaryColorForegroundTransparent": "#ffffff00",
+
+  "secondaryColor": "#212121",
+  "secondaryColorHovered": "#141414",
+  "secondaryColorPressed": "#0a0a0a",
+  "secondaryColorDisabled": "#9e9e9e",
+  "secondaryColorTransparent": "#21212100",
+
+  "secondaryAlternativeColor": "#6b6b6b",
+  "secondaryAlternativeColorHovered": "#5c5c5c",
+  "secondaryAlternativeColorPressed": "#4f4f4f",
+  "secondaryAlternativeColorDisabled": "#bdbdbd",
+  "secondaryAlternativeColorTransparent": "#6b6b6b00",
+
+  "secondaryColorForeground": "#ffffff",
+  "secondaryColorForegroundHovered": "#ffffff",
+  "secondaryColorForegroundPressed": "#ffffff",
+  "secondaryColorForegroundDisabled": "#ffffff99",
+  "secondaryColorForegroundTransparent": "#ffffff00",
+
+  "semiTransparentColor1": "#0000000a",
+  "semiTransparentColor2": "#00000014",
+  "semiTransparentColor3": "#0000001f",
+  "semiTransparentColor4": "#00000029",
+
+  "shadowColor1": "#00000038",
+  "shadowColor2": "#00000033",
+  "shadowColor3": "#0000004d",
+  "shadowColorTransparent": "#00000000",
+
+  "statusColorError": "#b00020",
+  "statusColorErrorHovered": "#b61432",
+  "statusColorErrorPressed": "#bb243f",
+  "statusColorErrorDisabled": "#e19eaa",
+
+  "statusColorForeground": "#ffffff",
+  "statusColorForegroundHovered": "#ffffff",
+  "statusColorForegroundPressed": "#ffffff",
+  "statusColorForegroundDisabled": "#ffffff99",
+
+  "statusColorInfo": "#1e88e5",
+  "statusColorInfoHovered": "#3092e7",
+  "statusColorInfoPressed": "#3e99e9",
+  "statusColorInfoDisabled": "#aad2f5",
+
+  "statusColorSuccess": "#43a047",
+  "statusColorSuccessHovered": "#52a856",
+  "statusColorSuccessPressed": "#5dad61",
+  "statusColorSuccessDisabled": "#b8dbb9",
+
+  "statusColorWarning": "#f57c00",
+  "statusColorWarningHovered": "#f68614",
+  "statusColorWarningPressed": "#f68e24",
+  "statusColorWarningDisabled": "#fbcd9e",
+
+  "borderRadius": 2,
+  "checkBoxBorderRadius": 2,
+  "menuItemBorderRadius": 2,
+  "menuBarItemBorderRadius": 2,
+
+  "animationDuration": 200,
+  "spacing": 8,
+  "controlHeightLarge": 36,
+  "controlHeightMedium": 32,
+  "controlHeightSmall": 20,
+  "scrollBarThicknessFull": 8,
+  "scrollBarThicknessSmall": 8,
+
+  "sliderGrooveHeight": 2,
+  "progressBarGrooveHeight": 4
+}

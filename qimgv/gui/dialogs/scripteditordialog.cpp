@@ -2,11 +2,12 @@
 #include "ui_scripteditordialog.h"
 
 ScriptEditorDialog::ScriptEditorDialog(QWidget *parent) :
-    QDialog(parent),
+    MaterialDialog(parent),
     ui(new Ui::ScriptEditorDialog),
     editMode(false)
 {
     ui->setupUi(this);
+    enableMaterialChrome();
     this->setWindowTitle(tr("New application/script"));
     ui->keywordsLabel->setText(tr("Keywords:") + " %file%");
     connect(ui->nameLineEdit, &QLineEdit::textChanged, this, &ScriptEditorDialog::onNameChanged);
@@ -14,11 +15,12 @@ ScriptEditorDialog::ScriptEditorDialog(QWidget *parent) :
 }
 
 ScriptEditorDialog::ScriptEditorDialog(QString name, Script script, QWidget *parent)
-    : QDialog(parent),
+    : MaterialDialog(parent),
       ui(new Ui::ScriptEditorDialog),
       editMode(true)
 {
     ui->setupUi(this);
+    enableMaterialChrome();
     this->setWindowTitle(tr("Edit"));
     this->onNameChanged(ui->nameLineEdit->text());
     editTarget = name;

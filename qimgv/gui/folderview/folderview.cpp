@@ -35,11 +35,19 @@ FolderView::FolderView(QWidget *parent) :
     // is defined in points by default and in pixels by Qlementine, where
     // pointSize() is -1 - a "-1pt" rule makes Qt warn for every row and leaves
     // the view with no usable font.
+    //
+    // Under Qlementine the font is set on the widget instead: a per-widget
+    // stylesheet wraps the view in QStyleSheetStyle, which keeps the palette it
+    // was polished with, so switching themes left the tree in the old (black on
+    // black) colours until a restart.
     const QFont appFont = QApplication::font();
-    if(appFont.pointSize() > 0)
+    if(UiStyle::useQlementine()) {
+        ui->dirTreeView->setFont(appFont);
+    } else if(appFont.pointSize() > 0) {
         ui->dirTreeView->setStyleSheet(QString("font: %1pt;").arg(appFont.pointSize()));
-    else if(appFont.pixelSize() > 0)
+    } else if(appFont.pixelSize() > 0) {
         ui->dirTreeView->setStyleSheet(QString("font: %1px;").arg(appFont.pixelSize()));
+    }
 
     optionsPopup = new FVOptionsPopup();
     popupTimerClutch.start();

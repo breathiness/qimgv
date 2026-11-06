@@ -242,9 +242,11 @@ void ThumbnailWidget::drawHighlight(QPainter *painter) {
         auto hints = painter->renderHints();
         auto op = painter->opacity();
         painter->setRenderHint(QPainter::Antialiasing);
-        painter->setOpacity(0.40f * op);
+        // MD1 selects with a 12% accent tint plus an accent outline, not a
+        // solid fill - a filled cell competes with the thumbnail itself.
+        painter->setOpacity(0.12f * op);
         painter->fillRect(bgRect, settings->colorScheme().accent);
-        painter->setOpacity(0.70f * op);
+        painter->setOpacity(0.90f * op);
         QPen pen(settings->colorScheme().accent, 2);
         painter->setPen(pen);
         painter->drawRect(bgRect.adjusted(1,1,-1,-1)); // 2px pen

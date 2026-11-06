@@ -9,6 +9,7 @@ FileSystemModelCustom::FileSystemModelCustom(QObject *parent) : QFileSystemModel
 
     connect(settings, &Settings::settingsChanged, [this, dpr]() {
         loadFolderIcon(dpr);
+        notifyIconsChanged();
     });
 }
 
@@ -19,7 +20,7 @@ void FileSystemModelCustom::loadFolderIcon(qreal dpr) {
     const QString themed = UiStyle::themedIconName(resource);
     if(!themed.isEmpty()) {
         const qreal scale = qMax(1.0, dpr);
-        QPixmap pm = UiStyle::vectorIcon(themed).pixmap(QSize(16, 16) * scale);
+        QPixmap pm = UiStyle::vectorIcon(themed).pixmap(QSize(20, 20) * scale);
         if(!pm.isNull()) {
             pm.setDevicePixelRatio(scale);
             folderIcon = pm;
@@ -32,6 +33,14 @@ void FileSystemModelCustom::loadFolderIcon(qreal dpr) {
         path.replace(".", "@2x.");
     folderIcon.load(path);
     ImageLib::recolor(folderIcon, settings->colorScheme().icons);
+}
+
+void FileSystemModelCustom::notifyIconsChanged() {
+    // The views keep the decoration they painted last; without this the tree
+    // stays with the previous theme's icon colour after a theme switch.
+    if(rowCount() > 0)
+        emit dataChanged(index(0, 0), index(rowCount() - 1, columnCount() - 1),
+                         {Qt::DecorationRole});
 }
 
 QVariant FileSystemModelCustom::data( const QModelIndex& index, int role ) const {

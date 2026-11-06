@@ -2,6 +2,8 @@
 #include "themestore.h"
 
 #ifdef USE_QLEMENTINE
+#include <QApplication>
+#include <QFontDatabase>
 #include <oclero/qlementine/style/QlementineStyle.hpp>
 
 #include <QApplication>
@@ -42,9 +44,27 @@ QColor foregroundFor(const QColor &background) {
     return background.lightnessF() > 0.55 ? QColor(0x1a, 0x1a, 0x1a) : QColor(0xff, 0xff, 0xff);
 }
 
-QJsonObject loadThemeFile(bool light) {
-    QFile file(light ? ":/qlementine/resources/themes/light.json"
-                     : ":/qlementine/resources/themes/dark.json");
+bool isMaterialScheme(int tid) {
+    return tid == COLORS_MATERIAL_LIGHT || tid == COLORS_MATERIAL_DARK;
+}
+
+// Theme file for a scheme that is not following the desktop. The Material
+// themes are qimgv's own (res/themes); the rest are the ones Qlementine ships.
+QString themeResourcePath(int tid) {
+    switch(tid) {
+        case COLORS_LIGHT:
+            return QStringLiteral(":/qlementine/resources/themes/light.json");
+        case COLORS_MATERIAL_LIGHT:
+            return QStringLiteral(":/res/themes/material-light.json");
+        case COLORS_MATERIAL_DARK:
+            return QStringLiteral(":/res/themes/material-dark.json");
+        default:
+            return QStringLiteral(":/qlementine/resources/themes/dark.json");
+    }
+}
+
+QJsonObject loadThemeFile(const QString &path) {
+    QFile file(path);
     if(!file.open(QIODevice::ReadOnly))
         return {};
     return QJsonDocument::fromJson(file.readAll()).object();
@@ -89,14 +109,29 @@ void UiTheme::apply(ColorScheme &scheme, bool followSystem, bool tintAccent) {
     if(!style)
         return;
 
-    const bool light = followSystem ? UiTheme::systemPrefersLight()
-                                    : (scheme.tid == COLORS_LIGHT);
-    QJsonObject json = loadThemeFile(light);
+    // "Follow the desktop" only chooses between the light and the dark half of
+    // the family the user is in: following the system while on a Material theme
+    // must not drop back to the stock Qlementine ones.
+    const bool systemLight = UiTheme::systemPrefersLight();
+    const bool material = isMaterialScheme(scheme.tid);
+    QString path = themeResourcePath(scheme.tid);
+    if(followSystem) {
+        if(material)
+            path = systemLight ? themeResourcePath(COLORS_MATERIAL_LIGHT)
+                               : themeResourcePath(COLORS_MATERIAL_DARK);
+        else
+            path = systemLight ? themeResourcePath(COLORS_LIGHT)
+                               : themeResourcePath(COLORS_DARK);
+    }
+    QJsonObject json = loadThemeFile(path);
     if(json.isEmpty()) {
-        qWarning() << "UiTheme: cannot read the Qlementine theme resource";
+        qWarning() << "UiTheme: cannot read the Qlementine theme resource" << path;
         return;
     }
-    if(tintAccent && !followSystem) {
+    // The Material themes ship the palette they are named after, and the accent
+    // picker is hidden while one of them is active, so recolouring here would
+    // only fight the theme it is meant to reproduce.
+    if(tintAccent && !followSystem && !material) {
         const QColor stock(json["primaryColor"].toString());
         // Leave the file alone when the accent is the one it was drawn with: its
         // hover/pressed/focus shades are hand-tuned, and beating them with
@@ -112,7 +147,54 @@ void UiTheme::apply(ColorScheme &scheme, bool followSystem, bool tintAccent) {
         qWarning() << "UiTheme: malformed Qlementine theme";
         return;
     }
-    style->setTheme(theme.value());
+    static bool fontsLoaded = false;
+    static QString cjkFamily;
+    if(!fontsLoaded) {
+        QFontDatabase::addApplicationFont(QStringLiteral(":/res/fonts/Roboto-Regular.ttf"));
+        QFontDatabase::addApplicationFont(QStringLiteral(":/res/fonts/Roboto-Medium.ttf"));
+        // Glow Sans SC (Source Han Sans derivative) subset to GB2312 + the strings
+        // in this repo; the family name is whatever the cut font declares, so ask
+        // the database instead of hard-coding it.
+        const int glowId = QFontDatabase::addApplicationFont(QStringLiteral(":/res/fonts/GlowSansSC-Regular.otf"));
+        QFontDatabase::addApplicationFont(QStringLiteral(":/res/fonts/GlowSansSC-Medium.otf"));
+        const QStringList families = QFontDatabase::applicationFontFamilies(glowId);
+        if(!families.isEmpty())
+            cjkFamily = families.first();
+        fontsLoaded = true;
+    }
+
+    auto appliedTheme = theme.value();
+    // Qlementine ships Inter and never loads anything else, and Inter carries no
+    // CJK glyphs - so Latin came from Inter while Chinese fell back to whatever
+    // Windows picked. Point the theme's fonts at Roboto (bundled) with the CJK
+    // face as the fallback family.
+    QStringList families{QStringLiteral("Roboto")};
+    if(!cjkFamily.isEmpty())
+        families << cjkFamily;
+    families << QStringLiteral("Microsoft YaHei UI") << QStringLiteral("Microsoft YaHei");
+
+    // MD1 type scale: 14sp body, 12sp caption, 16/20/24 for headings, and Medium
+    // for the places MD emphasises with weight rather than size.
+    const auto applyFont = [&](QFont &font, int pixelSize, QFont::Weight weight) {
+        font.setFamilies(families);
+        font.setPixelSize(pixelSize);
+        font.setWeight(weight);
+    };
+    applyFont(appliedTheme.fontRegular, 14, QFont::Normal);
+    applyFont(appliedTheme.fontBold, 14, QFont::Medium);
+    applyFont(appliedTheme.fontCaption, 12, QFont::Normal);
+    applyFont(appliedTheme.fontH1, 24, QFont::Medium);
+    applyFont(appliedTheme.fontH2, 20, QFont::Medium);
+    applyFont(appliedTheme.fontH3, 16, QFont::Medium);
+    applyFont(appliedTheme.fontH4, 16, QFont::Normal);
+    applyFont(appliedTheme.fontH5, 14, QFont::Medium);
+    appliedTheme.fontMonospace.setFamilies({"Cascadia Mono", "Consolas", "Roboto Mono"});
+
+    style->setTheme(appliedTheme);
+    // Qlementine only pushes the palette; widgets that paint themselves (the
+    // folder tree, the context menu) kept Qt's default 9pt font, which is why
+    // they looked smaller than everything else.
+    QApplication::setFont(appliedTheme.fontRegular);
 
     // Read the result back into the scheme. The theme may have adjusted what was
     // asked for (and while following the desktop it was never asked), but qimgv

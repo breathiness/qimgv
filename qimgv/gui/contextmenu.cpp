@@ -1,6 +1,48 @@
 #include "contextmenu.h"
 #include "ui_contextmenu.h"
 
+#include <QHash>
+#include <QPainter>
+#include <QPixmap>
+#include <QStyleOption>
+
+#include "uistyle.h"
+
+#ifdef USE_QLEMENTINE
+#include <oclero/qlementine/utils/ImageUtils.hpp>
+#endif
+
+namespace {
+// The popup paints its own card, so it keeps a margin for the drop shadow the
+// way Qlementine's own menus do (their window is translucent and the shadow is
+// drawn inside it).
+constexpr int kCardMargin = 8;
+
+QPixmap shadowFor(const QSize &cardSize, qreal radius, const QColor &color) {
+    static QHash<QString, QPixmap> cache;
+    const QString key = QStringLiteral("%1x%2|%3")
+                            .arg(cardSize.width()).arg(cardSize.height()).arg(qRound(radius));
+    const auto cached = cache.constFind(key);
+    if(cached != cache.constEnd())
+        return cached.value();
+
+    QPixmap shape(cardSize);
+    shape.fill(Qt::transparent);
+    {
+        QPainter painter(&shape);
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(Qt::black);
+        painter.drawRoundedRect(QRectF(shape.rect()), radius, radius);
+    }
+    QPixmap shadow = oclero::qlementine::getDropShadowPixmap(shape, kCardMargin, color);
+    if(cache.size() > 8)
+        cache.clear();
+    cache.insert(key, shadow);
+    return shadow;
+}
+}
+
 ContextMenu::ContextMenu(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::ContextMenu)
@@ -9,6 +51,10 @@ ContextMenu::ContextMenu(QWidget *parent) :
     setWindowFlags(Qt::Popup);
     setAttribute(Qt::WA_TranslucentBackground, true);
     setAttribute(Qt::WA_NoMousePropagation, true);
+    // Room for the shadow the card paints in paintEvent(); the stylesheet mode
+    // keeps the geometry its .ui describes.
+    if(UiStyle::useQlementine() && layout())
+        layout()->setContentsMargins(1, 1, 1, 1);
     this->hide();
 
     // -------------------------------------------------------------------------
@@ -17,41 +63,53 @@ ContextMenu::ContextMenu(QWidget *parent) :
     ui->zoomIn->setAction("zoomIn");
     ui->zoomIn->setIconPath(":/res/icons/common/buttons/contextmenu/zoom-in18.png");
     ui->zoomIn->setTriggerMode(TriggerMode::PressTrigger);
+    ui->zoomIn->setToolTip(tr("Zoom in"));
     ui->zoomOut->setAction("zoomOut");
     ui->zoomOut->setIconPath(":/res/icons/common/buttons/contextmenu/zoom-out18.png");
     ui->zoomOut->setTriggerMode(TriggerMode::PressTrigger);
+    ui->zoomOut->setToolTip(tr("Zoom out"));
     ui->zoomOriginal->setAction("fitNormal");
     ui->zoomOriginal->setIconPath(":/res/icons/common/buttons/contextmenu/zoom-original18.png");
     ui->zoomOriginal->setTriggerMode(TriggerMode::PressTrigger);
+    ui->zoomOriginal->setToolTip(tr("Original size"));
     ui->fitWidth->setAction("fitWidth");
     ui->fitWidth->setIconPath(":/res/icons/common/buttons/contextmenu/fit-width18.png");
     ui->fitWidth->setTriggerMode(TriggerMode::PressTrigger);
+    ui->fitWidth->setToolTip(tr("Fit width"));
     ui->fitWindow->setAction("fitWindow");
     ui->fitWindow->setIconPath(":/res/icons/common/buttons/contextmenu/fit-window18.png");
     ui->fitWindow->setTriggerMode(TriggerMode::PressTrigger);
+    ui->fitWindow->setToolTip(tr("Fit window"));
     ui->fitWindowStretch->setAction("fitWindowStretch");
     ui->fitWindowStretch->setIconPath(":/res/icons/common/buttons/contextmenu/fit-height-stretch18.png");
     ui->fitWindowStretch->setTriggerMode(TriggerMode::PressTrigger);
+    ui->fitWindowStretch->setToolTip(tr("Fit height"));
     // -------------------------------------------------------------------------
     // transform buttons
     ui->rotateLeft->setAction("rotateLeft");
     ui->rotateLeft->setIconPath(":/res/icons/common/menuitem/rotate-left16.png");
     ui->rotateLeft->setTriggerMode(TriggerMode::PressTrigger);
+    ui->rotateLeft->setToolTip(tr("Rotate left"));
     ui->rotateRight->setAction("rotateRight");
     ui->rotateRight->setIconPath(":/res/icons/common/menuitem/rotate-right16.png");
     ui->rotateRight->setTriggerMode(TriggerMode::PressTrigger);
+    ui->rotateRight->setToolTip(tr("Rotate right"));
     ui->flipH->setAction("flipH");
     ui->flipH->setIconPath(":/res/icons/common/menuitem/flip-h16.png");
     ui->flipH->setTriggerMode(TriggerMode::PressTrigger);
+    ui->flipH->setToolTip(tr("Flip horizontally"));
     ui->flipV->setAction("flipV");
     ui->flipV->setIconPath(":/res/icons/common/menuitem/flip-v16.png");
     ui->flipV->setTriggerMode(TriggerMode::PressTrigger);
+    ui->flipV->setToolTip(tr("Flip vertically"));
     ui->crop->setAction("crop");
     ui->crop->setIconPath(":/res/icons/common/menuitem/image-crop16.png");
     ui->crop->setTriggerMode(TriggerMode::PressTrigger);
+    ui->crop->setToolTip(tr("Crop"));
     ui->resize->setAction("resize");
     ui->resize->setIconPath(":/res/icons/common/menuitem/resize16.png");
     ui->resize->setTriggerMode(TriggerMode::PressTrigger);
+    ui->resize->setToolTip(tr("Resize"));
     // -------------------------------------------------------------------------
     //  entries
     ui->print->setAction("print");
@@ -179,9 +237,30 @@ void ContextMenu::mousePressEvent(QMouseEvent *event) {
 
 void ContextMenu::paintEvent(QPaintEvent *event) {
     Q_UNUSED(event)
+    QPainter p(this);
+#ifdef USE_QLEMENTINE
+    if(UiStyle::useQlementine()) {
+        // Qlementine leaves PE_Widget empty, and the popup window is
+        // translucent, so the card has to be painted here or the menu is a
+        // transparent rectangle with unreadable text on top of the image.
+        UiStyle::ChromePalette pal;
+        if(!UiStyle::chromePalette(pal))
+            return;
+        p.setRenderHint(QPainter::Antialiasing, true);
+        const QRectF card = QRectF(rect());
+        if(card.width() <= 0 || card.height() <= 0)
+            return;
+
+        // A 30% shadow at this size read as a black ring around the card; MD1
+        // menus carry a soft 8dp elevation, not an outline.
+        p.setPen(QPen(pal.surfaceLine, 1));
+        p.setBrush(pal.surface);
+        p.drawRoundedRect(card.adjusted(0.5, 0.5, -0.5, -0.5), pal.radius, pal.radius);
+        return;
+    }
+#endif
     QStyleOption opt;
     opt.initFrom(this);
-    QPainter p(this);
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }
 

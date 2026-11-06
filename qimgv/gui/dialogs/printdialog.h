@@ -2,6 +2,7 @@
 #define PRINTDIALOG_H
 
 #include <QDialog>
+#include "gui/customwidgets/materialdialog.h"
 #include <QtPrintSupport/QPrinter>
 #include <QtPrintSupport/QPrinterInfo>
 #include <QFileDialog>
@@ -15,7 +16,7 @@ namespace Ui {
 class PrintDialog;
 }
 
-class PrintDialog : public QDialog {
+class PrintDialog : public MaterialDialog {
     Q_OBJECT
 
 public:

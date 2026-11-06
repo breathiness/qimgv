@@ -2,9 +2,10 @@
 #include "ui_printdialog.h"
 
 PrintDialog::PrintDialog(QWidget *parent)
-    : QDialog(parent), ui(new Ui::PrintDialog)
+    : MaterialDialog(parent), ui(new Ui::PrintDialog)
 {
     ui->setupUi(this);
+    enableMaterialChrome();
     ui->previewLabel->setContentsMargins(0,0,0,0);
     pdfPrinter.setOutputFormat(QPrinter::PdfFormat);
     pdfPrinter.setPageSize(QPageSize(QPageSize::A4));

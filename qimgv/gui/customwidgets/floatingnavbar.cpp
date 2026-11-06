@@ -357,7 +357,7 @@ void FloatingNavBar::applyTheme() {
      .arg(colors.accent.blue())
      .arg(hover.alpha())
      .arg(pressed.alpha())
-     .arg(UiStyle::controlRadius()));
+     .arg(4));  // small radius; the navbar buttons are pills, not circles; the radius clamps to half the height
 }
 
 void FloatingNavBar::updateFromShortcuts() {

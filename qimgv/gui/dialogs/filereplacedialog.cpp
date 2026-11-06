@@ -1,8 +1,9 @@
 #include "filereplacedialog.h"
 #include "ui_filereplacedialog.h"
 
-FileReplaceDialog::FileReplaceDialog(QWidget *parent) : QDialog(parent), ui(new Ui::FileReplaceDialog) {
+FileReplaceDialog::FileReplaceDialog(QWidget *parent) : MaterialDialog(parent), ui(new Ui::FileReplaceDialog) {
     ui->setupUi(this);
+    enableMaterialChrome();
     multi = false;
     connect(ui->yesButton, &QPushButton::clicked, this, &FileReplaceDialog::onYesClicked);
     connect(ui->noButton, &QPushButton::clicked, this, &FileReplaceDialog::onNoClicked);

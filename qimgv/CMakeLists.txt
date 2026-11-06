@@ -56,6 +56,8 @@ add_executable(qimgv
     proxystyle.cpp
     uistyle.cpp
     uitheme.cpp
+    materialstyle.cpp
+    gui/customwidgets/materialdialog.cpp
     macosapplication.cpp
     resources.qrc
     qimgv.rc

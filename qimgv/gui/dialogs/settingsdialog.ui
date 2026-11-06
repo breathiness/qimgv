@@ -4903,6 +4903,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
             <property name="text">
              <string>OK</string>
             </property>
+            <property name="default">
+             <bool>true</bool>
+            </property>
            </widget>
           </item>
           <item>

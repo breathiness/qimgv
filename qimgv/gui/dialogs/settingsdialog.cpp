@@ -8,11 +8,49 @@
 #include <QLabel>
 #include <QVBoxLayout>
 
+namespace {
+// Order of the entries setupQlementineThemePage() puts in the theme combo.
+constexpr int kQlementineThemeCount = 4;
+
+ColorSchemes qlementinePresetAt(int index) {
+    switch(index) {
+        case 0:  return COLORS_DARK;
+        case 1:  return COLORS_LIGHT;
+        case 2:  return COLORS_MATERIAL_LIGHT;
+        default: return COLORS_MATERIAL_DARK;
+    }
+}
+
+int qlementinePresetIndex(int tid) {
+    switch(tid) {
+        case COLORS_LIGHT:          return 1;
+        case COLORS_MATERIAL_LIGHT: return 2;
+        case COLORS_MATERIAL_DARK:  return 3;
+        default:                    return 0;
+    }
+}
+
+bool isMaterialPreset(int tid) {
+    return tid == COLORS_MATERIAL_LIGHT || tid == COLORS_MATERIAL_DARK;
+}
+} // namespace
+
 SettingsDialog::SettingsDialog(QWidget *parent) :
-    QDialog(parent),
+    MaterialDialog(parent),
     ui(new Ui::SettingsDialog)
 {
     ui->setupUi(this);
+    // Frameless MD1 surface with a painted elevation; a no-op for the stock
+    // themes, which keep the native title bar.
+    enableMaterialChrome();
+    // MaterialStyle fills the button that carries this property; the dialog has
+    // no QDialogButtonBox to flag its accept button automatically, and the
+    // "default" flag QPushButton offers does not survive focus changes here.
+    ui->OK->setProperty("materialPrimary", true);
+    // MD1 lists are 48dp rows. The item views get that from the style, but a
+    // QTableWidget sizes its rows from the header's default section size.
+    if(UiStyle::materialTheme())
+        ui->shortcutsTableWidget->verticalHeader()->setDefaultSectionSize(48);
     this->setWindowTitle(tr("Preferences — ") + qApp->applicationName());
 
     ui->shortcutsTableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);   
@@ -30,15 +68,13 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
         ui->themeSelectorComboBox->setCurrentIndex(index);
         ui->themeSelectorComboBox->blockSignals(false);
         if(UiStyle::useQlementine()) {
-            // two entries only: Dark, Light (see setupQlementineThemePage())
-            if(index == 0) {
-                mQlementinePresetTid = COLORS_DARK;
-                setColorScheme(ThemeStore::colorScheme(COLORS_DARK));
-                settings->setColorTid(COLORS_DARK);
-            } else if(index == 1) {
-                mQlementinePresetTid = COLORS_LIGHT;
-                setColorScheme(ThemeStore::colorScheme(COLORS_LIGHT));
-                settings->setColorTid(COLORS_LIGHT);
+            // entries: Dark, Light, Material, Material Dark (see setupQlementineThemePage())
+            if(index >= 0 && index < kQlementineThemeCount) {
+                const ColorSchemes tid = qlementinePresetAt(index);
+                mQlementinePresetTid = tid;
+                setColorScheme(ThemeStore::colorScheme(tid));
+                settings->setColorTid(tid);
+                updateAccentRow(tid);
             }
             return;
         }
@@ -55,14 +91,17 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
             ui->themeSelectorComboBox->setCurrentIndex(-1);
             setColorScheme(ThemeStore::colorScheme(COLORS_SYSTEM));
             settings->setColorTid(COLORS_SYSTEM);
+            updateAccentRow(COLORS_DARK);
         }
         else if(UiStyle::useQlementine()) {
             // Back to the last window theme the user picked. COLORS_CUSTOMIZED
             // would take the colours from the pickers, but in Qlementine mode
             // those describe the theme and cannot be applied back.
-            const ColorSchemes tid = mQlementinePresetTid == COLORS_LIGHT ? COLORS_LIGHT : COLORS_DARK;
+            const ColorSchemes tid = mQlementinePresetTid >= 0 ? static_cast<ColorSchemes>(mQlementinePresetTid)
+                                                              : COLORS_DARK;
             setColorScheme(ThemeStore::colorScheme(tid));
             settings->setColorTid(tid);
+            updateAccentRow(tid);
         }
         else {
             readColorScheme();
@@ -233,10 +272,16 @@ void SettingsDialog::setupQlementineThemePage() {
         ui->themeSelectorComboBox->clear();
         ui->themeSelectorComboBox->addItem(tr("Dark"));
         ui->themeSelectorComboBox->addItem(tr("Light"));
+        ui->themeSelectorComboBox->addItem(tr("Material"));
+        ui->themeSelectorComboBox->addItem(tr("Material Dark"));
     }
     ui->modifySystemSchemeLabel->hide();
     // what "Use system colors" falls back to when switched off again
-    mQlementinePresetTid = settings->colorScheme().tid == COLORS_LIGHT ? COLORS_LIGHT : COLORS_DARK;
+    const int savedTid = static_cast<int>(settings->colorScheme().tid);
+    mQlementinePresetTid = (savedTid == COLORS_LIGHT || savedTid == COLORS_MATERIAL_LIGHT
+                            || savedTid == COLORS_MATERIAL_DARK) ? savedTid
+                                                                 : static_cast<int>(COLORS_DARK);
+    updateAccentRow(mQlementinePresetTid);
 
     // Keep the accent and its label, hide the rest of the grid.
     for(int i = 0; i < ui->gridLayout_2->count(); i++) {
@@ -251,6 +296,16 @@ void SettingsDialog::setupQlementineThemePage() {
     note->setAccessibleName("SNoteText");
     note->setWordWrap(true);
     ui->verticalLayout_23->insertWidget(0, note);
+}
+//------------------------------------------------------------------------------
+void SettingsDialog::updateAccentRow(int tid) {
+    // Material has a fixed accent, so the picker would only be a control that
+    // does nothing. The whole colour card goes with it: after the grid is
+    // stripped down it holds nothing but the accent row and its note.
+    const bool material = isMaterialPreset(tid);
+    ui->colorsGroup->setVisible(!material);
+    ui->colorSelectorAccent->setVisible(!material);
+    ui->label_33->setVisible(!material);
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::resetToDesktopTheme() {
@@ -567,8 +622,11 @@ void SettingsDialog::setColorScheme(ColorScheme colors) {
         if(settings->useSystemColorScheme()) {
             ui->themeSelectorComboBox->setCurrentIndex(-1); // follows the desktop
         } else {
-            mQlementinePresetTid = colors.tid == COLORS_LIGHT ? COLORS_LIGHT : COLORS_DARK;
-            ui->themeSelectorComboBox->setCurrentIndex(mQlementinePresetTid == COLORS_LIGHT ? 1 : 0);
+            mQlementinePresetTid = (colors.tid == COLORS_LIGHT || colors.tid == COLORS_MATERIAL_LIGHT
+                                    || colors.tid == COLORS_MATERIAL_DARK) ? colors.tid
+                                                                         : static_cast<int>(COLORS_DARK);
+            ui->themeSelectorComboBox->setCurrentIndex(qlementinePresetIndex(mQlementinePresetTid));
+            updateAccentRow(mQlementinePresetTid);
         }
     } else {
         switch (colors.tid) {

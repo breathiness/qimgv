@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QDialog>
+#include "gui/customwidgets/materialdialog.h"
 #include <QFileDialog>
 #include <QColorDialog>
 #include <QThreadPool>
@@ -27,7 +27,7 @@ class QCheckBox;
 class QComboBox;
 class QLabel;
 
-class SettingsDialog : public QDialog
+class SettingsDialog : public MaterialDialog
 {
     Q_OBJECT
 
@@ -69,6 +69,8 @@ private:
     void setupSidebar();
     void setupUiStyleRow();
     void setupQlementineThemePage();
+    // The Material themes carry their own accent, so the picker is hidden there
+    void updateAccentRow(int tid);
     void removeShortcutAt(int row);
     void adjustSizeToContents();
     QMap<QString, QString> langs; // <"en_US", "English">

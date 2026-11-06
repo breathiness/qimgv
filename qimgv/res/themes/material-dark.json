@@ -1,0 +1,117 @@
+{
+  "meta": {
+    "author": "qimgv",
+    "name": "Material Dark",
+    "version": "1.0"
+  },
+
+  "backgroundColorMain1": "#121212",
+  "backgroundColorMain2": "#1e1e1e",
+  "backgroundColorMain3": "#242424",
+  "backgroundColorMain4": "#2c2c2c",
+  "backgroundColorMainTransparent": "#12121200",
+
+  "backgroundColorWorkspace": "#000000",
+  "backgroundColorTabBar": "#1e1e1e",
+
+  "borderColor": "#3d3d3d",
+  "borderColorHovered": "#4f4f4f",
+  "borderColorPressed": "#616161",
+  "borderColorDisabled": "#2a2a2a",
+  "borderColorTransparent": "#3d3d3d00",
+
+  "focusColor": "#bb86fc66",
+
+  "neutralColor": "#2a2a2a",
+  "neutralColorHovered": "#333333",
+  "neutralColorPressed": "#3d3d3d",
+  "neutralColorDisabled": "#232323",
+  "neutralColorTransparent": "#2a2a2a00",
+
+  "primaryColor": "#bb86fc",
+  "primaryColorHovered": "#c395fc",
+  "primaryColorPressed": "#caa1fd",
+  "primaryColorDisabled": "#523e6b",
+  "primaryColorTransparent": "#bb86fc00",
+
+  "primaryAlternativeColor": "#3700b3",
+  "primaryAlternativeColorHovered": "#4f1fbc",
+  "primaryAlternativeColorPressed": "#6338c4",
+  "primaryAlternativeColorDisabled": "#200b4f",
+  "primaryAlternativeColorTransparent": "#3700b300",
+
+  "primaryColorForeground": "#000000",
+  "primaryColorForegroundHovered": "#000000",
+  "primaryColorForegroundPressed": "#000000",
+  "primaryColorForegroundDisabled": "#7a7a7a",
+  "primaryColorForegroundTransparent": "#00000000",
+
+  "secondaryColor": "#ededed",
+  "secondaryColorHovered": "#d5d5d5",
+  "secondaryColorPressed": "#c2c2c2",
+  "secondaryColorDisabled": "#6c6c6c",
+  "secondaryColorTransparent": "#ededed00",
+
+  "secondaryAlternativeColor": "#9e9e9e",
+  "secondaryAlternativeColorHovered": "#b0b0b0",
+  "secondaryAlternativeColorPressed": "#c0c0c0",
+  "secondaryAlternativeColorDisabled": "#5a5a5a",
+  "secondaryAlternativeColorTransparent": "#9e9e9e00",
+
+  "secondaryColorForeground": "#121212",
+  "secondaryColorForegroundHovered": "#121212",
+  "secondaryColorForegroundPressed": "#121212",
+  "secondaryColorForegroundDisabled": "#12121299",
+  "secondaryColorForegroundTransparent": "#12121200",
+
+  "semiTransparentColor1": "#ffffff0a",
+  "semiTransparentColor2": "#ffffff14",
+  "semiTransparentColor3": "#ffffff1f",
+  "semiTransparentColor4": "#ffffff29",
+
+  "shadowColor1": "#00000099",
+  "shadowColor2": "#000000b3",
+  "shadowColor3": "#000000e6",
+  "shadowColorTransparent": "#00000000",
+
+  "statusColorError": "#cf6679",
+  "statusColorErrorHovered": "#d57889",
+  "statusColorErrorPressed": "#da8896",
+  "statusColorErrorDisabled": "#5a3239",
+
+  "statusColorForeground": "#000000",
+  "statusColorForegroundHovered": "#000000",
+  "statusColorForegroundPressed": "#000000",
+  "statusColorForegroundDisabled": "#00000099",
+
+  "statusColorInfo": "#42a5f5",
+  "statusColorInfoHovered": "#59b0f6",
+  "statusColorInfoPressed": "#6cb9f7",
+  "statusColorInfoDisabled": "#244a68",
+
+  "statusColorSuccess": "#66bb6a",
+  "statusColorSuccessHovered": "#78c37c",
+  "statusColorSuccessPressed": "#88ca8b",
+  "statusColorSuccessDisabled": "#325233",
+
+  "statusColorWarning": "#ffa726",
+  "statusColorWarningHovered": "#ffb240",
+  "statusColorWarningPressed": "#ffba56",
+  "statusColorWarningDisabled": "#6c4b1a",
+
+  "borderRadius": 2,
+  "checkBoxBorderRadius": 2,
+  "menuItemBorderRadius": 2,
+  "menuBarItemBorderRadius": 2,
+
+  "animationDuration": 200,
+  "spacing": 8,
+  "controlHeightLarge": 36,
+  "controlHeightMedium": 32,
+  "controlHeightSmall": 20,
+  "scrollBarThicknessFull": 8,
+  "scrollBarThicknessSmall": 8,
+
+  "sliderGrooveHeight": 2,
+  "progressBarGrooveHeight": 4
+}

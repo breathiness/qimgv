@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gui/customwidgets/materialdialog.h"
+
 #include <QFileDialog>
 #include <QLabel>
 #include <QPushButton>
@@ -12,7 +14,7 @@ namespace Ui {
 class ScriptEditorDialog;
 }
 
-class ScriptEditorDialog : public QDialog
+class ScriptEditorDialog : public MaterialDialog
 {
     Q_OBJECT
 

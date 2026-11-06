@@ -10,6 +10,7 @@
 
 #include "settings.h"
 #include "sourcecontainers/thumbnail.h"
+#include "uistyle.h"
 
 namespace {
 
@@ -301,18 +302,28 @@ void DirectoryPresenter::generateThumbnails(QList<int> indexes, int size, bool c
             // size and colour and then shared: the SVG parse plus the recolor for
             // each row added up to most of the time a folder-heavy listing took.
             const QColor iconColor = settings->colorScheme().icons;
-            const QString cacheKey = QString::number(size) + "|" + iconColor.name(QColor::HexArgb);
+            // The Material themes draw the tiles with Papirus' folder instead of
+            // the monochrome one: the flat colour palette leaves nothing for a
+            // masked glyph to sit on.
+            const bool papirus = UiStyle::materialTheme();
+            const QString cacheKey = QString::number(size) + "|" + iconColor.name(QColor::HexArgb)
+                                     + (papirus ? QStringLiteral("|papirus") : QString());
             std::shared_ptr<QPixmap> pixmap = mDirIconCache.value(cacheKey);
             if(!pixmap) {
                 QSvgRenderer svgRenderer;
-                svgRenderer.load(QString(":/res/icons/common/other/folder32-scalable.svg"));
+                svgRenderer.load(papirus
+                                     ? QString(":/res/icons/common/other/folder-papirus.svg")
+                                     : QString(":/res/icons/common/other/folder32-scalable.svg"));
                 int factor = (size * 0.90f) / svgRenderer.defaultSize().width();
                 pixmap = std::make_shared<QPixmap>(svgRenderer.defaultSize() * factor);
                 pixmap->fill(Qt::transparent);
                 QPainter pixPainter(pixmap.get());
                 svgRenderer.render(&pixPainter);
                 pixPainter.end();
-                ImageLib::recolor(*pixmap, iconColor);
+                // Papirus' folder carries its own colours; only the symbolic one
+                // is masked with the theme's icon colour.
+                if(!papirus)
+                    ImageLib::recolor(*pixmap, iconColor);
                 // a handful of sizes is all this ever holds
                 if(mDirIconCache.size() > 8)
                     mDirIconCache.clear();

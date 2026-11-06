@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gui/customwidgets/materialdialog.h"
+
 #include <QDialog>
 #include <QComboBox>
 #include <QRadioButton>
@@ -14,7 +16,7 @@ namespace Ui {
 class ShortcutCreatorDialog;
 }
 
-class ShortcutCreatorDialog : public QDialog
+class ShortcutCreatorDialog : public MaterialDialog
 {
     Q_OBJECT
 

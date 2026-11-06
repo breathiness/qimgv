@@ -2,11 +2,12 @@
 #include "ui_resizedialog.h"
 
 ResizeDialog::ResizeDialog(QSize originalSize,  QWidget *parent) :
-    QDialog(parent),
+    MaterialDialog(parent),
     ui(new Ui::ResizeDialog),
     lastEdited(0)
 {
     ui->setupUi(this);
+    enableMaterialChrome();
     setWindowModality(Qt::ApplicationModal);
     ui->percent->setFocus();
 

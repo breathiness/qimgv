@@ -1,5 +1,7 @@
 #pragma once
 
+#include "gui/customwidgets/materialdialog.h"
+
 #include <QCheckBox>
 #include <QDebug>
 #include <QScreen>
@@ -17,7 +19,7 @@ namespace Ui {
     class ResizeDialog;
 }
 
-class ResizeDialog : public QDialog
+class ResizeDialog : public MaterialDialog
 {
     Q_OBJECT
 public:

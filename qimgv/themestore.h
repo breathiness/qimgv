@@ -10,7 +10,12 @@ enum ColorSchemes {
     COLORS_BLACK,
     COLORS_DARK,
     COLORS_DARKBLUE,
-    COLORS_CUSTOMIZED
+    COLORS_CUSTOMIZED,
+    // The Material entries only exist in Qlementine mode: they carry a theme
+    // file of their own (see UiTheme) instead of the colour set below. Appended
+    // so the ids already written to config files keep their meaning.
+    COLORS_MATERIAL_LIGHT,
+    COLORS_MATERIAL_DARK
 };
 
 struct BaseColorScheme {

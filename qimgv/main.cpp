@@ -16,9 +16,11 @@
 #include "sharedresources.h"
 #include "proxystyle.h"
 #include "uistyle.h"
+#include "uitheme.h"
 #include "core.h"
 
 #ifdef USE_QLEMENTINE
+#include "materialstyle.h"
 #include <oclero/qlementine/style/QlementineStyle.hpp>
 #include <oclero/qlementine/icons/QlementineIcons.hpp>
 #endif
@@ -137,7 +139,9 @@ int main(int argc, char *argv[]) {
         uiStyle = UI_STYLE_QLEMENTINE;
     if(uiStyle == UI_STYLE_QLEMENTINE) {
 #ifdef USE_QLEMENTINE
-        auto *qlementineStyle = new oclero::qlementine::QlementineStyle;
+        // MaterialStyle is a QlementineStyle that repaints buttons only while a
+        // Material theme is installed; the stock themes go straight through.
+        auto *qlementineStyle = new MaterialStyle;
         // Bootstrap theme, replaced a few lines down by the one the saved
         // settings ask for (see UiTheme::apply): the style has to exist before
         // Settings can be constructed, and Settings owns the theme choice.

@@ -1,4 +1,6 @@
 #pragma once
+
+#include "gui/customwidgets/materialdialog.h"
 #include <QDialog>
 
 struct DialogResult {
@@ -29,7 +31,7 @@ namespace Ui {
 class FileReplaceDialog;
 }
 
-class FileReplaceDialog : public QDialog {
+class FileReplaceDialog : public MaterialDialog {
     Q_OBJECT
 
 public:

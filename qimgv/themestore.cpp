@@ -78,6 +78,39 @@ ColorScheme ThemeStore::colorScheme(ColorSchemes name) {
             base.overlay = "#1a1a1a";
             base.tid = static_cast<int>(name);
             break;
+        case COLORS_MATERIAL_LIGHT:
+            // Only reachable as a fallback: UiTheme replaces all of this with the
+            // material-light.json theme. Values mirror that file so a failed load
+            // still leaves a sane light window.
+            base.background = "#ffffff";
+            base.background_fullscreen = "#e0e0e0";
+            base.text = "#1a1a1a";
+            base.icons = "#1a1a1a";
+            base.widget = "#eeeeee";
+            base.widget_border = "#e0e0e0";
+            base.accent = "#6200ee";
+            base.folderview = "#eeeeee";
+            base.folderview_topbar = "#f5f5f5";
+            base.scrollbar = "#eeeeee";
+            base.overlay_text = "#1a1a1a";
+            base.overlay = "#ffffff";
+            base.tid = static_cast<int>(name);
+            break;
+        case COLORS_MATERIAL_DARK:
+            base.background = "#121212";
+            base.background_fullscreen = "#000000";
+            base.text = "#e8e8e8";
+            base.icons = "#e8e8e8";
+            base.widget = "#2a2a2a";
+            base.widget_border = "#3d3d3d";
+            base.accent = "#bb86fc";
+            base.folderview = "#242424";
+            base.folderview_topbar = "#1e1e1e";
+            base.scrollbar = "#2a2a2a";
+            base.overlay_text = "#e8e8e8";
+            base.overlay = "#121212";
+            base.tid = static_cast<int>(name);
+            break;
     }
     return ColorScheme(base);
 }

@@ -3,10 +3,11 @@
 #include "utils/actions.h"
 
 ShortcutCreatorDialog::ShortcutCreatorDialog(QWidget *parent) :
-    QDialog(parent),
+    MaterialDialog(parent),
     ui(new Ui::ShortcutCreatorDialog)
 {
     ui->setupUi(this);
+    enableMaterialChrome();
     // the title comes from the .ui file, which is already translated
     actionList = appActions->getList();
     scriptList = scriptManager->scriptNames();
