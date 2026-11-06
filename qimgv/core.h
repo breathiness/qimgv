@@ -49,6 +49,9 @@ public slots:
 
 private:
     QElapsedTimer t;
+    // Colour the folder icons were last rendered with, so a theme switch can
+    // repaint them (see Core::readSettings).
+    QColor lastIconColor;
 
     void initGui();
     void initComponents();

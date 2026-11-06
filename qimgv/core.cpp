@@ -47,6 +47,17 @@ void Core::readSettings() {
         folderViewPresenter.setShowDirs(showDirs);
     if(shuffle)
         syncRandomizer();
+
+    // A theme switch recolours the folder icons, but the views keep the pixmaps
+    // they were first populated with - after switching to a dark theme the
+    // folder glyphs stayed white on white. The presenters render one icon per
+    // (size, colour), so re-populating is enough to pick the new colour up.
+    const QColor iconColor = settings->colorScheme().icons;
+    if(iconColor != lastIconColor) {
+        lastIconColor = iconColor;
+        folderViewPresenter.reloadModel();
+        thumbPanelPresenter.reloadModel();
+    }
 }
 
 void Core::showGui() {

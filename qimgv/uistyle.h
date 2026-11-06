@@ -14,6 +14,11 @@ namespace UiStyle {
 bool useQlementine();
 void setUseQlementine(bool enabled);
 
+// True when one of the Material themes is installed. Parts of the UI that
+// change their look with the theme (the folder tiles, which switch to Papirus'
+// colourful folder) ask this instead of guessing from colours.
+bool materialTheme();
+
 // Corner radius for widgets qimgv paints itself (navigation bar, overlays).
 // Follows the active style when it exposes one, so both halves agree.
 int controlRadius();
