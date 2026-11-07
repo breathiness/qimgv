@@ -16,7 +16,7 @@ qimgv（个人修改版）
 | **PDF 阅读** | 分页显示，只渲染屏幕上的那几页，所以几百页的书也能秒开；支持缩放、翻页、加密文档。 |
 | **图片信息面板** | 按 I 显示文件、图像、内嵌文本，以及相机的 EXIF（机型、镜头、快门、光圈、ISO、GPS 等）。 |
 | **文件夹视图右键菜单** | 复制、剪切、粘贴、删除、新建文件夹等操作可直接在网格里完成。 |
-| **更多格式** | DXF/DWG 图纸、PDF、视频缩略图；通过可选扩展包支持 WebP/HEIC/AVIF/JXL/RAW/PSD 等。 |
+| **更多格式** | DXF/DWG 图纸、PDF、视频缩略图；通过可选格式包 / 视频包支持 WebP/HEIC/AVIF/JXL/RAW/PSD 等。 |
 | **矢量图标** | 界面图标改用 Material Symbols 矢量图标，任意 DPI 都清晰。 |
 | **Material 主题** | 按 MDUI 规范绘制的 Material Light / Dark 主题：按钮、复选框、滑块、菜单、文本框与无边框对话框，搭配 Roboto + 未来荧黑字体。 |
 
@@ -138,7 +138,7 @@ qimgv 也会遵循 KDE 系统设置里的全局缩放系数。
 
 # 额外图片格式
 
-qimgv 可以通过第三方图片插件打开一些额外格式，Windows 安装包内均已包含。
+qimgv 可以通过第三方图片插件打开一些额外格式，这些插件放在可选格式包里（见下面的「安装」）。
 
 | 格式 | 插件 |
 | ------- | ------------- |
@@ -153,7 +153,8 @@ qimgv 可以通过第三方图片插件打开一些额外格式，Windows 安装
 Windows 64 位构建发布在 [Releases](https://github.com/breathiness/qimgv/releases)：
 
 - **主程序包**（`qimgv-<版本>-win64.zip`）：解压即用，含 Qt 运行时与基础图片格式。
-- **扩展包**（`qimgv-extras-<版本>.zip`，可选）：按需覆盖到主程序目录，补充 WebP / HEIC / AVIF / JPEG XL / RAW / PSD 与视频播放。
+- **格式包**（`qimgv-formats-<版本>.zip`，可选）：覆盖到主程序目录，补充 WebP / HEIC / AVIF / JPEG XL / RAW / PSD 与 PDF。
+- **视频包**（`qimgv-video-<版本>.zip`，可选）：覆盖到主程序目录，补充视频播放与视频缩略图。播放器库（libmpv）体积较大，因此和格式分开下载；不看视频可以不装。
 
 ## 从源码编译
 

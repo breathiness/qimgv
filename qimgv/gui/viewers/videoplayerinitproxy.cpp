@@ -30,8 +30,10 @@ VideoPlayerInitProxy::~VideoPlayerInitProxy() {
 void VideoPlayerInitProxy::onSettingsChanged() {
     if(!player)
         return;
+    // scaling is not read here: ViewerWidget owns it (see readSettings), and
+    // re-reading it from the settings file would undo a fit command given in the
+    // viewer every time an unrelated option was saved
     player->setMuted(!settings->playVideoSounds());
-    player->setVideoUnscaled(!settings->expandImage());
 }
 
 std::shared_ptr<VideoPlayer> VideoPlayerInitProxy::getPlayer() {
@@ -75,7 +77,7 @@ inline bool VideoPlayerInitProxy::initPlayer() {
     }
 
     player->setMuted(!settings->playVideoSounds());
-    player->setVideoUnscaled(!settings->expandImage());
+    player->setVideoUnscaled(mVideoUnscaled);
     player->setVolume(settings->volume());
 
     player->setParent(this);
@@ -96,9 +98,9 @@ inline bool VideoPlayerInitProxy::initPlayer() {
 bool VideoPlayerInitProxy::showVideo(QString file) {
     if(!initPlayer())
         return false;
-    // The option used to be read only when the player was created, so changing
-    // "expand image" had no effect until a restart.
-    player->setVideoUnscaled(!settings->expandImage());
+    // no scaling here any more: ViewerWidget re-asserts the mode on every file.
+    // Reading it from the settings gave the new video the "expand image" answer
+    // and dropped the fit the previous video was shown with.
     return player->showVideo(file);
 }
 
@@ -183,6 +185,7 @@ int VideoPlayerInitProxy::volume() {
 }
 
 void VideoPlayerInitProxy::setVideoUnscaled(bool mode) {
+    mVideoUnscaled = mode;
     if(!player)
         return;
     player->setVideoUnscaled(mode);

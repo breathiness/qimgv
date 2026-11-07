@@ -70,6 +70,10 @@ private:
     CurrentWidget currentWidget;
     // what setVideoUnscaled() was last given; the video player has no getter
     bool mVideoScaled = true;
+    // the image fit mode the video scaling was derived from, so a change of the
+    // setting is told apart from a fit command the user gave in the viewer
+    ImageFitMode mVideoFitMode = FIT_FREE;
+    bool mVideoExpandImage = false;
     bool mInteractionEnabled, mWaylandCursorWorkaround;
     QTimer cursorTimer;
     const int CURSOR_HIDE_TIMEOUT_MS = 1000;

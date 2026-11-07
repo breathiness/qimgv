@@ -154,6 +154,17 @@ void FolderView::readSettings() {
     ui->bookmarksWidget->setVisible(settings->placesPanelBookmarksExpanded());
     ui->dirTreeView->setVisible(settings->placesPanelTreeExpanded());
 
+    // A theme switch swaps the application palette, but the tree keeps painting
+    // with the one it was polished with: after switching to a dark theme the
+    // places panel stayed white with dark text. Re-seed it from the palette the
+    // style just installed.
+    if(UiStyle::useQlementine()) {
+        const QPalette appPalette = QApplication::palette();
+        ui->dirTreeView->setPalette(appPalette);
+        ui->dirTreeView->viewport()->setPalette(appPalette);
+        ui->dirTreeView->viewport()->update();
+    }
+
     QList<int> sizes;
     sizes << settings->placesPanelWidth() << 1;
     ui->splitter->setSizes(sizes);

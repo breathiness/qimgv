@@ -5,6 +5,8 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QStyleOption>
+#include <QPair>
+#include <QVector>
 
 #include "uistyle.h"
 
@@ -17,6 +19,14 @@ namespace {
 // way Qlementine's own menus do (their window is translucent and the shadow is
 // drawn inside it).
 constexpr int kCardMargin = 8;
+
+// Icon-only buttons have no room for a key column, so their key goes into the
+// tooltip instead: "Fit window (1)".
+QString actionToolTip(const QString &action) {
+    const QString key = actionManager->primaryShortcutForAction(action);
+    const QString name = appActions->displayName(action);
+    return key.isEmpty() ? name : QStringLiteral("%1 (%2)").arg(name, key);
+}
 
 QPixmap shadowFor(const QSize &cardSize, qreal radius, const QColor &color) {
     static QHash<QString, QPixmap> cache;
@@ -59,57 +69,45 @@ ContextMenu::ContextMenu(QWidget *parent) :
 
     // -------------------------------------------------------------------------
     // setup actions
-    // top zoom buttons
+    // top zoom buttons (tooltips carry the key, see applyActionHints())
     ui->zoomIn->setAction("zoomIn");
     ui->zoomIn->setIconPath(":/res/icons/common/buttons/contextmenu/zoom-in18.png");
     ui->zoomIn->setTriggerMode(TriggerMode::PressTrigger);
-    ui->zoomIn->setToolTip(tr("Zoom in"));
     ui->zoomOut->setAction("zoomOut");
     ui->zoomOut->setIconPath(":/res/icons/common/buttons/contextmenu/zoom-out18.png");
     ui->zoomOut->setTriggerMode(TriggerMode::PressTrigger);
-    ui->zoomOut->setToolTip(tr("Zoom out"));
     ui->zoomOriginal->setAction("fitNormal");
     ui->zoomOriginal->setIconPath(":/res/icons/common/buttons/contextmenu/zoom-original18.png");
     ui->zoomOriginal->setTriggerMode(TriggerMode::PressTrigger);
-    ui->zoomOriginal->setToolTip(tr("Original size"));
     ui->fitWidth->setAction("fitWidth");
     ui->fitWidth->setIconPath(":/res/icons/common/buttons/contextmenu/fit-width18.png");
     ui->fitWidth->setTriggerMode(TriggerMode::PressTrigger);
-    ui->fitWidth->setToolTip(tr("Fit width"));
     ui->fitWindow->setAction("fitWindow");
     ui->fitWindow->setIconPath(":/res/icons/common/buttons/contextmenu/fit-window18.png");
     ui->fitWindow->setTriggerMode(TriggerMode::PressTrigger);
-    ui->fitWindow->setToolTip(tr("Fit window"));
     ui->fitWindowStretch->setAction("fitWindowStretch");
     ui->fitWindowStretch->setIconPath(":/res/icons/common/buttons/contextmenu/fit-height-stretch18.png");
     ui->fitWindowStretch->setTriggerMode(TriggerMode::PressTrigger);
-    ui->fitWindowStretch->setToolTip(tr("Fit height"));
     // -------------------------------------------------------------------------
     // transform buttons
     ui->rotateLeft->setAction("rotateLeft");
     ui->rotateLeft->setIconPath(":/res/icons/common/menuitem/rotate-left16.png");
     ui->rotateLeft->setTriggerMode(TriggerMode::PressTrigger);
-    ui->rotateLeft->setToolTip(tr("Rotate left"));
     ui->rotateRight->setAction("rotateRight");
     ui->rotateRight->setIconPath(":/res/icons/common/menuitem/rotate-right16.png");
     ui->rotateRight->setTriggerMode(TriggerMode::PressTrigger);
-    ui->rotateRight->setToolTip(tr("Rotate right"));
     ui->flipH->setAction("flipH");
     ui->flipH->setIconPath(":/res/icons/common/menuitem/flip-h16.png");
     ui->flipH->setTriggerMode(TriggerMode::PressTrigger);
-    ui->flipH->setToolTip(tr("Flip horizontally"));
     ui->flipV->setAction("flipV");
     ui->flipV->setIconPath(":/res/icons/common/menuitem/flip-v16.png");
     ui->flipV->setTriggerMode(TriggerMode::PressTrigger);
-    ui->flipV->setToolTip(tr("Flip vertically"));
     ui->crop->setAction("crop");
     ui->crop->setIconPath(":/res/icons/common/menuitem/image-crop16.png");
     ui->crop->setTriggerMode(TriggerMode::PressTrigger);
-    ui->crop->setToolTip(tr("Crop"));
     ui->resize->setAction("resize");
     ui->resize->setIconPath(":/res/icons/common/menuitem/resize16.png");
     ui->resize->setTriggerMode(TriggerMode::PressTrigger);
-    ui->resize->setToolTip(tr("Resize"));
     // -------------------------------------------------------------------------
     //  entries
     ui->print->setAction("print");
@@ -127,17 +125,14 @@ ContextMenu::ContextMenu(QWidget *parent) :
     ui->trash->setAction("moveToTrash");
     ui->trash->setText(tr("Move to trash"));
     ui->trash->setIconPath(":/res/icons/common/menuitem/trash16.png");
-    ui->trash->setShortcutText("");
     // -------------------------------------------------------------------------
     ui->open->setAction("open");
     ui->open->setText(tr("Open"));
     ui->open->setIconPath(":/res/icons/common/menuitem/open16.png");
-    ui->open->setShortcutText("");
 
     ui->folderView->setAction("folderView");
     ui->folderView->setText(tr("Folder View"));
     ui->folderView->setIconPath(":/res/icons/common/menuitem/folderview16.png");
-    ui->folderView->setShortcutText("");
 
     ui->settings->setAction("openSettings");
     ui->settings->setText(tr("Settings"));
@@ -165,10 +160,41 @@ ContextMenu::ContextMenu(QWidget *parent) :
     connect(ui->backButton, &ContextMenuItem::pressed, this, &ContextMenu::switchToMainPage);
     connect(ui->scriptSetupButton, &ContextMenuItem::pressed, this, &ContextMenu::showScriptSettings);
     fillOpenWithMenu();
+    applyActionHints();
 }
 
 ContextMenu::~ContextMenu() {
     delete ui;
+}
+
+// The popup is built once and reused, and the user can edit the shortcuts in the
+// preferences between two right-clicks, so the hints are re-read instead of being
+// frozen at construction time.
+void ContextMenu::applyActionHints() {
+    const auto items = findChildren<ContextMenuItem *>();
+    for(auto *item : items) {
+        const QString action = item->action();
+        if(!action.isEmpty())
+            item->setAction(action);
+    }
+
+    // icon-only buttons: the key goes into the tooltip
+    const QVector<QPair<ActionButton *, QString>> buttons = {
+        {ui->zoomIn,           QStringLiteral("zoomIn")},
+        {ui->zoomOut,          QStringLiteral("zoomOut")},
+        {ui->zoomOriginal,     QStringLiteral("fitNormal")},
+        {ui->fitWidth,         QStringLiteral("fitWidth")},
+        {ui->fitWindow,        QStringLiteral("fitWindow")},
+        {ui->fitWindowStretch, QStringLiteral("fitWindowStretch")},
+        {ui->rotateLeft,       QStringLiteral("rotateLeft")},
+        {ui->rotateRight,      QStringLiteral("rotateRight")},
+        {ui->flipH,            QStringLiteral("flipH")},
+        {ui->flipV,            QStringLiteral("flipV")},
+        {ui->crop,             QStringLiteral("crop")},
+        {ui->resize,           QStringLiteral("resize")},
+    };
+    for(const auto &entry : buttons)
+        entry.first->setToolTip(actionToolTip(entry.second));
 }
 
 void ContextMenu::fillOpenWithMenu() {
@@ -210,6 +236,9 @@ void ContextMenu::setImageEntriesEnabled(bool mode) {
 
 void ContextMenu::showAt(QPoint pos) {
     switchToMainPage();
+    applyActionHints();
+    // the hints can be wider than the ones the popup was built with
+    adjustSize();
     QRect geom = geometry();
     geom.moveTopLeft(pos);
     setGeometry(geom);

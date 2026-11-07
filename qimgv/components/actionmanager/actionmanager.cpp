@@ -204,6 +204,16 @@ void ActionManager::adjustFromVersion(QVersionNumber lastVer) {
             }
         }
     }
+    // "Stretch to window" has existed since 1.0.3, but a profile written before
+    // that never got a key for it and the version gate above only grants actions
+    // newer than the profile - it stayed unbound ever since. Bind the default key
+    // when nothing else has claimed it. (Profiles created before 1.0.3 are the
+    // ones this helps; a user who deliberately removed the key keeps it removed
+    // only until the next upgrade.)
+    if(shortcutForAction("fitWindowStretch").isEmpty() && !shortcuts.contains("4")) {
+        shortcuts.insert("4", "fitWindowStretch");
+        qDebug() << "[ActionManager] binding fitWindowStretch to [4]";
+    }
     // apply
     saveShortcuts();
 }
@@ -223,6 +233,38 @@ const QString ActionManager::shortcutForAction(QString action) {
 
 const QList<QString> ActionManager::shortcutsForAction(QString action) {
     return shortcuts.keys(action);
+}
+
+// Row in a menu shows one key, so pick the one a user would actually press: the
+// mouse chords and the modifier keys are bindings for the same action, but
+// "Ctrl+LMB" next to "Move to trash" only confuses.
+QString ActionManager::primaryShortcutForAction(const QString &action) {
+    static const QStringList mouseMarkers = {
+        QStringLiteral("lmb"), QStringLiteral("rmb"), QStringLiteral("mmb"),
+        QStringLiteral("wheel"), QStringLiteral("xbutton")
+    };
+    QString best;
+    // lower wins: fewer modifiers first, then the shorter key
+    int bestWeight = 0;
+    const QStringList keys = shortcutsForAction(action);
+    for(const QString &key : keys) {
+        const QString lower = key.toLower();
+        bool isMouse = false;
+        for(const QString &marker : mouseMarkers) {
+            if(lower.contains(marker)) {
+                isMouse = true;
+                break;
+            }
+        }
+        if(isMouse)
+            continue;
+        const int weight = key.count(QLatin1Char('+')) * 1000 + key.size();
+        if(best.isEmpty() || weight < bestWeight) {
+            best = key;
+            bestWeight = weight;
+        }
+    }
+    return best;
 }
 
 //------------------------------------------------------------------------------

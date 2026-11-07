@@ -45,9 +45,22 @@ struct ChromePalette {
     QColor groupLine;   // settings group border: theme borderColor
     QColor bar;         // folder view top bar: theme backgroundColorMain2
     QColor seam;        // 1px separator between areas: theme backgroundColorMain1
-    qreal radius = 0;   // theme borderRadius
+    // Text and the disabled family. The style already carries these; hand-painted
+    // widgets used to hardcode a grey border or fade the whole thing to 50%, which
+    // looks wrong on the dark themes.
+    QColor text;           // theme secondaryColor (the body text colour)
+    QColor textSecondary;  // theme secondaryAlternativeColor (captions, hints)
+    QColor disabled;       // disabled surface: theme neutralColorDisabled
+    QColor disabledText;   // disabled text: theme secondaryColorDisabled
+    QColor disabledLine;   // disabled border: theme borderColorDisabled
+    QColor accent;         // theme primaryColor
+    qreal radius = 0;      // theme borderRadius
 };
 bool chromePalette(ChromePalette &palette);
+
+// MD1 fades disabled content instead of recolouring it: 38% of the on-surface
+// colour, over the surface it sits on. Used where a widget cannot recolour cheaply.
+constexpr qreal kDisabledContentOpacity = 0.38;
 
 // Maps a qimgv icon resource path (".../menuitem/back16.png") to the matching
 // name in the vector icon theme ("navigation/arrow-left"). Returns an empty

@@ -49,6 +49,9 @@ private:
     QLibrary playerLib;
     std::shared_ptr<VideoPlayer> player;
     bool initPlayer();
+    // The scaling mode is chosen by ViewerWidget (it follows the image fit mode).
+    // Kept here so a call made before the plugin is loaded is not lost.
+    bool mVideoUnscaled = false;
     QVBoxLayout layout;
     QLabel *errorLabel = nullptr;
     QObject *eventFilterObj = nullptr;

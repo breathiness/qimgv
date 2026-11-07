@@ -7,6 +7,26 @@
 
 #include "pdf/pdfpagemodel.h"
 
+namespace {
+// A video has no zoom of its own: the player either fills this widget or leaves
+// the picture at its own size. Mirror the image viewer here - 1:1 never grows the
+// picture, "fit window" only shrinks it unless upscaling is allowed, and the
+// width/stretch modes always fill the window.
+bool videoScalesForFitMode(ImageFitMode mode) {
+    switch(mode) {
+    case FIT_ORIGINAL:
+        return false;
+    case FIT_WINDOW:
+        return settings->expandImage();
+    case FIT_WIDTH:
+    case FIT_WINDOW_STRETCH:
+        return true;
+    default:
+        return true;
+    }
+}
+}
+
 ViewerWidget::ViewerWidget(QWidget *parent)
     : FloatingWidgetContainer(parent),
       imageViewer(nullptr),
@@ -180,7 +200,7 @@ void ViewerWidget::enableVideoPlayer() {
         connect(videoPlayer.get(), &VideoPlayer::durationChanged, videoControls, &VideoControlsProxyWrapper::setPlaybackDuration);
         connect(videoPlayer.get(), &VideoPlayer::positionChanged, videoControls, &VideoControlsProxyWrapper::setPlaybackPosition);
         connect(videoPlayer.get(), &VideoPlayer::videoPaused,     videoControls, &VideoControlsProxyWrapper::onPlaybackPaused);
-        mVideoScaled = settings->expandImage();
+        mVideoScaled = videoScalesForFitMode(mVideoFitMode);
         videoPlayer->setVideoUnscaled(!mVideoScaled);
         videoPlayer->show();
         currentWidget = VIDEOPLAYER;
@@ -329,6 +349,10 @@ bool ViewerWidget::showAnimation(std::shared_ptr<QMovie> movie) {
 bool ViewerWidget::showVideo(QString file) {
     stopPlayback();
     enableVideoPlayer();
+    // the player re-applies its scaling option for every file it loads, so the
+    // mode has to be put back or the next video in the folder drops out of the
+    // fitting the user picked
+    videoPlayer->setVideoUnscaled(!mVideoScaled);
     videoPlayer->showVideo(file);
     hideCursorTimed(false);
     return true;
@@ -656,6 +680,22 @@ void ViewerWidget::onFullscreenModeChanged(bool mode) {
 
 void ViewerWidget::readSettings() {
     videoControls->onVideoMuted(!settings->playVideoSounds());
+
+    // The video used to follow "expand image" only and re-read it on every file,
+    // so a fit mode picked in the viewer was gone with the next video. Follow the
+    // image fit mode instead, and only when that setting itself changes. "Expand
+    // image" still matters in "fit window", and changing it while a video is
+    // shown keeps working from there.
+    const ImageFitMode fitMode = settings->imageFitMode();
+    const bool expandImage = settings->expandImage();
+    if(fitMode != mVideoFitMode || (fitMode == FIT_WINDOW && expandImage != mVideoExpandImage)) {
+        mVideoFitMode = fitMode;
+        mVideoExpandImage = expandImage;
+        mVideoScaled = videoScalesForFitMode(fitMode);
+        if(currentWidget == VIDEOPLAYER)
+            videoPlayer->setVideoUnscaled(!mVideoScaled);
+    }
+
     if(settings->clickableEdges()) {
         imageViewer->viewport()->installEventFilter(this);
         videoPlayer->installEventFilter(this);

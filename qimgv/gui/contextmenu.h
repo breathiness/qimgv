@@ -27,6 +27,9 @@ private:
     QTimer mTimer;
 
     void fillOpenWithMenu();
+    // (re)reads the key hints from the shortcut map; called whenever the popup is
+    // shown, because the bindings can be edited in the preferences
+    void applyActionHints();
 
 signals:
     void showScriptSettings();

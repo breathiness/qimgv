@@ -211,8 +211,9 @@ void IconWidget::applyColor() {
 void IconWidget::paintEvent(QPaintEvent *event) {
     Q_UNUSED(event)
     QPainter p(this);
+    // MD1 fades disabled content to 38% rather than to half.
     if(!this->isEnabled())
-        p.setOpacity(0.5f);
+        p.setOpacity(UiStyle::kDisabledContentOpacity);
     QStyleOption opt;
     opt.initFrom(this);
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);

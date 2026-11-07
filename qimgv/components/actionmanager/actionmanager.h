@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QObject>
 #include <QKeyEvent>
@@ -30,6 +30,9 @@ public:
     QString actionForShortcut(const QString &keys);
     const QString shortcutForAction(QString action);
     const QList<QString> shortcutsForAction(QString action);
+    // The binding worth printing next to an action in a menu: keyboard only and
+    // the simplest of several (Del rather than Ctrl+LMB, F rather than F11).
+    QString primaryShortcutForAction(const QString &action);
     QStringList actionList();
     const QMap<QString,QString>& allShortcuts();
     void removeShortcut(const QString &keys);

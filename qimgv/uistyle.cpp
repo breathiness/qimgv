@@ -85,6 +85,12 @@ bool chromePalette(ChromePalette &palette) {
     palette.groupLine = theme.borderColor;
     palette.bar = theme.backgroundColorMain2;
     palette.seam = theme.backgroundColorMain1;
+    palette.text = theme.secondaryColor;
+    palette.textSecondary = theme.secondaryAlternativeColor;
+    palette.disabled = theme.neutralColorDisabled;
+    palette.disabledText = theme.secondaryColorDisabled;
+    palette.disabledLine = theme.borderColorDisabled;
+    palette.accent = theme.primaryColor;
     palette.radius = theme.borderRadius;
     return true;
 #else
