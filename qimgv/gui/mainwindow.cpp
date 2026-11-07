@@ -1,12 +1,15 @@
 #include "mainwindow.h"
 
 
+#include <QDialogButtonBox>
 #include <QEventLoop>
-#include <QInputDialog>
+#include <QLabel>
 #include <QLineEdit>
 #include <QScreen>
 #include <QTimer>
+#include <QVBoxLayout>
 #include <functional>
+#include "gui/customwidgets/materialdialog.h"
 #include "sourcecontainers/imagestatic.h"
 
 // Runs the event loop until one of the connections added by `arm` quits it, or
@@ -1169,26 +1172,60 @@ void MW::showError(QString text) {
     floatingMessage->showMessage(text,  FloatingMessageIcon::ICON_ERROR, 2800);
 }
 
+// Both prompts below used QMessageBox/QInputDialog, which keep the native
+// Windows frame and ignore the Material chrome: in a Material theme they looked
+// like a different application (dark caption, English buttons). They are plain
+// MaterialDialogs instead, so the stock themes still get native chrome and the
+// Material ones get the same card as the preferences dialog.
+static void buildPromptBody(QDialog *dialog, const QString &text, QWidget *field,
+                            QDialogButtonBox::StandardButtons buttons) {
+    auto *root = new QVBoxLayout(dialog);
+    root->setContentsMargins(0, 0, 0, 0);
+    auto *body = new QWidget(dialog);
+    auto *layout = new QVBoxLayout(body);
+    layout->setContentsMargins(16, 8, 16, 16);
+    layout->setSpacing(14);
+
+    auto *label = new QLabel(text, body);
+    label->setWordWrap(true);
+    label->setTextFormat(Qt::PlainText);
+    layout->addWidget(label);
+    if(field)
+        layout->addWidget(field);
+
+    auto *box = new QDialogButtonBox(buttons, body);
+    if(auto *ok = box->button(QDialogButtonBox::Ok))
+        ok->setDefault(true);
+    if(auto *yes = box->button(QDialogButtonBox::Yes))
+        yes->setDefault(true);
+    layout->addWidget(box, 0, Qt::AlignRight);
+    root->addWidget(body);
+
+    QObject::connect(box, &QDialogButtonBox::accepted, dialog, &QDialog::accept);
+    QObject::connect(box, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
+}
+
 bool MW::showConfirmation(QString title, QString msg) {
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle(title);
-    msgBox.setText(msg);
-    msgBox.setIcon(QMessageBox::Warning);
-    msgBox.setStandardButtons(QMessageBox::Yes);
-    msgBox.addButton(QMessageBox::No);
-    msgBox.setDefaultButton(QMessageBox::Yes);
-    msgBox.setModal(true);
-    if(msgBox.exec() == QMessageBox::Yes)
-        return true;
-    else
-        return false;
+    MaterialDialog dialog(this);
+    dialog.setWindowTitle(title);
+    buildPromptBody(&dialog, msg, nullptr, QDialogButtonBox::Yes | QDialogButtonBox::No);
+    dialog.enableMaterialChrome();
+    dialog.setMinimumWidth(400);
+    return dialog.exec() == QDialog::Accepted;
 }
 
 QString MW::getPassword(QString title, QString prompt) {
-    bool ok = false;
-    const QString password = QInputDialog::getText(this, title, prompt, QLineEdit::Password,
-                                                   QString(), &ok);
-    return ok ? password : QString();
+    MaterialDialog dialog(this);
+    dialog.setWindowTitle(title);
+    auto *edit = new QLineEdit(&dialog);
+    edit->setEchoMode(QLineEdit::Password);
+    buildPromptBody(&dialog, prompt, edit, QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    dialog.enableMaterialChrome();
+    dialog.setMinimumWidth(400);
+    edit->setFocus();
+    if(dialog.exec() != QDialog::Accepted)
+        return QString();
+    return edit->text();
 }
 
 void MW::readSettings() {
