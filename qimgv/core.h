@@ -83,6 +83,9 @@ private:
     QDrag *mDrag;
     QMimeData *getMimeDataForImage(std::shared_ptr<Image> img, MimeDataTarget target);
     QTranslator *translator = nullptr;
+    // Qt's own catalog: standard dialog buttons (OK/Cancel/Yes/No) and the
+    // platform theme strings come from qtbase, not from qimgv's .ts files.
+    QTranslator *qtTranslator = nullptr;
 
     Randomizer randomizer;
     void syncRandomizer();

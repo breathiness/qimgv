@@ -238,6 +238,8 @@ void Core::initActions() {
 void Core::loadTranslation() {
     if(!translator)
         translator = new QTranslator;
+    if(!qtTranslator)
+        qtTranslator = new QTranslator;
     QString trPathFallback = QCoreApplication::applicationDirPath() + "/translations";
 #ifdef TRANSLATIONS_PATH
     QString trPath = QString(TRANSLATIONS_PATH);
@@ -249,18 +251,26 @@ void Core::loadTranslation() {
         localeName = QLocale::system().name();
     if(localeName.isEmpty() || localeName == "en_US") {
         QApplication::removeTranslator(translator);
+        QApplication::removeTranslator(qtTranslator);
         return;
     }
     QString trFile = trPath + "/" + localeName;
     QString trFileFallback = trPathFallback + "/" + localeName;
-    if(!translator->load(trFile)) {
+    if(translator->load(trFile) || translator->load(trFileFallback)) {
+        QApplication::installTranslator(translator);
+    } else {
         qDebug() << "Could not load translation file: " << trFile;
-        if(!translator->load(trFileFallback)) {
-            qDebug() << "Could not load translation file: " << trFileFallback;
-            return;
-        }
     }
-    QApplication::installTranslator(translator);
+
+    // Standard dialog buttons live in qtbase's catalog, shipped next to ours.
+    // Without it OK/Cancel/Yes/No stay English in an otherwise translated UI.
+    QApplication::removeTranslator(qtTranslator);
+    QString qtFile = trPath + "/qtbase_" + localeName;
+    QString qtFileFallback = trPathFallback + "/qtbase_" + localeName;
+    if(qtTranslator->load(qtFile) || qtTranslator->load(qtFileFallback))
+        QApplication::installTranslator(qtTranslator);
+    else
+        qDebug() << "Could not load Qt translation file: " << qtFile;
 }
 
 void Core::onUpdate() {
