@@ -34,6 +34,13 @@ if [ -d "$BUILD/qimgv/translations" ]; then
     cp -f "$BUILD/qimgv/translations"/*.qm "$TARGET/translations/" 2>/dev/null || true
 fi
 
+# license texts: the executable embeds Roboto, Glow Sans and the icon sets, and
+# qimgv itself is GPLv3, so every distribution has to carry them
+mkdir -p "$TARGET/licenses"
+cp -f "$HERE/../LICENSE" "$TARGET/licenses/GPL-3.0.txt" 2>/dev/null || true
+cp -f "$HERE/../LICENSES/"*.txt "$TARGET/licenses/" 2>/dev/null || true
+cp -f "$HERE/../LICENSES/README.md" "$TARGET/licenses/" 2>/dev/null || true
+
 # Qt runtime and the plugins a plain image viewer needs. windeployqt copies
 # every image format plugin it knows, so the optional ones are pruned below.
 windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw \

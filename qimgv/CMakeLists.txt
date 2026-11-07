@@ -85,6 +85,15 @@ if(${QT_VERSION_MAJOR} EQUAL 6)
     qt_add_lrelease(qimgv TS_FILES ${TS_FILES})
 endif()
 
+# qtbase's own catalog (standard dialog buttons, platform theme strings) is not
+# generated from TS_FILES; the checked-in .qm files go next to ours so the
+# deployment step picks them up with the rest of translations/.
+file(GLOB QT_BASE_TRANSLATIONS "${CMAKE_CURRENT_SOURCE_DIR}/res/translations/qtbase_*.qm")
+if(QT_BASE_TRANSLATIONS)
+    file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/qimgv/translations")
+    file(COPY ${QT_BASE_TRANSLATIONS} DESTINATION "${PROJECT_BINARY_DIR}/qimgv/translations")
+endif()
+
 # ADD SOURCES
 add_subdirectory(components)
 add_subdirectory(sourcecontainers)
