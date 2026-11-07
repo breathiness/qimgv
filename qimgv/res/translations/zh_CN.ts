@@ -3237,4 +3237,15 @@ li.checked::marker { content: "\2612"; }
             <translation>%1 米</translation>
         </message>
     </context>
+    <context>
+        <name>PdfView</name>
+        <message>
+            <source>Password required</source>
+            <translation>需要密码</translation>
+        </message>
+        <message>
+            <source>No pages</source>
+            <translation>没有页面</translation>
+        </message>
+    </context>
 </TS>

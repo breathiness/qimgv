@@ -342,14 +342,16 @@ void PdfView::paintEvent(QPaintEvent *event) {
     QPainter painter(viewport());
     painter.fillRect(event->rect(), palette().color(QPalette::Dark));
 
-    if(!mModel || mModel->pageCount() <= 0) {
+    // Encrypted but still locked: there are no pages to count, so this has to be
+    // checked before the empty-document branch or the window says "no pages".
+    if(mModel && mModel->isEncrypted()) {
         painter.setPen(palette().color(QPalette::Text));
-        painter.drawText(viewport()->rect(), Qt::AlignCenter, tr("no pages"));
+        painter.drawText(viewport()->rect(), Qt::AlignCenter, tr("Password required"));
         return;
     }
-    if(mModel->isEncrypted()) {
+    if(!mModel || mModel->pageCount() <= 0) {
         painter.setPen(palette().color(QPalette::Text));
-        painter.drawText(viewport()->rect(), Qt::AlignCenter, tr("password required"));
+        painter.drawText(viewport()->rect(), Qt::AlignCenter, tr("No pages"));
         return;
     }
 

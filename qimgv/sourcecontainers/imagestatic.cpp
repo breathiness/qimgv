@@ -224,7 +224,15 @@ bool ImageStatic::unlockPdf(const QString &password) {
     if(!mPdfModel->unlock(password))
         return false;
     mPdfNeedsPassword = false;
-    return mPdfModel->pageCount() > 0;
+    if(mPdfModel->pageCount() <= 0)
+        return false;
+    // While the document was locked there was no page to measure, so the size
+    // recorded by loadPdf() is (-1, -1). The window title reads it from here;
+    // without this the unlocked document kept reporting "-1 x -1" even though
+    // the pages rendered fine.
+    const QSizeF pageSize = mPdfModel->maxPageSize();
+    mSourceSize = QSize(qRound(pageSize.width()), qRound(pageSize.height()));
+    return true;
 }
 
 void ImageStatic::loadGeneric() {
