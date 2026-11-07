@@ -1,5 +1,9 @@
 #include "thumbnailwidget.h"
 
+QString ThumbnailWidget::fileName() const {
+    return thumbnail ? thumbnail->name() : QString();
+}
+
 ThumbnailWidget::ThumbnailWidget(QGraphicsItem *parent) :
     QGraphicsWidget(parent),
     isLoaded(false),

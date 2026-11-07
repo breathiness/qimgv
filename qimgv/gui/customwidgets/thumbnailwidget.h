@@ -30,6 +30,8 @@ public:
 
     bool isLoaded;
     void setThumbnail(std::shared_ptr<Thumbnail> _thumbnail);
+    // File name of the item, or an empty string while it has no thumbnail yet.
+    QString fileName() const;
 
     void setHighlighted(bool mode);
     bool isHighlighted();

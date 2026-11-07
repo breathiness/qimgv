@@ -2,6 +2,12 @@
 
 // TODO: create a base class for this and the one on panel
 
+QString FolderGridView::itemName(int index) const {
+    if(index < 0 || index >= thumbnails.size())
+        return QString();
+    return thumbnails.at(index)->fileName();
+}
+
 FolderGridView::FolderGridView(QWidget *parent)
     : ThumbnailView(Qt::Vertical, parent),
       shiftedCol(-1)

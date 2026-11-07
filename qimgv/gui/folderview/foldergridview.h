@@ -17,6 +17,9 @@ public:
     const int THUMBNAIL_SIZE_MAX = 400;  // these should be divisible by ZOOM_STEP
     const int ZOOM_STEP = 20;
     void selectAll();
+    // File name behind a row; used by the context menu to tell folders apart
+    // from files before offering folder-only commands.
+    QString itemName(int index) const;
 
 public slots:
     void show();

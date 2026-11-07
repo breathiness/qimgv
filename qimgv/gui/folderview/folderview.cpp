@@ -2,6 +2,8 @@
 #include "ui_folderview.h"
 #include "uistyle.h"
 
+#include <QDir>
+#include <QFileInfo>
 #include <QFontMetrics>
 #include <QContextMenuEvent>
 #include <QMenu>
@@ -492,7 +494,12 @@ void FolderView::showContextMenu(const QPoint &globalPos) {
         menu.addSeparator();
     }
 
-    if(row >= 0) {
+    // Folder-only command: on a file it either did nothing or answered with
+    // "Select a folder to dissolve." after the menu had already closed.
+    const QString selectedName = row >= 0 ? ui->thumbnailGrid->itemName(row) : QString();
+    const bool selectedIsFolder = row >= 0 && !selectedName.isEmpty()
+                                  && QFileInfo(QDir(directoryPath()).filePath(selectedName)).isDir();
+    if(selectedIsFolder) {
         QAction *dissolve = menu.addAction(folderMenuIcon("action/ungroup"), tr("Dissolve folder"));
         connect(dissolve, &QAction::triggered, this, [this]() {
             // let the menu close before anything asks a question
