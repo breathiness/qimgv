@@ -17,7 +17,8 @@ qimgv（个人修改版）
 | **图片信息面板** | 按 I 显示文件、图像、内嵌文本，以及相机的 EXIF（机型、镜头、快门、光圈、ISO、GPS 等）。 |
 | **文件夹视图右键菜单** | 复制、剪切、粘贴、删除、新建文件夹等操作可直接在网格里完成。 |
 | **更多格式** | DXF/DWG 图纸、PDF、视频缩略图；通过可选扩展包支持 WebP/HEIC/AVIF/JXL/RAW/PSD 等。 |
-| **矢量图标** | 界面图标改用 Lucide 矢量图标，任意 DPI 都清晰。 |
+| **矢量图标** | 界面图标改用 Material Symbols 矢量图标，任意 DPI 都清晰。 |
+| **Material 主题** | 按 MDUI 规范绘制的 Material Light / Dark 主题：按钮、复选框、滑块、菜单、文本框与无边框对话框，搭配 Roboto + 未来荧黑字体。 |
 
 
 ## 截图
@@ -149,7 +150,10 @@ qimgv 可以通过第三方图片插件打开一些额外格式，Windows 安装
 
 # 安装
 
-本分支目前没有发布编译好的安装包，请参考上文的「本分支的构建提示」自行编译，或使用上游的发行版：
+Windows 64 位构建发布在 [Releases](https://github.com/breathiness/qimgv/releases)：
+
+- **主程序包**（`qimgv-<版本>-win64.zip`）：解压即用，含 Qt 运行时与基础图片格式。
+- **扩展包**（`qimgv-extras-<版本>.zip`，可选）：按需覆盖到主程序目录，补充 WebP / HEIC / AVIF / JPEG XL / RAW / PSD 与视频播放。
 
 ## 从源码编译
 
@@ -158,4 +162,8 @@ qimgv 可以通过第三方图片插件打开一些额外格式，Windows 安装
 # 许可证与致谢
 
 - 原项目：[easymodo/qimgv](https://github.com/easymodo/qimgv)，作者 easymodo 及所有贡献者
-- 许可证：GNU GPLv3
+- 许可证：GNU GPLv3（全文见根目录 `LICENSE`）
+- 字体：Roboto（Apache License 2.0）、[未来荧黑 Glow Sans SC](https://github.com/welai/glow-sans)（SIL OFL 1.1）
+- 图标：Material Symbols（Apache License 2.0）、[Papirus](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme) 文件夹图标（GPL-3.0）
+
+第三方许可证全文与版权声明见 [`LICENSES/`](LICENSES/)。
