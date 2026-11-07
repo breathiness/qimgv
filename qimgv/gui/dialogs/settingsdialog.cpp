@@ -55,6 +55,22 @@ SettingsDialog::SettingsDialog(QWidget *parent) :
 
     ui->shortcutsTableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);   
     ui->aboutAppTextBrowser->viewport()->setAutoFillBackground(false);
+
+    // The about page carries the stock Qt blue inline and no version. Tint the
+    // links with the theme accent, stop visited links from turning teal, and put
+    // the version into the page itself (the footer is easy to miss).
+    {
+        const QColor accent = settings->colorScheme().accent;
+        QString about = ui->aboutAppTextBrowser->toHtml();
+        about.replace(QStringLiteral("#007af4"), accent.name(), Qt::CaseInsensitive);
+        ui->aboutAppTextBrowser->setHtml(about);
+        QPalette aboutPalette = ui->aboutAppTextBrowser->palette();
+        aboutPalette.setColor(QPalette::Link, accent);
+        aboutPalette.setColor(QPalette::LinkVisited, accent.darker(115));
+        ui->aboutAppTextBrowser->setPalette(aboutPalette);
+        ui->aboutAppTextBrowser->append(
+            QStringLiteral("<p>qimgv %1</p>").arg(QApplication::applicationVersion()));
+    }
     ui->versionLabel->setText("" + QApplication::applicationVersion());
     ui->qtVersionLabel->setText(qVersion());
     ui->appIconLabel->setPixmap(QIcon(":/res/icons/common/logo/app/22.png").pixmap(22,22));
