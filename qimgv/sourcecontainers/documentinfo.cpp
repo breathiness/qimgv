@@ -1,4 +1,5 @@
 #include "documentinfo.h"
+#include "3d/model3d.h"
 
 #include "utils/exifreader.h"
 
@@ -54,6 +55,17 @@ bool DocumentInfo::isPdf() const {
     const QString suffix = fileInfo.suffix();
     return suffix.compare(QStringLiteral("pdf"), Qt::CaseInsensitive) == 0
            || suffix.compare(QStringLiteral("ai"), Qt::CaseInsensitive) == 0;
+}
+
+bool DocumentInfo::is3d() const {
+    static const QStringList suffixes = {
+        QStringLiteral("stl"), QStringLiteral("obj"), QStringLiteral("ply"),
+        QStringLiteral("gltf"), QStringLiteral("glb"), QStringLiteral("fbx"),
+        QStringLiteral("dae"), QStringLiteral("3ds"), QStringLiteral("3mf"),
+        QStringLiteral("off"), QStringLiteral("amf"), QStringLiteral("ase"),
+        QStringLiteral("lwo"), QStringLiteral("x3d")
+    };
+    return Model3D::isAvailable() && suffixes.contains(fileInfo.suffix().toLower());
 }
 
 bool DocumentInfo::isCad() const {

@@ -1,4 +1,5 @@
 #include "imagestatic.h"
+#include "3d/model3d.h"
 #include "cad/caddrawing.h"
 #include "pdf/pdfpagemodel.h"
 #include <QElapsedTimer>
@@ -75,6 +76,10 @@ void ImageStatic::load() {
         loadPdf();
         return;
     }
+    if(mDocInfo->is3d()) {
+        load3d();
+        return;
+    }
     if(mDocInfo->mimeType().name() == "image/vnd.microsoft.icon") {
         loadICO();
         return;
@@ -118,6 +123,8 @@ bool ImageStatic::loadFull() {
     std::shared_ptr<const QImage> full;
     if(mDocInfo->isCad())
         full = renderCad(true);
+    else if(mDocInfo->is3d())
+        full = render3d(true);
     else
         full = readImage(QSize());
     QMutexLocker lock(&mImageLock);
@@ -315,6 +322,109 @@ void ImageStatic::detectPageCount() {
 
 // Switches to another page of the same file. Decoding stays on demand: only the
 // page that ends up on screen is read, and the previous one is dropped.
+bool ImageStatic::is3dFile() const {
+    return mDocInfo && mDocInfo->is3d();
+}
+
+// Rotates the model by a mouse drag and repaints at interactive size. The pixels
+// are swapped in place, so the viewer keeps its zoom while the user turns the
+// model around.
+bool ImageStatic::rotate3d(float deltaYaw, float deltaPitch) {
+    if(!mDocInfo || !mDocInfo->is3d())
+        return false;
+    if(!mModel3d) {
+        auto model = std::make_shared<Model3D>();
+        if(!model->load(mPath))
+            return false;
+        mModel3d = model;
+    }
+    constexpr float maxPitch = 1.55f;   // just short of straight up/down
+    mModelYaw += deltaYaw;
+    mModelPitch = qBound(-maxPitch, mModelPitch + deltaPitch, maxPitch);
+
+    Model3D::View view;
+    view.yaw = mModelYaw;
+    view.pitch = mModelPitch;
+    const QImage rendered = mModel3d->render(640, 640, view);
+    if(rendered.isNull())
+        return false;
+    {
+        QMutexLocker lock(&mImageLock);
+        image = std::make_shared<const QImage>(rendered);
+        mFullLoaded = false;
+    }
+    return true;
+}
+
+// Repaints at full size once the drag is over.
+bool ImageStatic::finish3dRotation() {
+    if(!mModel3d)
+        return false;
+    Model3D::View view;
+    view.yaw = mModelYaw;
+    view.pitch = mModelPitch;
+    const QImage rendered = mModel3d->render(2048, 2048, view);
+    if(rendered.isNull())
+        return false;
+    {
+        QMutexLocker lock(&mImageLock);
+        image = std::make_shared<const QImage>(rendered);
+        mFullLoaded = true;
+    }
+    mSourceSize = QSize(2048, 2048);
+    return true;
+}
+
+void ImageStatic::load3d() {
+    QSize detailedSize;
+    std::shared_ptr<const QImage> preview = render3d(false, &detailedSize);
+    if(!preview) {
+        mLoaded = true;
+        return;
+    }
+    {
+        QMutexLocker lock(&mImageLock);
+        image = preview;
+        mFullLoaded = false;
+    }
+    // claim the area the detailed render will cover, so the viewer asks for it
+    // once the image is zoomed past the preview's own resolution
+    mSourceSize = detailedSize.isValid() ? detailedSize : preview->size();
+    mLoaded = true;
+}
+
+std::shared_ptr<const QImage> ImageStatic::render3d(bool detailed, QSize *detailedSize) const {
+    if(!mModel3d) {
+        auto model = std::make_shared<Model3D>();
+        if(!model->load(mPath))
+            return nullptr;
+        mModel3d = model;
+    }
+
+    // a square canvas keeps the model centred whatever the window looks like
+    const int detailedSide = 2048;
+    int side = detailedSide;
+    if(!detailed) {
+        if(mPreviewTarget.isValid()) {
+            // the thumbnailer asks for a small size; honour it instead of
+            // rendering a full preview only to shrink it
+            side = qBound(256, qMax(mPreviewTarget.width(), mPreviewTarget.height()), 1280);
+        } else {
+            const QSize hint = g_previewSizeHint.isValid() ? g_previewSizeHint : QSize(2560, 1440);
+            side = qBound(512, qMax(hint.width(), hint.height()), 1280);
+        }
+    }
+    Model3D::View view;
+    view.yaw = mModelYaw;
+    view.pitch = mModelPitch;
+    const QImage rendered = mModel3d->render(side, side, view);
+    if(rendered.isNull())
+        return nullptr;
+    if(detailedSize)
+        *detailedSize = QSize(detailedSide, detailedSide);
+    return std::make_shared<const QImage>(rendered);
+}
+
 bool ImageStatic::setPage(int page) {
     if(mPageCount <= 1)
         return false;

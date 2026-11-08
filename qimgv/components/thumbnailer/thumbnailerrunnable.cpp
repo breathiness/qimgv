@@ -1,4 +1,5 @@
 #include "thumbnailerrunnable.h"
+#include "3d/model3d.h"
 
 #include "cad/caddrawing.h"
 #include "utils/pdfprovider.h"
@@ -73,8 +74,9 @@ std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, 
             // QImageReader copies the format name, but keeping it alive for the
             // call beats relying on how long a temporary would last.
             const QByteArray format = imgInfo.format().toUtf8();
-            if(imgInfo.isCad() || imgInfo.isPdf())
-                generated = createDocumentThumbnail(imgInfo.filePath(), imgInfo.type(), size, crop);
+            if(imgInfo.isCad() || imgInfo.isPdf() || imgInfo.is3d())
+                generated = createDocumentThumbnail(imgInfo.filePath(), imgInfo.type(), size, crop,
+                                                    imgInfo.is3d());
             else
                 generated = createThumbnail(imgInfo.filePath(), format.constData(), size, crop);
         }
@@ -136,16 +138,20 @@ ThumbnailerRunnable::~ThumbnailerRunnable() {
 // drawing without one, or a pdf, is rendered straight at the thumbnail size, which
 // is small enough that the geometry work stays cheap. Nothing here renders at
 // screen size - that is the loader's job when the file is actually opened.
-ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createDocumentThumbnail(const QString &path,
+ThumbnailerRunnable::ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createDocumentThumbnail(const QString &path,
                                                                                 DocumentType type, int size,
-                                                                                bool squared) {
+                                                                                bool squared, bool is3d) {
     ThumbnailImage result;
     Q_UNUSED(type)
     const int target = qMax(16, size) * 2;   // 2x for a little headroom when the grid scales
     QImage source;
 
-    const QImage embedded = CadDrawing::embeddedThumbnail(path);
-    if(!embedded.isNull()) {
+    const QImage embedded = is3d ? QImage() : CadDrawing::embeddedThumbnail(path);
+    if(is3d) {
+        Model3D model;
+        if(model.load(path))
+            source = model.render(target, target, Model3D::View());
+    } else if(!embedded.isNull()) {
         source = embedded;
     } else if(path.endsWith(QStringLiteral(".pdf"), Qt::CaseInsensitive)) {
         QString error;

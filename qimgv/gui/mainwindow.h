@@ -76,6 +76,7 @@ public:
     // paged documents own their pixels; the window hands them to the viewer
     bool showPdf(std::shared_ptr<PdfPageModel> model, const QString &path);
     bool isPdfView();
+    void setModelView(bool enabled);
     void pdfNextPage();
     void pdfPrevPage();
     int pdfCurrentPage();
@@ -201,6 +202,9 @@ signals:
     // the first image of a startup load is in the window: showWindowed() waits
     // for this instead of polling
     void firstImageReady();
+    // 3D model rotated by the middle button
+    void modelDragged(QPoint delta);
+    void modelDragFinished();
     void fullscreenStateChanged(bool);
     void copyRequested(QString);
     void moveRequested(QString);

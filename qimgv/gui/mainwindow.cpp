@@ -172,6 +172,8 @@ void MW::setupUi() {
     floatingMessage = new FloatingMessageProxy(viewerWidget.get()); // todo: use additional one for folderview?
     connect(viewerWidget.get(), &ViewerWidget::scalingRequested, this, &MW::scalingRequested);
     connect(viewerWidget.get(), &ViewerWidget::fullResolutionNeeded, this, &MW::fullResolutionNeeded);
+    connect(viewerWidget.get(), &ViewerWidget::modelDragged, this, &MW::modelDragged);
+    connect(viewerWidget.get(), &ViewerWidget::modelDragFinished, this, &MW::modelDragFinished);
     connect(viewerWidget.get(), &ViewerWidget::draggedOut, this, qOverload<>(&MW::draggedOut));
     connect(viewerWidget.get(), &ViewerWidget::playbackFinished, this, &MW::playbackFinished);
     connect(viewerWidget.get(), &ViewerWidget::showScriptSettings, this, &MW::showScriptSettings);
@@ -1443,6 +1445,11 @@ bool MW::showPdf(std::shared_ptr<PdfPageModel> model, const QString &path) {
 
 bool MW::isPdfView() {
     return viewerWidget && viewerWidget->isPdf();
+}
+
+void MW::setModelView(bool enabled) {
+    if(viewerWidget)
+        viewerWidget->setModelMode(enabled);
 }
 
 void MW::pdfNextPage() {

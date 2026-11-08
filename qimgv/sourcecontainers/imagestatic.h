@@ -11,6 +11,7 @@
 
 #include <memory>
 
+class Model3D;
 class PdfPageModel;
 #include "utils/imagelib.h"
 #include <settings.h>
@@ -50,6 +51,12 @@ public:
     int currentPage() const { return mCurrentPage; }
     bool setPage(int page);
 
+    // 3D models: rotate by a mouse delta and repaint. The interactive render is
+    // small; finish3dRotation() repaints at full size when the drag ends.
+    bool is3dFile() const;
+    bool rotate3d(float deltaYaw, float deltaPitch);
+    bool finish3dRotation();
+
     bool setEditedImage(std::unique_ptr<const QImage> imageEditedNew);
     bool discardEditedImage();
 
@@ -73,6 +80,9 @@ private:
     // renders a DXF/DWG through the CAD code; a smaller preview first, the detailed
     // one when the viewer asks for full resolution
     void loadCad();
+    // 3D models: rendered into a square image by the model renderer
+    void load3d();
+    std::shared_ptr<const QImage> render3d(bool detailed, QSize *detailedSize = nullptr) const;
     // pdf: pages are rendered by the optional provider plugin
     void loadPdf();
     std::shared_ptr<const QImage> renderPdfStrip();
@@ -99,5 +109,9 @@ private:
     // multi page image state (TIFF); 1/0 for everything else
     int mPageCount = 1;
     int mCurrentPage = 0;
+    // 3D state: the parsed model is kept so rotating does not re-read the file
+    mutable std::shared_ptr<Model3D> mModel3d;
+    float mModelYaw = 0.65f;
+    float mModelPitch = 0.45f;
     mutable QMutex mImageLock;
 };

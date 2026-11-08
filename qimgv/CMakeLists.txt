@@ -111,6 +111,8 @@ set_target_properties(qimgv PROPERTIES CXX_EXTENSIONS OFF)
 target_link_libraries(qimgv PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Svg Qt${QT_VERSION_MAJOR}::PrintSupport)
 # CAD drawings: DXF/DWG rendering
 target_link_libraries(qimgv PRIVATE cadrenderer pdfpages)
+# 3D models: rendered into an image by the model3d library
+target_link_libraries(qimgv PRIVATE model3d)
 if(QT_VERSION_MAJOR GREATER_EQUAL 6)
     target_link_libraries(qimgv PRIVATE Qt${QT_VERSION_MAJOR}::OpenGLWidgets)
 endif()

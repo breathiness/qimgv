@@ -206,6 +206,12 @@ void ImageViewerV2::pauseResume() {
     }
 }
 
+void ImageViewerV2::setModelMode(bool enabled) {
+    modelMode = enabled;
+    if(!enabled)
+        modelRotating = false;
+}
+
 void ImageViewerV2::enableDrags() {
     dragsEnabled = true;
 }
@@ -573,6 +579,13 @@ void ImageViewerV2::mousePressEvent(QMouseEvent *event) {
         QWidget::mousePressEvent(event);
         return;
     }
+    if(modelMode && event->button() == Qt::MiddleButton) {
+        modelRotating = true;
+        modelLastPos = event->pos();
+        setCursor(Qt::ClosedHandCursor);
+        event->accept();
+        return;
+    }
     mouseMoveStartPos = event->pos();
     mousePressPos = mouseMoveStartPos;
     if(event->button() & Qt::RightButton) {
@@ -584,6 +597,14 @@ void ImageViewerV2::mousePressEvent(QMouseEvent *event) {
 
 void ImageViewerV2::mouseMoveEvent(QMouseEvent *event) {
     QWidget::mouseMoveEvent(event);
+    if(modelRotating) {
+        const QPoint delta = event->pos() - modelLastPos;
+        modelLastPos = event->pos();
+        if(!delta.isNull())
+            emit modelDragged(delta);
+        event->accept();
+        return;
+    }
     if(!pixmap || mouseInteraction == MouseInteractionState::MOUSE_DRAG || mouseInteraction == MouseInteractionState::MOUSE_WHEEL_ZOOM)
         return;
 
@@ -635,6 +656,13 @@ void ImageViewerV2::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void ImageViewerV2::mouseReleaseEvent(QMouseEvent *event) {
+    if(modelRotating && event->button() == Qt::MiddleButton) {
+        modelRotating = false;
+        unsetCursor();
+        emit modelDragFinished();
+        event->accept();
+        return;
+    }
     unsetCursor();
     if(forceFastScale) {
         forceFastScale = false;

@@ -56,6 +56,8 @@ ViewerWidget::ViewerWidget(QWidget *parent)
 
     connect(imageViewer.get(), &ImageViewerV2::scalingRequested, this, &ViewerWidget::scalingRequested);
     connect(imageViewer.get(), &ImageViewerV2::fullResolutionNeeded, this, &ViewerWidget::fullResolutionNeeded);
+    connect(imageViewer.get(), &ImageViewerV2::modelDragged, this, &ViewerWidget::modelDragged);
+    connect(imageViewer.get(), &ImageViewerV2::modelDragFinished, this, &ViewerWidget::modelDragFinished);
     connect(imageViewer.get(), &ImageViewerV2::scaleChanged, this, &ViewerWidget::onScaleChanged);
     connect(imageViewer.get(), &ImageViewerV2::playbackFinished, this, &ViewerWidget::onAnimationPlaybackFinished);
     connect(this, &ViewerWidget::toggleTransparencyGrid, imageViewer.get(), &ImageViewerV2::toggleTransparencyGrid);
@@ -258,6 +260,10 @@ void ViewerWidget::onVideoPlaybackFinished() {
 void ViewerWidget::onAnimationPlaybackFinished() {
     if(currentWidget == IMAGEVIEWER)
         emit playbackFinished();
+}
+
+void ViewerWidget::setModelMode(bool enabled) {
+    imageViewer->setModelMode(enabled);
 }
 
 void ViewerWidget::setInteractionEnabled(bool mode) {

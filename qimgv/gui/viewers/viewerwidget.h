@@ -36,6 +36,8 @@ public:
 
     void setInteractionEnabled(bool mode);
     bool interactionEnabled();
+    // a 3D model is shown: middle button drag turns it
+    void setModelMode(bool enabled);
     // true while the video player is the active viewer
     bool isVideo();
     // video playback: scale the picture to the widget (fit) or show it at its
@@ -95,6 +97,9 @@ private slots:
 signals:
     void scalingRequested(QSize, ScalingFilter);
     void fullResolutionNeeded();
+    // 3D model rotated by the middle button
+    void modelDragged(QPoint delta);
+    void modelDragFinished();
     void zoomIn();
     void zoomOut();
     void zoomInCursor();

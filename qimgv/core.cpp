@@ -125,6 +125,8 @@ void Core::connectComponents() {
     connect(actionManager, &ActionManager::copyImage,      this, &Core::copyImageToClipboard);
     connect(actionManager, &ActionManager::cutSelection,   this, &Core::cutSelection);
     connect(actionManager, &ActionManager::pasteSelection, this, &Core::pasteSelection);
+    connect(mw, &MW::modelDragged, this, &Core::rotate3d);
+    connect(mw, &MW::modelDragFinished, this, &Core::finish3dRotation);
     connect(actionManager, &ActionManager::pdfNextPage, this, &Core::pdfNextPage);
     // scrolling to another page of a document updates the title
     connect(mw, &MW::pdfPageChanged, this, &Core::updateInfoString);
@@ -1073,6 +1075,27 @@ void Core::pasteSelection() {
         mw->showError(tr("Some items could not be pasted."));
 }
 
+// Turns the 3D model on screen by a mouse delta and repaints the interactive
+// (small) render. Mouse pixels are scaled to radians here, so the viewer stays
+// free of the mapping.
+void Core::rotate3d(QPoint delta) {
+    auto *modelImage = dynamic_cast<ImageStatic *>(state.currentImg.get());
+    if(!modelImage || !modelImage->is3dFile())
+        return;
+    constexpr float radiansPerPixel = 0.008f;
+    if(modelImage->rotate3d(delta.x() * radiansPerPixel, delta.y() * radiansPerPixel))
+        mw->refreshImage(modelImage->getPixmap());
+}
+
+// Full size repaint once the drag ended.
+void Core::finish3dRotation() {
+    auto *modelImage = dynamic_cast<ImageStatic *>(state.currentImg.get());
+    if(!modelImage || !modelImage->is3dFile())
+        return;
+    if(modelImage->finish3dRotation())
+        mw->refreshImage(modelImage->getPixmap());
+}
+
 // Moves one page in a paged document. A pdf is drawn by the paged view; a multi
 // page image (TIFF) is decoded page by page by ImageStatic. Everything else has a
 // single page and ignores the request, as before.
@@ -1860,6 +1883,8 @@ void Core::guiSetImage(std::shared_ptr<Image> img) {
     if(type == STATIC) {
         // a pdf has no pixmap: the paged viewer draws the pages itself
         if(auto *staticImage = dynamic_cast<ImageStatic *>(img.get())) {
+            // the middle button turns a 3D model instead of doing nothing
+            mw->setModelView(staticImage->is3dFile());
             if(staticImage->pdfModel()
                && mw->showPdf(staticImage->pdfModel(), img->filePath())) {
                 updateInfoString();
@@ -1868,9 +1893,11 @@ void Core::guiSetImage(std::shared_ptr<Image> img) {
         }
         mw->showImage(img->getPixmap(), img->size());
     } else if(type == ANIMATED) {
+        mw->setModelView(false);
         auto animated = dynamic_cast<ImageAnimated *>(img.get());
         mw->showAnimation(animated->getMovie());
     } else if(type == VIDEO) {
+        mw->setModelView(false);
         auto video = dynamic_cast<Video *>(img.get());
         // workaround for mpv. If we play video while mainwindow is hidden we get black screen.
         // affects only initial startup (e.g. we open webm from file manager)

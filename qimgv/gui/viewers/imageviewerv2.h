@@ -58,9 +58,14 @@ public:
     void pauseResume();
     void enableDrags();
     void disableDrags();
+    // a 3D model is on screen: the middle button turns it instead of doing nothing
+    void setModelMode(bool enabled);
 
 signals:
     void scalingRequested(QSize, ScalingFilter);
+    // middle button drag over a 3D model, in pixels
+    void modelDragged(QPoint delta);
+    void modelDragFinished();
     // the displayed pixmap is a downscaled preview and the current zoom level
     // needs the real pixels now
     void fullResolutionNeeded();
@@ -161,6 +166,10 @@ private:
     int dragThreshold = 10;
 
     bool dragsEnabled = true;
+    // 3D model on screen: middle button drag turns it
+    bool modelMode = false;
+    bool modelRotating = false;
+    QPoint modelLastPos;
     bool wayland = false;
 
     float zoomStep = 0.1, dpr;

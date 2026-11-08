@@ -145,6 +145,8 @@ private slots:
     void cutSelection();
     void pasteSelection();
     // pdf page navigation (no-ops for anything that is not a pdf)
+    void rotate3d(QPoint delta);
+    void finish3dRotation();
     void pdfNextPage();
     void pdfPrevPage();
     void changePdfPage(int delta);

@@ -1,4 +1,5 @@
 #include "settings.h"
+#include "3d/model3d.h"
 #include "utils/pdfprovider.h"
 #include "uistyle.h"
 #include "uitheme.h"
@@ -434,6 +435,12 @@ QList<QByteArray> Settings::supportedFormats() {
     formats << "pdf";
     // Illustrator files are PDF compatible and use the same provider
     formats << "ai";
+    // 3D models are rendered by the model renderer, not by an image plugin
+    if(Model3D::isAvailable()) {
+        formats << "stl" << "obj" << "ply" << "gltf" << "glb" << "fbx"
+                << "dae" << "3ds" << "3mf" << "off" << "amf" << "ase"
+                << "lwo" << "x3d";
+    }
     // formats from the optional image format plugin (HEIC, JPEG XL, camera raw,
     // PSD, APNG) are already in the list above: QImageReader reports the keys of
     // every installed plugin

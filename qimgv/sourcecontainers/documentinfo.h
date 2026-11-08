@@ -45,6 +45,8 @@ public:
     bool isCad() const;
     // PDF: rendered page by page through the optional provider plugin
     bool isPdf() const;
+    // 3D model: rendered into an image by the model renderer (assimp)
+    bool is3d() const;
 
     QDateTime lastModified() const;
     void refresh();
