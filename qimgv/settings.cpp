@@ -432,6 +432,8 @@ QList<QByteArray> Settings::supportedFormats() {
     // even when it is missing: opening one then explains what is absent, which is
     // friendlier than a file that silently does not exist.
     formats << "pdf";
+    // Illustrator files are PDF compatible and use the same provider
+    formats << "ai";
     // formats from the optional image format plugin (HEIC, JPEG XL, camera raw,
     // PSD, APNG) are already in the list above: QImageReader reports the keys of
     // every installed plugin

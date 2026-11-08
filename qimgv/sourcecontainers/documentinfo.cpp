@@ -49,7 +49,11 @@ DocumentType DocumentInfo::type() const {
 }
 
 bool DocumentInfo::isPdf() const {
-    return fileInfo.suffix().compare(QStringLiteral("pdf"), Qt::CaseInsensitive) == 0;
+    // .ai files are PDF compatible in almost every case: the pages are drawn by
+    // the same provider, so they take this path too
+    const QString suffix = fileInfo.suffix();
+    return suffix.compare(QStringLiteral("pdf"), Qt::CaseInsensitive) == 0
+           || suffix.compare(QStringLiteral("ai"), Qt::CaseInsensitive) == 0;
 }
 
 bool DocumentInfo::isCad() const {
@@ -96,6 +100,22 @@ void DocumentInfo::detectFormat() {
         mDocumentType = DocumentType::STATIC;
         return;
     }
+    // HEIF family. The mime database reports some of these as video/quicktime
+    // (both containers are ISO BMFF), which used to send an animated AVIF to the
+    // video player instead of the image viewer. The suffix is unambiguous here.
+    const QString heifSuffix = QString::fromUtf8(suffix);
+    if(heifSuffix == "avif" || heifSuffix == "heic" || heifSuffix == "heif" || heifSuffix == "hif") {
+        mFormat = heifSuffix;
+        mDocumentType = DocumentType::STATIC;
+        // only the plugin knows whether the file is a still picture or a sequence
+        const QByteArray format = suffix;
+        if(QImageReader::supportedImageFormats().contains(format)
+           && QImageReader(fileInfo.filePath(), format).supportsAnimation()) {
+            mDocumentType = DocumentType::ANIMATED;
+        }
+        loadExifOrientation();
+        return;
+    }
     if(mimeName == "image/jpeg") {
         mFormat = "jpg";
         mDocumentType = DocumentType::STATIC;
@@ -121,20 +141,6 @@ void DocumentInfo::detectFormat() {
             // this build did before the plugin learned to play the sequence
             mDocumentType = DocumentType::STATIC;
         }
-    } else if(mimeName == "image/avif") {
-        mFormat = "avif";
-        mDocumentType = DocumentType::STATIC;
-        // a sequence needs a Qt reader that can animate it; without a plugin
-        // libheif shows the first frame instead of the file failing to open
-        if(detectAnimatedAvif() && QImageReader::supportedImageFormats().contains("avif"))
-            mDocumentType = DocumentType::ANIMATED;
-    } else if(mimeName == "image/heic" || mimeName == "image/heif"
-              || mimeName == "image/heic-sequence" || mimeName == "image/heif-sequence") {
-        // decoded by libheif, see utils/heifdecoder.cpp
-        mFormat = suffix;
-        if(mFormat.isEmpty())
-            mFormat = "heic";
-        mDocumentType = DocumentType::STATIC;
     } else if(mimeName == "image/bmp") {
         mFormat = "bmp";
         mDocumentType = DocumentType::STATIC;
@@ -146,7 +152,9 @@ void DocumentInfo::detectFormat() {
         mFormat = suffix;
         if(mFormat.compare("jfif", Qt::CaseInsensitive) == 0)
             mFormat = "jpg";
-        if(settings->videoPlayback() && settings->videoFormats().values().contains(suffix))
+        if(suffix == "ani" && QImageReader::supportedImageFormats().contains("ani"))
+            mDocumentType = DocumentType::ANIMATED;   // cursor animations always are
+        else if(settings->videoPlayback() && settings->videoFormats().values().contains(suffix))
             mDocumentType = DocumentType::VIDEO;
         else
             mDocumentType = DocumentType::STATIC;
@@ -195,23 +203,6 @@ bool DocumentInfo::detectAnimatedWebP() {
 bool DocumentInfo::detectAnimatedJxl() {
     QImageReader r(fileInfo.filePath(), "jxl");
     return r.supportsAnimation();
-}
-
-bool DocumentInfo::detectAnimatedAvif() {
-    QFile f(fileInfo.filePath());
-    bool result = false;
-    if(f.open(QFile::ReadOnly)) {
-        QDataStream in(&f);
-        in.skipRawData(4); // skip box size
-        char *buf = static_cast<char*>(malloc(9));
-        buf[8] = '\0';
-        in.readRawData(buf, 8);
-        if(strcmp(buf, "ftypavis") == 0) {
-            result = true;
-        }
-        free(buf);
-    }
-    return result;
 }
 
 void DocumentInfo::loadExifTags() {

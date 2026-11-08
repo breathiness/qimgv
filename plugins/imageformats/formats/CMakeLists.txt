@@ -6,6 +6,13 @@ project(qimgvformats
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+# The plugin metadata (the suffix list Qt and qimgv read) lives in formats.json
+# and is compiled in by moc. Without this filter AUTOMOC does not notice a change
+# to that file and the plugin keeps advertising the old suffixes.
+set(CMAKE_AUTOMOC_DEPEND_FILTERS
+    Q_PLUGIN_METADATA "FILE \"([^\"]+)\""
+)
+
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Gui)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui)
 
@@ -13,6 +20,14 @@ add_library(qimgvformats MODULE
     formatshandler.cpp
     formatshandler.h
     main.cpp
+    decoders/anidecoder.cpp
+    decoders/anidecoder.h
+    decoders/archivedecoder.cpp
+    decoders/archivedecoder.h
+    decoders/exrdecoder.cpp
+    decoders/exrdecoder.h
+    decoders/hdrdecoder.cpp
+    decoders/hdrdecoder.h
     decoders/heifdecoder.cpp
     decoders/heifdecoder.h
     decoders/jxldecoder.cpp
@@ -24,7 +39,8 @@ add_library(qimgvformats MODULE
 )
 
 target_link_libraries(qimgvformats PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Gui)
-target_compile_features(qimgvformats PRIVATE cxx_std_14)
+# OpenEXR 3 headers need C++17
+target_compile_features(qimgvformats PRIVATE cxx_std_17)
 target_include_directories(qimgvformats PRIVATE decoders)
 
 # each codec is optional at build time; the handler only offers what it has
@@ -50,6 +66,14 @@ endif()
 if(LibRaw_FOUND)
     target_link_libraries(qimgvformats PRIVATE PkgConfig::LibRaw)
     target_compile_definitions(qimgvformats PRIVATE USE_LIBRAW)
+endif()
+
+# OpenEXR (HDR rendering images); the decoder is only compiled in when the
+# library is around, like every other optional codec here
+find_package(OpenEXR QUIET)
+if(OpenEXR_FOUND)
+    target_link_libraries(qimgvformats PRIVATE OpenEXR::OpenEXR)
+    target_compile_definitions(qimgvformats PRIVATE USE_OPENEXR)
 endif()
 
 # PSD files may store their image data zlib compressed

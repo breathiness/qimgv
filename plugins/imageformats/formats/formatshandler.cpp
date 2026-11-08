@@ -5,6 +5,10 @@
 #include <QFileInfo>
 #include <QStringList>
 
+#include "decoders/anidecoder.h"
+#include "decoders/archivedecoder.h"
+#include "decoders/exrdecoder.h"
+#include "decoders/hdrdecoder.h"
 #include "decoders/heifdecoder.h"
 #include "decoders/jxldecoder.h"
 #include "decoders/psddecoder.h"
@@ -52,6 +56,9 @@ QStringList FormatsHandler::supportedSuffixes()
 {
     QStringList all = heifSuffixes();
     all << "jxl" << "psd" << "psb";
+    all << "exr" << "hdr" << "rgbe";
+    all << "kra" << "ora";
+    all << "ani";
     all << rawSuffixes();
     return all;
 }
@@ -61,6 +68,9 @@ bool FormatsHandler::isSupportedSuffix(const QString &suffix)
     const QString s = suffix.toLower();
     return heifSuffixes().contains(s) || s == QLatin1String("jxl")
            || s == QLatin1String("psd") || s == QLatin1String("psb")
+           || ExrDecoder::isExrSuffix(s) || HdrDecoder::isHdrSuffix(s)
+           || ArchiveImageDecoder::isArchiveSuffix(s)
+           || AniImage::isAniSuffix(s)
            || rawSuffixes().contains(s);
 }
 
@@ -96,8 +106,11 @@ bool FormatsHandler::supportsOption(ImageOption option) const
     case Size:
     case ScaledSize:
     case ImageFormat:
-    case Animation:
         return true;
+    case Animation:
+        // the real answer: the viewer asks this to decide whether to play the
+        // file, and only the decoders know whether there is a sequence inside
+        return ensureAnimationLoaded();
     default:
         return QImageIOHandler::supportsOption(option);
     }
@@ -126,6 +139,14 @@ QVariant FormatsHandler::option(ImageOption option) const
             return RawImage::size(path);
         if(HeifDecoder::isHeifSuffix(suffix))
             return HeifDecoder::size(path);
+        if(ExrDecoder::isExrSuffix(suffix) && ExrDecoder::isAvailable())
+            return ExrDecoder::size(path);
+        if(HdrDecoder::isHdrSuffix(suffix))
+            return HdrDecoder::size(path);
+        if(ArchiveImageDecoder::isArchiveSuffix(suffix) && ArchiveImageDecoder::isAvailable())
+            return ArchiveImageDecoder::size(path);
+        if(AniImage::isAniSuffix(suffix))
+            return AniImage::size(path);
         return QVariant();
     }
     case ImageFormat:
@@ -144,23 +165,46 @@ bool FormatsHandler::ensureAnimationLoaded() const
 
     const QString path = filePath();
     const QString suffix = resolvedSuffix();
-    if(path.isEmpty() || !JxlImage::isJxlSuffix(suffix) || !JxlImage::isAvailable())
-        return false;
-    // the header says whether this is an animation at all; asking readAnimation()
-    // would decode a still image twice (once here, once for the actual read)
-    if(!JxlImage::isAnimated(path))
+    if(path.isEmpty())
         return false;
 
-    JxlImage::Animation animation;
-    if(!JxlImage::readAnimation(path, &animation) || animation.frames.size() < 2)
-        return false;   // a single frame does not need the animation path
+    // JPEG XL: the header says whether this is an animation at all; asking
+    // readAnimation() would decode a still image twice (once here, once for the
+    // actual read)
+    if(JxlImage::isJxlSuffix(suffix) && JxlImage::isAvailable()) {
+        if(!JxlImage::isAnimated(path))
+            return false;
+        JxlImage::Animation animation;
+        if(!JxlImage::readAnimation(path, &animation) || animation.frames.size() < 2)
+            return false;   // a single frame does not need the animation path
+        for(const JxlImage::Frame &frame : animation.frames)
+            mAnimFrames.append({frame.image, frame.delayMs});
+        mAnimNumLoops = animation.numLoops;
+    } else if(HeifDecoder::isHeifSuffix(suffix) && HeifDecoder::isAvailable()) {
+        // HEIC/AVIF with an image sequence: the still image is the first track
+        // sample, the rest only exist here
+        HeifDecoder::Animation animation;
+        if(!HeifDecoder::readAnimation(path, &animation) || animation.frames.size() < 2)
+            return false;
+        for(const HeifDecoder::Frame &frame : animation.frames)
+            mAnimFrames.append({frame.image, frame.delayMs});
+        mAnimNumLoops = animation.numLoops;
+    } else if(AniImage::isAniSuffix(suffix)) {
+        QVector<AniImage::Frame> frames;
+        if(!AniImage::readAnimation(path, &frames) || frames.isEmpty())
+            return false;
+        for(const AniImage::Frame &frame : frames)
+            mAnimFrames.append({frame.image, frame.delayMs});
+        // cursors repeat for as long as they are on screen
+        mAnimNumLoops = 0;
+    } else {
+        return false;
+    }
 
-    mAnimFrames = animation.frames;
-    mAnimNumLoops = animation.numLoops;
     mAnimNext = 0;
     mAnimCurrent = 0;
-    mAnimIsAnimated = true;
-    return true;
+    mAnimIsAnimated = !mAnimFrames.isEmpty();
+    return mAnimIsAnimated;
 }
 
 void FormatsHandler::setOption(ImageOption option, const QVariant &value)
@@ -212,6 +256,23 @@ QImage FormatsHandler::decode(const QString &path, const QString &suffix, const 
                 return scaled;
         }
         return PsdDecoder::read(path, target);
+    }
+
+    if(ExrDecoder::isExrSuffix(suffix) && ExrDecoder::isAvailable())
+        return ExrDecoder::read(path, target);
+
+    if(HdrDecoder::isHdrSuffix(suffix))
+        return HdrDecoder::read(path, target);
+
+    if(ArchiveImageDecoder::isArchiveSuffix(suffix) && ArchiveImageDecoder::isAvailable())
+        return ArchiveImageDecoder::read(path, target);
+
+    if(AniImage::isAniSuffix(suffix)) {
+        // a one frame cursor (or a failed animation parse) still shows its first
+        // picture instead of an error
+        QVector<AniImage::Frame> frames;
+        if(AniImage::readAnimation(path, &frames) && !frames.isEmpty())
+            return frames.first().image;
     }
 
     return QImage();

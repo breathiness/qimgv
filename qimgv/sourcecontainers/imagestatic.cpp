@@ -79,6 +79,9 @@ void ImageStatic::load() {
         loadICO();
         return;
     }
+    // Only formats that can hold several images are asked; for everything else
+    // this is a no-op and the loading path below is exactly what it was.
+    detectPageCount();
     if(mPreviewTarget.isEmpty()) {
         loadGeneric();
         return;
@@ -257,11 +260,15 @@ void ImageStatic::loadGeneric() {
 }
 
 // decodes the file, optionally asking Qt for a downscaled copy
-std::unique_ptr<const QImage> ImageStatic::readImage(QSize scaledTarget) {
+std::unique_ptr<const QImage> ImageStatic::readImage(QSize scaledTarget, int page) {
     QImageReader r(mPath, mDocInfo->format().toStdString().c_str());
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     r.setAllocationLimit(settings->memoryAllocationLimit());
 #endif
+    // page 0 is what a reader shows by default, so the single page path does not
+    // even touch the seek machinery
+    if(page > 0 && !r.jumpToImage(page))
+        return nullptr;
     if(!scaledTarget.isEmpty()) {
         const QSize full = r.size();
         if(!full.isEmpty() && full.width() > scaledTarget.width())
@@ -289,6 +296,43 @@ void ImageStatic::setSourceSize(QSize fullSizeFromHeader) {
     if(orientation >= 4 && orientation <= 7)
         fullSizeFromHeader = fullSizeFromHeader.transposed();
     mSourceSize = fullSizeFromHeader;
+}
+
+// Only TIFF (in practice) stores several images per file. Opening a reader just
+// for that costs a header read; a one page file leaves mPageCount at 1 and is
+// treated exactly like any other image.
+void ImageStatic::detectPageCount() {
+    const QString format = mDocInfo->format().toLower();
+    if(format != QLatin1String("tiff") && format != QLatin1String("tif"))
+        return;
+    QImageReader reader(mPath, mDocInfo->format().toStdString().c_str());
+    if(!reader.canRead())
+        return;
+    const int count = reader.imageCount();
+    if(count > 1)
+        mPageCount = count;
+}
+
+// Switches to another page of the same file. Decoding stays on demand: only the
+// page that ends up on screen is read, and the previous one is dropped.
+bool ImageStatic::setPage(int page) {
+    if(mPageCount <= 1)
+        return false;
+    page = qBound(0, page, mPageCount - 1);
+    if(page == mCurrentPage)
+        return false;
+    std::shared_ptr<const QImage> next(readImage(QSize(), page));
+    if(!next)
+        return false;
+    {
+        QMutexLocker lock(&mImageLock);
+        image = next;
+        mFullLoaded = true;
+    }
+    mCurrentPage = page;
+    mSourceSize = next->size();
+    mLoaded = true;
+    return true;
 }
 
 std::shared_ptr<const QImage> ImageStatic::currentImage() const {

@@ -1,4 +1,5 @@
 #include "imageanimated.h"
+#include <QImageReader>
 #include <time.h>
 
 // TODO: this class is kinda useless now. redesign?
@@ -35,6 +36,13 @@ void ImageAnimated::loadMovie() {
     movie->setFormat(mDocInfo->format().toStdString().c_str());
     movie->jumpToFrame(0);
     mSize = movie->frameRect().size();
+    if(mSize.isEmpty()) {
+        // not every reader hands out a frame synchronously; ask for the picture
+        // size directly so the info bar and window title are not left without
+        // dimensions
+        QImageReader reader(mPath, mDocInfo->format().toStdString().c_str());
+        mSize = reader.size();
+    }
     mFrameCount = movie->frameCount();
 }
 

@@ -43,6 +43,13 @@ public:
     bool pdfNeedsPassword() const { return mPdfNeedsPassword; }
     bool unlockPdf(const QString &password);
 
+    // Multi page images (TIFF) keep every page in the file and decode one at a
+    // time. A single page file reports 1/0 and setPage() does nothing, so the
+    // ordinary browsing path is unchanged.
+    int pageCount() const { return mPageCount; }
+    int currentPage() const { return mCurrentPage; }
+    bool setPage(int page);
+
     bool setEditedImage(std::unique_ptr<const QImage> imageEditedNew);
     bool discardEditedImage();
 
@@ -73,7 +80,9 @@ private:
     // have, which is what the preview claims to stand in for
     std::shared_ptr<const QImage> renderCad(bool detailed, QSize *detailedSize = nullptr) const;
     // decodes the file, optionally asking Qt for a downscaled copy
-    std::unique_ptr<const QImage> readImage(QSize scaledTarget);
+    std::unique_ptr<const QImage> readImage(QSize scaledTarget, int page = -1);
+    // counts the pages of a page-capable format; only TIFF is asked
+    void detectPageCount();
     std::shared_ptr<const QImage> currentImage() const;
     void setSourceSize(QSize fullSizeFromHeader);
     QString generateHash(QString str);
@@ -87,5 +96,8 @@ private:
     // pdf state: the open document, its page count and the page on screen
     std::shared_ptr<PdfPageModel> mPdfModel;
     bool mPdfNeedsPassword = false;
+    // multi page image state (TIFF); 1/0 for everything else
+    int mPageCount = 1;
+    int mCurrentPage = 0;
     mutable QMutex mImageLock;
 };

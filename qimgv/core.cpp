@@ -1073,12 +1073,26 @@ void Core::pasteSelection() {
         mw->showError(tr("Some items could not be pasted."));
 }
 
-// Moves one page in the paged pdf view.
+// Moves one page in a paged document. A pdf is drawn by the paged view; a multi
+// page image (TIFF) is decoded page by page by ImageStatic. Everything else has a
+// single page and ignores the request, as before.
 void Core::changePdfPage(int delta) {
-    if(delta > 0)
-        mw->pdfNextPage();
-    else if(delta < 0)
-        mw->pdfPrevPage();
+    if(mw->isPdfView()) {
+        if(delta > 0)
+            mw->pdfNextPage();
+        else if(delta < 0)
+            mw->pdfPrevPage();
+        return;
+    }
+    auto *pageImage = dynamic_cast<ImageStatic *>(state.currentImg.get());
+    if(!pageImage || pageImage->pageCount() <= 1)
+        return;
+    if(pageImage->setPage(pageImage->currentPage() + delta)) {
+        // refresh rather than showImage: flipping through the pages of one
+        // document should keep the zoom and fit mode the reader picked
+        mw->refreshImage(pageImage->getPixmap());
+        updateInfoString();
+    }
 }
 
 void Core::maybeAskPdfPassword(std::shared_ptr<Image> img) {
@@ -1902,6 +1916,13 @@ void Core::updateInfoString() {
         // the paged viewer knows which page it is on
         pdfPage = mw->pdfCurrentPage();
         pdfPageCount = mw->pdfPageCount();
+    } else if(auto *pageImage = dynamic_cast<ImageStatic *>(infoImg.get())) {
+        // a multi page image keeps its own page cursor; a single page file
+        // reports 0/1 and the title stays exactly as it was
+        if(pageImage->pageCount() > 1) {
+            pdfPage = pageImage->currentPage();
+            pdfPageCount = pageImage->pageCount();
+        }
     }
     mw->setCurrentInfo(index,
                        model->fileCount(),

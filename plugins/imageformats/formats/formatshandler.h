@@ -9,8 +9,9 @@
 
 #include "decoders/jxldecoder.h"
 
-// Reads the formats qimgv cannot get from Qt itself: HEIC/HEIF/AVIF (libheif),
-// JPEG XL (libjxl), camera raw (libraw) and PSD/PSB (parsed here).
+// Reads the formats qimgv cannot get from Qt itself: HEIC/HEIF/AVIF (libheif,
+// stills and sequences), JPEG XL (libjxl), camera raw (libraw), PSD/PSB (parsed
+// here) and Windows animated cursors.
 //
 // All of them live in this plugin so the application itself stays free of those
 // dependencies: dropping the plugin out of imageformats/ only removes the
@@ -26,7 +27,8 @@ public:
     QVariant option(ImageOption option) const override;
     void setOption(ImageOption option, const QVariant &value) override;
 
-    // animated JPEG XL: QMovie drives these
+    // animated formats (JPEG XL, HEIC/AVIF sequences, .ani cursors): QMovie
+    // drives these
     int imageCount() const override;
     int currentImageNumber() const override;
     bool jumpToImage(int imageNumber) override;
@@ -39,6 +41,12 @@ public:
     static bool isSupportedSuffix(const QString &suffix);
 
 private:
+    // one picture of an animation, whatever decoder produced it
+    struct AnimationFrame {
+        QImage image;
+        int delayMs = 0;
+    };
+
     QString filePath() const;
     QString resolvedSuffix() const;
     QImage decode(const QString &path, const QString &suffix, const QSize &target) const;
@@ -53,7 +61,7 @@ private:
 
     mutable bool mAnimProbed = false;
     mutable bool mAnimIsAnimated = false;
-    mutable QVector<JxlImage::Frame> mAnimFrames;
+    mutable QVector<AnimationFrame> mAnimFrames;
     mutable int mAnimNumLoops = 0;
     mutable int mAnimNext = 0;
     mutable int mAnimCurrent = 0;

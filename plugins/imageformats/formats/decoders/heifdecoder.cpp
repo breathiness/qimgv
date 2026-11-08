@@ -6,6 +6,7 @@
 
 #ifdef USE_LIBHEIF
 #include <libheif/heif.h>
+#include <libheif/heif_sequences.h>
 #endif
 
 namespace {
@@ -172,6 +173,93 @@ QImage readThumbnail(const QString &path, int minSize)
     Q_UNUSED(path)
     Q_UNUSED(minSize)
     return QImage();
+#endif
+}
+
+bool isAnimated(const QString &path)
+{
+#ifdef USE_LIBHEIF
+    HeifContext ctx;
+    if(!ctx.ctx)
+        return false;
+    const QByteArray nativePath = QFile::encodeName(path);
+    if(heif_context_read_from_file(ctx.ctx, nativePath.constData(), nullptr).code != heif_error_Ok)
+        return false;
+    return heif_context_has_sequence(ctx.ctx) != 0;
+#else
+    Q_UNUSED(path)
+    return false;
+#endif
+}
+
+bool readAnimation(const QString &path, Animation *animation)
+{
+    if(!animation)
+        return false;
+    animation->frames.clear();
+    animation->numLoops = 1;
+#ifdef USE_LIBHEIF
+    HeifContext ctx;
+    if(!ctx.ctx)
+        return false;
+    const QByteArray nativePath = QFile::encodeName(path);
+    if(heif_context_read_from_file(ctx.ctx, nativePath.constData(), nullptr).code != heif_error_Ok)
+        return false;
+    if(!heif_context_has_sequence(ctx.ctx))
+        return false;
+
+    // 0 asks for the first visual track
+    heif_track *track = heif_context_get_track(ctx.ctx, 0);
+    if(!track)
+        return false;
+
+    const uint32_t timescale = heif_track_get_timescale(track);
+    heif_decoding_options *options = heif_decoding_options_alloc();
+    if(options) {
+        // 8 bit RGB is what the viewer wants, and the edit list is applied by
+        // the viewer instead: with it, a file that loops forever never ends.
+        options->convert_hdr_to_8bit = 1;
+        options->ignore_sequence_editlist = 1;
+    }
+
+    bool ok = false;
+    while(animation->frames.size() < 2000) {
+        HeifImage decoded;
+        const heif_error error = heif_track_decode_next_image(
+            track, &decoded.img, heif_colorspace_RGB, heif_chroma_interleaved_RGBA, options);
+        if(error.code != heif_error_Ok)
+            break;   // heif_error_End_of_sequence on a complete file
+        QImage image = toQImage(decoded);
+        if(image.isNull())
+            break;
+        Frame frame;
+        frame.image = image;
+        const uint32_t ticks = heif_image_get_duration(decoded.img);
+        frame.delayMs = timescale > 0 ? int(qint64(ticks) * 1000 / qint64(timescale)) : 100;
+        if(frame.delayMs <= 0)
+            frame.delayMs = 100;
+        animation->frames.append(frame);
+        ok = true;
+    }
+
+    if(options)
+        heif_decoding_options_free(options);
+
+    // 0 is "the edit list was not understood", 1 is "play once", and the maximum
+    // value means it repeats for as long as the viewer lets it
+    const uint32_t repetitions = heif_track_get_number_of_repetitions(track);
+    heif_track_release(track);
+    if(repetitions == 0)
+        animation->numLoops = 1;
+    else if(repetitions == heif_sequence_track_number_of_repetitions_infinite)
+        animation->numLoops = 0;
+    else
+        animation->numLoops = int(repetitions);
+
+    return ok && animation->frames.size() >= 2;
+#else
+    Q_UNUSED(path)
+    return false;
 #endif
 }
 
