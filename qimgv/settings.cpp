@@ -435,6 +435,8 @@ QList<QByteArray> Settings::supportedFormats() {
     formats << "pdf";
     // Illustrator files are PDF compatible and use the same provider
     formats << "ai";
+    // comic archives: pages are read out of the zip by the viewer
+    formats << "cbz";
     // 3D models are rendered by the model renderer, not by an image plugin
     if(Model3D::isAvailable()) {
         formats << "stl" << "obj" << "ply" << "gltf" << "glb" << "fbx"

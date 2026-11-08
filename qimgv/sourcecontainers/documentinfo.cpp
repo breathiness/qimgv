@@ -68,6 +68,10 @@ bool DocumentInfo::is3d() const {
     return Model3D::isAvailable() && suffixes.contains(fileInfo.suffix().toLower());
 }
 
+bool DocumentInfo::isComic() const {
+    return fileInfo.suffix().compare(QStringLiteral("cbz"), Qt::CaseInsensitive) == 0;
+}
+
 bool DocumentInfo::isCad() const {
     const QString suffix = fileInfo.suffix().toLower();
     return suffix == QStringLiteral("dxf") || suffix == QStringLiteral("dwg");

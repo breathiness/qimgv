@@ -2,6 +2,7 @@
 
 #include <QByteArray>
 #include <QFile>
+#include <QFileInfo>
 #include <QStringList>
 #include <QVector>
 
@@ -165,14 +166,20 @@ QSize pngSize(const QByteArray &data)
     return QSize(int(width), int(height));
 }
 
-const QStringList &candidateNames()
+// Which entries hold the flattened picture depends on the application: Krita
+// and OpenRaster write mergedimage.png, Sketch and Procreate keep a preview.
+QStringList candidatesFor(const QString &path)
 {
-    static const QStringList names = {
-        QStringLiteral("mergedimage.png"),
-        QStringLiteral("preview.png"),
-        QStringLiteral("thumbnails/thumbnail.png")
-    };
-    return names;
+    const QString suffix = QFileInfo(path).suffix().toLower();
+    if(suffix == QLatin1String("sketch")) {
+        return { QStringLiteral("previews/preview.png"), QStringLiteral("preview.png") };
+    }
+    if(suffix == QLatin1String("procreate")) {
+        return { QStringLiteral("preview.png"), QStringLiteral("quicklook/preview.png"),
+                 QStringLiteral("quicklook/thumbnail.png"), QStringLiteral("preview.jpg") };
+    }
+    return { QStringLiteral("mergedimage.png"), QStringLiteral("preview.png"),
+             QStringLiteral("thumbnails/thumbnail.png") };
 }
 
 #endif // USE_ZLIB
@@ -193,7 +200,9 @@ bool isAvailable()
 bool isArchiveSuffix(const QString &suffix)
 {
     return suffix.compare(QLatin1String("kra"), Qt::CaseInsensitive) == 0
-           || suffix.compare(QLatin1String("ora"), Qt::CaseInsensitive) == 0;
+           || suffix.compare(QLatin1String("ora"), Qt::CaseInsensitive) == 0
+           || suffix.compare(QLatin1String("sketch"), Qt::CaseInsensitive) == 0
+           || suffix.compare(QLatin1String("procreate"), Qt::CaseInsensitive) == 0;
 }
 
 QSize size(const QString &path)
@@ -205,7 +214,7 @@ QSize size(const QString &path)
     QVector<ZipEntry> entries;
     if(!readDirectory(file, &entries))
         return QSize();
-    for(const QString &candidate : candidateNames()) {
+    for(const QString &candidate : candidatesFor(path)) {
         for(const ZipEntry &entry : entries) {
             if(entry.name.compare(candidate, Qt::CaseInsensitive) != 0)
                 continue;
@@ -240,7 +249,7 @@ QImage read(const QString &path, const QSize &targetSize)
     // Krita writes the flattened image, OpenRaster too; the thumbnail is the
     // fallback for files saved without one. The largest candidate wins.
     QImage image;
-    for(const QString &candidate : candidateNames()) {
+    for(const QString &candidate : candidatesFor(path)) {
         for(const ZipEntry &entry : entries) {
             if(entry.name.compare(candidate, Qt::CaseInsensitive) != 0)
                 continue;

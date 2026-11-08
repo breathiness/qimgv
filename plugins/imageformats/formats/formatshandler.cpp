@@ -7,9 +7,13 @@
 
 #include "decoders/anidecoder.h"
 #include "decoders/archivedecoder.h"
+#include "decoders/ddsdecoder.h"
+#include "decoders/fitsdecoder.h"
 #include "decoders/exrdecoder.h"
 #include "decoders/hdrdecoder.h"
 #include "decoders/heifdecoder.h"
+#include "decoders/pfmdecoder.h"
+#include "decoders/qoidecoder.h"
 #include "decoders/jxldecoder.h"
 #include "decoders/psddecoder.h"
 #include "decoders/rawdecoder.h"
@@ -59,6 +63,7 @@ QStringList FormatsHandler::supportedSuffixes()
     all << "exr" << "hdr" << "rgbe";
     all << "kra" << "ora";
     all << "ani";
+    all << "qoi" << "pfm" << "dds" << "fits" << "fit" << "sketch" << "procreate";
     all << rawSuffixes();
     return all;
 }
@@ -71,6 +76,8 @@ bool FormatsHandler::isSupportedSuffix(const QString &suffix)
            || ExrDecoder::isExrSuffix(s) || HdrDecoder::isHdrSuffix(s)
            || ArchiveImageDecoder::isArchiveSuffix(s)
            || AniImage::isAniSuffix(s)
+           || QoiImage::isQoiSuffix(s) || PfmImage::isPfmSuffix(s)
+           || DdsImage::isDdsSuffix(s) || FitsImage::isFitsSuffix(s)
            || rawSuffixes().contains(s);
 }
 
@@ -147,6 +154,14 @@ QVariant FormatsHandler::option(ImageOption option) const
             return ArchiveImageDecoder::size(path);
         if(AniImage::isAniSuffix(suffix))
             return AniImage::size(path);
+        if(QoiImage::isQoiSuffix(suffix))
+            return QoiImage::size(path);
+        if(PfmImage::isPfmSuffix(suffix))
+            return PfmImage::size(path);
+        if(DdsImage::isDdsSuffix(suffix))
+            return DdsImage::size(path);
+        if(FitsImage::isFitsSuffix(suffix))
+            return FitsImage::size(path);
         return QVariant();
     }
     case ImageFormat:
@@ -274,6 +289,18 @@ QImage FormatsHandler::decode(const QString &path, const QString &suffix, const 
         if(AniImage::readAnimation(path, &frames) && !frames.isEmpty())
             return frames.first().image;
     }
+
+    if(QoiImage::isQoiSuffix(suffix))
+        return QoiImage::read(path, target);
+
+    if(PfmImage::isPfmSuffix(suffix))
+        return PfmImage::read(path, target);
+
+    if(DdsImage::isDdsSuffix(suffix))
+        return DdsImage::read(path, target);
+
+    if(FitsImage::isFitsSuffix(suffix))
+        return FitsImage::read(path, target);
 
     return QImage();
 }

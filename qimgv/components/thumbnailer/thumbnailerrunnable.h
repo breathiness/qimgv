@@ -35,7 +35,7 @@ private:
     // drawings and pdf pages have no image codec: they are rendered (or, for dxf,
     // taken from the preview the file carries) instead of decoded
     static ThumbnailImage createDocumentThumbnail(const QString &path, DocumentType type, int size,
-                                                   bool crop, bool is3d = false);
+                                                   bool crop, bool is3d = false, bool isComic = false);
 #ifdef _WIN32
     // asks the Explorer shell for its cached thumbnail; much cheaper than
     // decoding the video ourselves

@@ -13,6 +13,7 @@
 
 class Model3D;
 class PdfPageModel;
+class ZipArchive;
 #include "utils/imagelib.h"
 #include <settings.h>
 
@@ -51,6 +52,10 @@ public:
     int currentPage() const { return mCurrentPage; }
     bool setPage(int page);
 
+    // comic archive: pages are images inside the zip; the page cursor works like
+    // the one a multi page tiff has
+    bool isComicFile() const;
+
     // 3D models: rotate by a mouse delta and repaint. The interactive render is
     // small; finish3dRotation() repaints at full size when the drag ends.
     bool is3dFile() const;
@@ -80,6 +85,9 @@ private:
     // renders a DXF/DWG through the CAD code; a smaller preview first, the detailed
     // one when the viewer asks for full resolution
     void loadCad();
+    // comic archive (CBZ): the pages are decoded one at a time
+    void loadComic();
+    std::shared_ptr<const QImage> readComicPage(int page) const;
     // 3D models: rendered into a square image by the model renderer
     void load3d();
     std::shared_ptr<const QImage> render3d(bool detailed, QSize *detailedSize = nullptr) const;
@@ -109,6 +117,9 @@ private:
     // multi page image state (TIFF); 1/0 for everything else
     int mPageCount = 1;
     int mCurrentPage = 0;
+    // comic state: entry names and the open archive, so a page turn is one read
+    QStringList mComicPages;
+    mutable std::shared_ptr<ZipArchive> mComicArchive;
     // 3D state: the parsed model is kept so rotating does not re-read the file
     mutable std::shared_ptr<Model3D> mModel3d;
     float mModelYaw = 0.65f;

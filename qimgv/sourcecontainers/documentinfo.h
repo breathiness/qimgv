@@ -47,6 +47,8 @@ public:
     bool isPdf() const;
     // 3D model: rendered into an image by the model renderer (assimp)
     bool is3d() const;
+    // comic archive (CBZ): pages are images inside a zip
+    bool isComic() const;
 
     QDateTime lastModified() const;
     void refresh();

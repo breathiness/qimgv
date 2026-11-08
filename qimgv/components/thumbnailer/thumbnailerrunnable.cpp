@@ -1,5 +1,6 @@
 #include "thumbnailerrunnable.h"
 #include "3d/model3d.h"
+#include "utils/ziparchive.h"
 
 #include "cad/caddrawing.h"
 #include "utils/pdfprovider.h"
@@ -74,9 +75,9 @@ std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, 
             // QImageReader copies the format name, but keeping it alive for the
             // call beats relying on how long a temporary would last.
             const QByteArray format = imgInfo.format().toUtf8();
-            if(imgInfo.isCad() || imgInfo.isPdf() || imgInfo.is3d())
+            if(imgInfo.isCad() || imgInfo.isPdf() || imgInfo.is3d() || imgInfo.isComic())
                 generated = createDocumentThumbnail(imgInfo.filePath(), imgInfo.type(), size, crop,
-                                                    imgInfo.is3d());
+                                                    imgInfo.is3d(), imgInfo.isComic());
             else
                 generated = createThumbnail(imgInfo.filePath(), format.constData(), size, crop);
         }
@@ -140,13 +141,25 @@ ThumbnailerRunnable::~ThumbnailerRunnable() {
 // screen size - that is the loader's job when the file is actually opened.
 ThumbnailerRunnable::ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createDocumentThumbnail(const QString &path,
                                                                                 DocumentType type, int size,
-                                                                                bool squared, bool is3d) {
+                                                                                bool squared, bool is3d,
+                                                                                bool isComic) {
     ThumbnailImage result;
     Q_UNUSED(type)
     const int target = qMax(16, size) * 2;   // 2x for a little headroom when the grid scales
     QImage source;
 
-    const QImage embedded = is3d ? QImage() : CadDrawing::embeddedThumbnail(path);
+    if(isComic) {
+        ZipArchive archive;
+        if(archive.open(path)) {
+            const QStringList pages = comicImageEntries(archive.names());
+            if(!pages.isEmpty()) {
+                const QByteArray data = archive.read(pages.first());
+                if(!data.isEmpty())
+                    source = QImage::fromData(data);
+            }
+        }
+    }
+    const QImage embedded = (is3d || isComic) ? QImage() : CadDrawing::embeddedThumbnail(path);
     if(is3d) {
         Model3D model;
         if(model.load(path))

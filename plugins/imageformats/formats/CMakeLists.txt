@@ -24,12 +24,20 @@ add_library(qimgvformats MODULE
     decoders/anidecoder.h
     decoders/archivedecoder.cpp
     decoders/archivedecoder.h
+    decoders/ddsdecoder.cpp
+    decoders/ddsdecoder.h
     decoders/exrdecoder.cpp
     decoders/exrdecoder.h
+    decoders/fitsdecoder.cpp
+    decoders/fitsdecoder.h
     decoders/hdrdecoder.cpp
     decoders/hdrdecoder.h
     decoders/heifdecoder.cpp
     decoders/heifdecoder.h
+    decoders/pfmdecoder.cpp
+    decoders/pfmdecoder.h
+    decoders/qoidecoder.cpp
+    decoders/qoidecoder.h
     decoders/jxldecoder.cpp
     decoders/jxldecoder.h
     decoders/psddecoder.cpp
@@ -42,6 +50,8 @@ target_link_libraries(qimgvformats PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VE
 # OpenEXR 3 headers need C++17
 target_compile_features(qimgvformats PRIVATE cxx_std_17)
 target_include_directories(qimgvformats PRIVATE decoders)
+# BCn block decoding for DDS surfaces (public domain / MIT, vendored)
+target_include_directories(qimgvformats PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../3rdparty/bcdec)
 
 # each codec is optional at build time; the handler only offers what it has
 find_package(PkgConfig)

@@ -1,6 +1,7 @@
 #include "imagestatic.h"
 #include "3d/model3d.h"
 #include "cad/caddrawing.h"
+#include "utils/ziparchive.h"
 #include "pdf/pdfpagemodel.h"
 #include <QElapsedTimer>
 #include <time.h>
@@ -78,6 +79,10 @@ void ImageStatic::load() {
     }
     if(mDocInfo->is3d()) {
         load3d();
+        return;
+    }
+    if(mDocInfo->isComic()) {
+        loadComic();
         return;
     }
     if(mDocInfo->mimeType().name() == "image/vnd.microsoft.icon") {
@@ -375,6 +380,50 @@ bool ImageStatic::finish3dRotation() {
     return true;
 }
 
+bool ImageStatic::isComicFile() const {
+    return mDocInfo && mDocInfo->isComic();
+}
+
+// A comic is a zip full of pictures; the pages are the sorted image entries.
+void ImageStatic::loadComic() {
+    mComicArchive = std::make_shared<ZipArchive>();
+    if(!mComicArchive->open(mPath)) {
+        mLoaded = true;
+        return;
+    }
+    mComicPages = comicImageEntries(mComicArchive->names());
+    if(mComicPages.isEmpty()) {
+        mLoaded = true;
+        return;
+    }
+    mPageCount = mComicPages.size();
+    mCurrentPage = 0;
+    std::shared_ptr<const QImage> first = readComicPage(0);
+    if(!first) {
+        mLoaded = true;
+        return;
+    }
+    {
+        QMutexLocker lock(&mImageLock);
+        image = first;
+        mFullLoaded = true;
+    }
+    mSourceSize = first->size();
+    mLoaded = true;
+}
+
+std::shared_ptr<const QImage> ImageStatic::readComicPage(int page) const {
+    if(!mComicArchive || page < 0 || page >= mComicPages.size())
+        return nullptr;
+    const QByteArray data = mComicArchive->read(mComicPages.at(page));
+    if(data.isEmpty())
+        return nullptr;
+    std::shared_ptr<const QImage> decoded(new QImage(QImage::fromData(data)));
+    if(decoded->isNull())
+        return nullptr;
+    return decoded;
+}
+
 void ImageStatic::load3d() {
     QSize detailedSize;
     std::shared_ptr<const QImage> preview = render3d(false, &detailedSize);
@@ -426,6 +475,22 @@ std::shared_ptr<const QImage> ImageStatic::render3d(bool detailed, QSize *detail
 }
 
 bool ImageStatic::setPage(int page) {
+    if(!mComicPages.isEmpty()) {
+        page = qBound(0, page, mComicPages.size() - 1);
+        if(page == mCurrentPage)
+            return false;
+        std::shared_ptr<const QImage> next = readComicPage(page);
+        if(!next)
+            return false;
+        {
+            QMutexLocker lock(&mImageLock);
+            image = next;
+            mFullLoaded = true;
+        }
+        mCurrentPage = page;
+        mSourceSize = next->size();
+        return true;
+    }
     if(mPageCount <= 1)
         return false;
     page = qBound(0, page, mPageCount - 1);
