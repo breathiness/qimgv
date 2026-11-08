@@ -1,0 +1,221 @@
+diff --git a/lib/src/style/PolishUtils.cpp b/lib/src/style/PolishUtils.cpp
+index 9598100..a8bae38 100644
+--- a/lib/src/style/PolishUtils.cpp
++++ b/lib/src/style/PolishUtils.cpp
+@@ -44,15 +44,16 @@ void polishToolTip(QWidget* widget) {
+ #endif
+ }
+ 
+-void polishLineEditIconButton(QlementineStyle& style, WidgetAnimationManager& animations, QWidget* widget,
+-  PolishedWidgetRegistry::Entry& entry, bool eventFiltersInstalled) {
++void polishLineEditIconButton(QlementineStyle& style, WidgetAnimationManager& animations,
++  PolishedWidgetRegistry& registry, QWidget* widget, PolishedWidgetRegistry::Entry& entry,
++  bool eventFiltersInstalled) {
++  Q_UNUSED(entry)
+   if (!widget->inherits("QLineEditIconButton"))
+     return;
+ 
+   if (!eventFiltersInstalled) {
+     auto* eventFilter = new LineEditButtonEventFilter(&style, animations, qobject_cast<QToolButton*>(widget));
+-    widget->installEventFilter(eventFilter);
+-    entry.eventFilters.push_back(eventFilter);
++    registry.addEventFilter(widget, eventFilter);
+   }
+   widget->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+   // Fix hardcoded width in qlineedit_p.cpp:493
+@@ -92,15 +93,17 @@ void polishCommonWidget(QWidget* widget) {
+ 
+ void polishExternalFocusFrame(
+   QWidget* widget, PolishedWidgetRegistry& registry, PolishedWidgetRegistry::Entry& entry, bool eventFiltersInstalled) {
++  Q_UNUSED(entry)
+   // QFocusFrame is used to draw focus outside of the widget's bound.
+   if (shouldHaveExternalFocusFrame(widget) && !eventFiltersInstalled) {
+     auto* eventFilter = new WidgetWithFocusFrameEventFilter(widget);
+-    registry.addEventFilter(widget, entry, eventFilter);
++    registry.addEventFilter(widget, eventFilter);
+   }
+ }
+ 
+ void polishMenu(
+   QWidget* widget, PolishedWidgetRegistry& registry, PolishedWidgetRegistry::Entry& entry, bool eventFiltersInstalled) {
++  Q_UNUSED(entry)
+   if (auto* menu = qobject_cast<QMenu*>(widget)) {
+     menu->setBackgroundRole(QPalette::NoRole);
+     menu->setAutoFillBackground(false);
+@@ -114,7 +117,7 @@ void polishMenu(
+     // Place the QMenu correctly by making up for the drop shadow margins.
+     if (!eventFiltersInstalled) {
+       auto* eventFilter = new MenuEventFilter(menu);
+-      registry.rememberEventFilter(entry, eventFilter);
++      registry.rememberEventFilter(widget, eventFilter);
+     }
+   }
+ }
+@@ -161,13 +164,14 @@ void polishVerticalCompression(QWidget* widget) {
+ 
+ void polishMouseWheelBlocker(
+   QWidget* widget, PolishedWidgetRegistry& registry, PolishedWidgetRegistry::Entry& entry, bool eventFiltersInstalled) {
++  Q_UNUSED(entry)
+   if (shouldNotHaveWheelEvents(widget)) {
+     if (widget->focusPolicy() == Qt::WheelFocus) {
+       widget->setFocusPolicy(Qt::StrongFocus);
+     }
+     if (!eventFiltersInstalled) {
+       auto* eventFilter = new MouseWheelBlockerEventFilter(widget);
+-      registry.addEventFilter(widget, entry, eventFilter);
++      registry.addEventFilter(widget, eventFilter);
+     }
+   }
+ }
+@@ -189,10 +193,11 @@ void polishComboBox(QlementineStyle& style, QWidget* widget) {
+ 
+ void polishTabBar(
+   QWidget* widget, PolishedWidgetRegistry& registry, PolishedWidgetRegistry::Entry& entry, bool eventFiltersInstalled) {
++  Q_UNUSED(entry)
+   if (auto* tabBar = qobject_cast<QTabBar*>(widget)) {
+     if (!eventFiltersInstalled) {
+       auto* eventFilter = new TabBarEventFilter(tabBar);
+-      registry.addEventFilter(tabBar, entry, eventFilter);
++      registry.addEventFilter(tabBar, eventFilter);
+     }
+   }
+ }
+@@ -221,11 +226,12 @@ void polishSlider(QWidget* widget) {
+ 
+ void polishTextEditors(
+   QWidget* widget, PolishedWidgetRegistry& registry, PolishedWidgetRegistry::Entry& entry, bool eventFiltersInstalled) {
++  Q_UNUSED(entry)
+   // Make the QPlainTextEdit have a frame by default.
+   if (auto* plainTextEdit = qobject_cast<QPlainTextEdit*>(widget)) {
+     if (!eventFiltersInstalled) {
+       auto* eventFilter = new TextEditEventFilter(plainTextEdit);
+-      registry.addEventFilter(plainTextEdit, entry, eventFilter);
++      registry.addEventFilter(plainTextEdit, eventFilter);
+     }
+     if (auto* viewport = plainTextEdit->findChild<QWidget*>(QStringLiteral("qt_scrollarea_viewport"))) {
+       viewport->setAutoFillBackground(false);
+@@ -235,7 +241,7 @@ void polishTextEditors(
+   if (auto* textEdit = qobject_cast<QTextEdit*>(widget)) {
+     if (!eventFiltersInstalled) {
+       auto* eventFilter = new TextEditEventFilter(textEdit);
+-      registry.addEventFilter(textEdit, entry, eventFilter);
++      registry.addEventFilter(textEdit, eventFilter);
+     }
+     if (auto* viewport = textEdit->findChild<QWidget*>(QStringLiteral("qt_scrollarea_viewport"))) {
+       viewport->setAutoFillBackground(false);
+@@ -245,26 +251,28 @@ void polishTextEditors(
+ 
+ void polishLineEditMenus(
+   QWidget* widget, PolishedWidgetRegistry& registry, PolishedWidgetRegistry::Entry& entry, bool eventFiltersInstalled) {
++  Q_UNUSED(entry)
+   if (auto* lineEdit = qobject_cast<QLineEdit*>(widget)) {
+     if (!eventFiltersInstalled) {
+       auto* eventFilter = new LineEditMenuEventFilter(lineEdit);
+-      registry.addEventFilter(lineEdit, entry, eventFilter);
++      registry.addEventFilter(lineEdit, eventFilter);
+     }
+   } else if (auto* spinBox = qobject_cast<QSpinBox*>(widget)) {
+     if (!eventFiltersInstalled) {
+       auto* eventFilter = new LineEditMenuEventFilter(spinBox);
+-      registry.addEventFilter(spinBox, entry, eventFilter);
++      registry.addEventFilter(spinBox, eventFilter);
+     }
+   } else if (auto* plainTextEdit = qobject_cast<QPlainTextEdit*>(widget)) {
+     if (!eventFiltersInstalled) {
+       auto* eventFilter = new LineEditMenuEventFilter(plainTextEdit);
+-      registry.addEventFilter(plainTextEdit, entry, eventFilter);
++      registry.addEventFilter(plainTextEdit, eventFilter);
+     }
+   }
+ }
+ 
+ void polishDestructionTracking(QWidget* widget, QObject* parent, PolishedWidgetRegistry& registry,
+   PolishedWidgetRegistry::Entry& entry, bool eventFiltersInstalled) {
++  Q_UNUSED(entry)
+   // Clean up when the widget is destroyed without unpolish() being called.
+   // Using an event filter instead of signal to handle cases where blockSignals() is called.
+   if (!eventFiltersInstalled) {
+@@ -272,7 +280,7 @@ void polishDestructionTracking(QWidget* widget, QObject* parent, PolishedWidgetR
+       widget, parent, [&registry](QWidget* destroyedWidget, QObject* destructionEventFilter) {
+         registry.forgetDestroyedWidget(destroyedWidget, destructionEventFilter);
+       });
+-    registry.addEventFilter(widget, entry, eventFilter);
++    registry.addEventFilter(widget, eventFilter);
+   }
+ }
+ 
+diff --git a/lib/src/style/PolishUtils.hpp b/lib/src/style/PolishUtils.hpp
+index 141f392..31a6ac5 100644
+--- a/lib/src/style/PolishUtils.hpp
++++ b/lib/src/style/PolishUtils.hpp
+@@ -14,8 +14,9 @@ class WidgetAnimationManager;
+ 
+ void polishToolTip(QWidget* widget);
+ 
+-void polishLineEditIconButton(QlementineStyle& style, WidgetAnimationManager& animations, QWidget* widget,
+-  PolishedWidgetRegistry::Entry& entry, bool eventFiltersInstalled);
++void polishLineEditIconButton(QlementineStyle& style, WidgetAnimationManager& animations,
++  PolishedWidgetRegistry& registry, QWidget* widget, PolishedWidgetRegistry::Entry& entry,
++  bool eventFiltersInstalled);
+ 
+ void polishCommonWidget(QWidget* widget);
+ 
+diff --git a/lib/src/style/PolishedWidgetRegistry.cpp b/lib/src/style/PolishedWidgetRegistry.cpp
+index b1a566e..e52cfde 100644
+--- a/lib/src/style/PolishedWidgetRegistry.cpp
++++ b/lib/src/style/PolishedWidgetRegistry.cpp
+@@ -16,17 +16,17 @@ bool PolishedWidgetRegistry::hasEventFilters(QWidget* widget) const {
+   return iter != _widgets.end() && !iter.value().eventFilters.empty();
+ }
+ 
+-void PolishedWidgetRegistry::addEventFilter(QWidget* widget, Entry& entry, QObject* eventFilter) {
++void PolishedWidgetRegistry::addEventFilter(QWidget* widget, QObject* eventFilter) {
+   if (!widget || !eventFilter)
+     return;
+ 
+   widget->installEventFilter(eventFilter);
+-  rememberEventFilter(entry, eventFilter);
++  rememberEventFilter(widget, eventFilter);
+ }
+ 
+-void PolishedWidgetRegistry::rememberEventFilter(Entry& entry, QObject* eventFilter) {
+-  if (eventFilter) {
+-    entry.eventFilters.push_back(eventFilter);
++void PolishedWidgetRegistry::rememberEventFilter(QWidget* widget, QObject* eventFilter) {
++  if (widget && eventFilter) {
++    ensure(widget).eventFilters.push_back(eventFilter);
+   }
+ }
+ 
+diff --git a/lib/src/style/PolishedWidgetRegistry.hpp b/lib/src/style/PolishedWidgetRegistry.hpp
+index b1e4034..a2235b3 100644
+--- a/lib/src/style/PolishedWidgetRegistry.hpp
++++ b/lib/src/style/PolishedWidgetRegistry.hpp
+@@ -19,8 +19,12 @@ public:
+   Entry& ensure(QWidget* widget);
+   bool hasEventFilters(QWidget* widget) const;
+ 
+-  void addEventFilter(QWidget* widget, Entry& entry, QObject* eventFilter);
+-  void rememberEventFilter(Entry& entry, QObject* eventFilter);
++  // The widget based variants are the safe ones: polishing a widget can
++  // unpolish it again (setting window flags does exactly that for a QMenu), and
++  // that erases its Entry. A reference kept from before the call would dangle,
++  // so the lookup happens right before the insertion.
++  void addEventFilter(QWidget* widget, QObject* eventFilter);
++  void rememberEventFilter(QWidget* widget, QObject* eventFilter);
+   void removeAndDeleteEventFilters(QWidget* widget);
+   void forgetDestroyedWidget(QWidget* widget, QObject* destructionEventFilter);
+ 
+diff --git a/lib/src/style/QlementineStyle.cpp b/lib/src/style/QlementineStyle.cpp
+index 153308f..3a07247 100644
+--- a/lib/src/style/QlementineStyle.cpp
++++ b/lib/src/style/QlementineStyle.cpp
+@@ -4947,7 +4947,7 @@ void QlementineStyle::polish(QWidget* w) {
+ 
+   // Not yet ideal, but still better than a huge fonction.
+   polishToolTip(w);
+-  polishLineEditIconButton(*this, _impl->animations, w, polishedWidgetInfo, eventFiltersInstalled);
++  polishLineEditIconButton(*this, _impl->animations, _impl->polishedWidgets, w, polishedWidgetInfo, eventFiltersInstalled);
+   polishCommonWidget(w);
+   polishExternalFocusFrame(w, _impl->polishedWidgets, polishedWidgetInfo, eventFiltersInstalled);
+   polishMenu(w, _impl->polishedWidgets, polishedWidgetInfo, eventFiltersInstalled);

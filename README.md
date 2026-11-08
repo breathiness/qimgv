@@ -156,6 +156,13 @@ Windows 64 位构建发布在 [Releases](https://github.com/breathiness/qimgv/re
 - **格式包**（`qimgv-formats-<版本>.zip`，可选）：覆盖到主程序目录，补充 WebP / HEIC / AVIF / JPEG XL / RAW / PSD 与 PDF。
 - **视频包**（`qimgv-video-<版本>.zip`，可选）：覆盖到主程序目录，补充视频播放与视频缩略图。播放器库（libmpv）体积较大，因此和格式分开下载；不看视频可以不装。
 
+## 本分支的构建提示
+
+- **子模块**：先 `git submodule update --init --recursive`（qlementine、qlementine-icons、libdxfrw）。
+- **3D 模型（可选）**：只需要 assimp 的头文件，`cmake -DASSIMP_ROOT=<前缀>` 指向它（`include/` 即可）。运行库 `libassimp-6.dll` 由运行时按需加载，随格式包分发，主程序不依赖它。
+- **格式插件**：编译时自动探测 libheif / libjxl / libraw / OpenEXR。发布时必须把这些运行库一起打包——缺任何一个都会让整个 `qimgvformats.dll` 加载失败（不是只坏对应的格式）。
+- **qlementine 补丁**：`for f in 3rdparty/patches/*.patch; do git -C 3rdparty/qlementine apply "$f"; done`。两个补丁分别修：样式注册表在 polish 期间被重入（设置窗口标志导致 unpolish）时的偶发崩溃；弹出菜单点击条目后动作不触发的 qlementine 缺陷（它靠合成鼠标事件触发，按下被过滤时就丢了）。
+
 ## 从源码编译
 
 参见上游 wiki：[Compiling qimgv from source](https://github.com/easymodo/qimgv/wiki/Compiling-qimgv-from-source)。Windows 下的补充说明见上文「本分支的构建提示」。

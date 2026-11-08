@@ -1,0 +1,26 @@
+diff --git a/lib/src/style/eventFilters/MenuEventFilter.hpp b/lib/src/style/eventFilters/MenuEventFilter.hpp
+index 945bcf0..96fe3e2 100644
+--- a/lib/src/style/eventFilters/MenuEventFilter.hpp
++++ b/lib/src/style/eventFilters/MenuEventFilter.hpp
+@@ -108,12 +108,15 @@ public:
+ 
+           if (action->menu() == nullptr) {
+             flashAction(action, _menu, [this, action]() {
+-              // We send a manually-built mouse event to click on the menu item.
+-              const auto menuItemCenter = _menu->actionGeometry(action).center();
+-              _mouseEventToNotFilter.reset(new QMouseEvent(QEvent::MouseButtonRelease, menuItemCenter,
+-                _menu->mapToGlobal(menuItemCenter), Qt::LeftButton, Qt::NoButton, Qt::NoModifier));
+-              QCoreApplication::sendEvent(_menu, _mouseEventToNotFilter.get());
+-              _mouseEventToNotFilter.reset();
++              // Trigger the action directly. The manually-built release event this
++              // used to send only worked while the menu still believed a mouse press
++              // was in progress; when the press had been swallowed (a click that
++              // landed on the menu's shadow margin, or a menu Qt had scrolled) the
++              // release was dropped and nothing happened at all.
++              action->trigger();
++              if (_menu) {
++                _menu->close();
++              }
+             });
+             return true;
+           }
