@@ -91,6 +91,7 @@ bool chromePalette(ChromePalette &palette) {
     palette.disabledText = theme.secondaryColorDisabled;
     palette.disabledLine = theme.borderColorDisabled;
     palette.accent = theme.primaryColor;
+    palette.error = theme.statusColorError;
     palette.radius = theme.borderRadius;
     return true;
 #else

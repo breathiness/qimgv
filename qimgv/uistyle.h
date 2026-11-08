@@ -54,6 +54,7 @@ struct ChromePalette {
     QColor disabledText;   // disabled text: theme secondaryColorDisabled
     QColor disabledLine;   // disabled border: theme borderColorDisabled
     QColor accent;         // theme primaryColor
+    QColor error;          // theme statusColorError (destructive hover, close button)
     qreal radius = 0;      // theme borderRadius
 };
 bool chromePalette(ChromePalette &palette);

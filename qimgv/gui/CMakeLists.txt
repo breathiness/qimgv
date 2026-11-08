@@ -27,6 +27,10 @@ target_sources(qimgv PRIVATE
     customwidgets/slidepanel.cpp
     customwidgets/spinboxinputfix.cpp
     customwidgets/thumbnailview.cpp
+    customwidgets/windowresizegrip.cpp
+    customwidgets/windowresizegrip.h
+    customwidgets/windowtitlebar.cpp
+    customwidgets/windowtitlebar.h
     customwidgets/thumbnailwidget.cpp
     customwidgets/videoslider.cpp
     customwidgets/pushbuttonfocusind.cpp

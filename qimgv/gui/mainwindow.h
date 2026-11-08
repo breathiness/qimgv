@@ -65,6 +65,9 @@ enum ActiveSidePanel {
     SIDEPANEL_NONE
 };
 
+class WindowTitleBar;
+class WindowResizeGrip;
+
 class MW : public FloatingWidgetContainer
 {
     Q_OBJECT
@@ -102,6 +105,13 @@ public:
 private:
     std::shared_ptr<ViewerWidget> viewerWidget;
     QHBoxLayout layout;
+    // the window frame qimgv draws itself; null in classic/stock mode, where the
+    // system title bar stays
+    WindowTitleBar *titleBar = nullptr;
+    // resize targets along the window edges, which a frameless window lacks
+    QList<WindowResizeGrip *> resizeGrips;
+    void setupResizeGrips();
+    void layoutResizeGrips();
     QTimer windowGeometryChangeTimer;
     int currentDisplay;
 
@@ -169,6 +179,8 @@ private slots:
 protected:
     void mouseMoveEvent(QMouseEvent *event);
     bool event(QEvent *event);
+    void changeEvent(QEvent *event);
+    bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result);
     void paintEvent(QPaintEvent *event);
     void closeEvent(QCloseEvent *event);
     void dragEnterEvent(QDragEnterEvent *e);

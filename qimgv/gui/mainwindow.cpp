@@ -10,7 +10,14 @@
 #include <QVBoxLayout>
 #include <functional>
 #include "gui/customwidgets/materialdialog.h"
+#include "gui/customwidgets/windowresizegrip.h"
+#include "gui/customwidgets/windowtitlebar.h"
 #include "sourcecontainers/imagestatic.h"
+#include "uistyle.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 // Runs the event loop until one of the connections added by `arm` quits it, or
 // until the timeout fires. Returns true when a condition fired first.
@@ -59,7 +66,21 @@ MW::MW(QWidget *parent)
     // via passthrough from child widgets
     setFocusPolicy(Qt::NoFocus);
 
-    this->setLayout(&layout);
+    // Qlementine mode draws its own window frame: the system title bar goes
+    // away and the bar below takes over dragging, the window buttons and the
+    // title. The stock/classic styles keep the native one.
+    if(UiStyle::useQlementine()) {
+        setWindowFlag(Qt::FramelessWindowHint, true);
+        titleBar = new WindowTitleBar(this);
+        auto *root = new QVBoxLayout(this);
+        root->setContentsMargins(0, 0, 0, 0);
+        root->setSpacing(0);
+        root->addWidget(titleBar);
+        root->addLayout(&layout, 1);
+        setupResizeGrips();
+    } else {
+        this->setLayout(&layout);
+    }
 
     setWindowTitle(QCoreApplication::applicationName() + " " +
                    QCoreApplication::applicationVersion());
@@ -79,6 +100,46 @@ MW::MW(QWidget *parent)
     currentDisplay = settings->lastDisplay();
     maximized = settings->maximizedWindow();
     restoreWindowGeometry();
+}
+
+// A frameless window has no non-client border, so the resize targets have to be
+// widgets: four edges plus four corners, each starting a system resize. They sit
+// on top of everything and are hidden while maximized or in fullscreen.
+void MW::setupResizeGrips() {
+    const Qt::Edges edges[8] = {
+        Qt::LeftEdge, Qt::RightEdge, Qt::TopEdge, Qt::BottomEdge,
+        Qt::LeftEdge | Qt::TopEdge, Qt::RightEdge | Qt::TopEdge,
+        Qt::LeftEdge | Qt::BottomEdge, Qt::RightEdge | Qt::BottomEdge
+    };
+    for(const Qt::Edges gripEdges : edges)
+        resizeGrips.append(new WindowResizeGrip(gripEdges, this));
+}
+
+void MW::layoutResizeGrips() {
+    if(resizeGrips.isEmpty())
+        return;
+    const int edge = 5;
+    const int corner = 11;
+    const int w = width();
+    const int h = height();
+    const QRect rects[8] = {
+        QRect(0, 0, edge, h),
+        QRect(w - edge, 0, edge, h),
+        QRect(0, 0, w, edge),
+        QRect(0, h - edge, w, edge),
+        QRect(0, 0, corner, corner),
+        QRect(w - corner, 0, corner, corner),
+        QRect(0, h - corner, corner, corner),
+        QRect(w - corner, h - corner, corner, corner)
+    };
+    const bool active = !isMaximized() && !isFullScreen();
+    for(int i = 0; i < resizeGrips.size(); ++i) {
+        WindowResizeGrip *grip = resizeGrips.at(i);
+        grip->setGeometry(rects[i]);
+        grip->setVisible(active);
+        if(active)
+            grip->raise();
+    }
 }
 
 /*                                                             |--[ImageViewer]
@@ -643,10 +704,51 @@ bool MW::event(QEvent *event) {
         // this filter out out events while the window is still being set up
         if(this->isVisible() && !this->isFullScreen())
             maximized = nowMaximized;
+        if(titleBar)
+            titleBar->setMaximized(nowMaximized);
+        layoutResizeGrips();
     }
     if(event->type() == QEvent::Move || event->type() == QEvent::Resize)
         windowGeometryChangeTimer.start();
     return QWidget::event(event);
+}
+
+void MW::changeEvent(QEvent *event) {
+    if(event->type() == QEvent::WindowTitleChange && titleBar)
+        titleBar->setTitle(windowTitle());
+    QWidget::changeEvent(event);
+}
+
+bool MW::nativeEvent(const QByteArray &eventType, void *message, qintptr *result) {
+#ifdef _WIN32
+    // Qt labels messages it pulls off the queue "windows_dispatcher_MSG" and ones
+    // that arrive through SendMessage "windows_generic_MSG"; both carry a MSG.
+    const bool windowsMessage = eventType == QByteArrayLiteral("windows_generic_MSG")
+                                || eventType == QByteArrayLiteral("windows_dispatcher_MSG");
+    if(titleBar && windowsMessage) {
+        auto *msg = static_cast<MSG *>(message);
+        // A frameless window is maximized to the whole screen by the platform,
+        // which covers the taskbar. Clamp the maximized rectangle to the work
+        // area of the monitor the window is on.
+        if(msg->message == WM_GETMINMAXINFO) {
+            auto *info = reinterpret_cast<MINMAXINFO *>(msg->lParam);
+            const HMONITOR monitor = MonitorFromWindow(msg->hwnd, MONITOR_DEFAULTTONEAREST);
+            MONITORINFO monitorInfo{};
+            monitorInfo.cbSize = sizeof(MONITORINFO);
+            if(GetMonitorInfo(monitor, &monitorInfo)) {
+                const RECT work = monitorInfo.rcWork;
+                const RECT full = monitorInfo.rcMonitor;
+                info->ptMaxPosition.x = work.left - full.left;
+                info->ptMaxPosition.y = work.top - full.top;
+                info->ptMaxSize.x = work.right - work.left;
+                info->ptMaxSize.y = work.bottom - work.top;
+                *result = 0;
+                return true;
+            }
+        }
+    }
+#endif
+    return QWidget::nativeEvent(eventType, message, result);
 }
 
 // hook up to actionManager
@@ -743,6 +845,7 @@ void MW::resizeEvent(QResizeEvent *event) {
     // keep the loader's preview size in step with the window, so that a preview
     // is never smaller than what is on screen
     ImageStatic::setPreviewSizeHint(viewerWidget->size() * devicePixelRatioF());
+    layoutResizeGrips();
     FloatingWidgetContainer::resizeEvent(event);
 }
 
@@ -1264,6 +1367,10 @@ void MW::applyFullscreenBackground() {
 
 // changes ui elements according to fullscreen state
 void MW::adaptToWindowState() {
+    // the custom frame belongs to the windowed mode; fullscreen has no chrome
+    if(titleBar)
+        titleBar->setVisible(!isFullScreen());
+    layoutResizeGrips();
     docWidget->hideFloatingPanel();
     if(isFullScreen()) { //-------------------------------------- fullscreen ---
         applyFullscreenBackground();
