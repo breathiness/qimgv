@@ -1539,7 +1539,14 @@ bool Core::loadPath(QString path) {
             QStringList types = settings->supportedMimeTypes();
             QMimeDatabase db;
             QMimeType type = db.mimeTypeForFile(fileInfo.absoluteFilePath());
-            if(types.contains(type.name())) {
+            // The suffix list is what the directory model filters on, and for
+            // containers the mime check disagrees with it: a .kra is reported as
+            // application/zip by content but as its own type by extension, so a
+            // file handed over on the command line used to be dropped. Accept a
+            // supported suffix as well.
+            const QString suffix = fileInfo.suffix().toLower();
+            const bool knownSuffix = settings->supportedFormats().contains(suffix.toLatin1());
+            if(types.contains(type.name()) || knownSuffix) {
                 if(model->forceInsert(fileInfo.absoluteFilePath())) {
                     index = model->indexOfFile(fileInfo.absoluteFilePath());
                 }
