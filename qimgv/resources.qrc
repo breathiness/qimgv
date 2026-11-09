@@ -223,9 +223,7 @@
         <file>res/icons/common/other/folder-papirus.svg</file>
         <file>res/themes/material-light.json</file>
         <file>res/themes/material-dark.json</file>
-        <file>res/fonts/Roboto-Regular.ttf</file>
-        <file>res/fonts/Roboto-Medium.ttf</file>
-        <file>res/fonts/GlowSansSC-Regular.otf</file>
-        <file>res/fonts/GlowSansSC-Medium.otf</file>
+        <file>res/fonts/SourceHanSansCN-Regular.otf</file>
+        <file>res/fonts/SourceHanSansCN-Bold.otf</file>
     </qresource>
 </RCC>

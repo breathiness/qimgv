@@ -18,7 +18,7 @@ qimgv（个人修改版）
 | **文件夹视图右键菜单** | 复制、剪切、粘贴、删除、新建文件夹等操作可直接在网格里完成。 |
 | **更多格式** | DXF/DWG 图纸、PDF、视频缩略图；通过可选格式包 / 视频包支持 WebP/HEIC/AVIF/JXL/RAW/PSD 等。 |
 | **矢量图标** | 界面图标改用 Material Symbols 矢量图标，任意 DPI 都清晰。 |
-| **Material 主题** | 按 MDUI 规范绘制的 Material Light / Dark 主题：按钮、复选框、滑块、菜单、文本框与无边框对话框，搭配 Roboto + 未来荧黑字体。 |
+| **Material 主题** | 按 MDUI 规范绘制的 Material Light / Dark 主题：按钮、复选框、滑块、菜单、文本框与无边框对话框，搭配 Arial（西文，系统字体）+ 思源黑体（中文，随包）。 |
 
 
 ## 截图
@@ -171,7 +171,7 @@ Windows 64 位构建发布在 [Releases](https://github.com/breathiness/qimgv/re
 
 - 原项目：[easymodo/qimgv](https://github.com/easymodo/qimgv)，作者 easymodo 及所有贡献者
 - 许可证：GNU GPLv3（全文见根目录 `LICENSE`）
-- 字体：Roboto（Apache License 2.0）、[未来荧黑 Glow Sans SC](https://github.com/welai/glow-sans)（SIL OFL 1.1）
+- 字体：[思源黑体 Source Han Sans CN](https://github.com/adobe-fonts/source-han-sans)（SIL OFL 1.1，随包子集，族名改为 `Qimgv Han Sans` 以免与系统安装的同名字体冲突）；西文用系统的 Arial
 - 图标：Material Symbols（Apache License 2.0）、[Papirus](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme) 文件夹图标（GPL-3.0）
 
 第三方许可证全文与版权声明见 [`LICENSES/`](LICENSES/)。

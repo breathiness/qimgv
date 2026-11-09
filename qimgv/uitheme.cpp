@@ -150,47 +150,54 @@ void UiTheme::apply(ColorScheme &scheme, bool followSystem, bool tintAccent) {
     static bool fontsLoaded = false;
     static QString cjkFamily;
     if(!fontsLoaded) {
-        QFontDatabase::addApplicationFont(QStringLiteral(":/res/fonts/Roboto-Regular.ttf"));
-        QFontDatabase::addApplicationFont(QStringLiteral(":/res/fonts/Roboto-Medium.ttf"));
-        // Glow Sans SC (Source Han Sans derivative) subset to GB2312 + the strings
-        // in this repo; the family name is whatever the cut font declares, so ask
-        // the database instead of hard-coding it.
-        const int glowId = QFontDatabase::addApplicationFont(QStringLiteral(":/res/fonts/GlowSansSC-Regular.otf"));
-        QFontDatabase::addApplicationFont(QStringLiteral(":/res/fonts/GlowSansSC-Medium.otf"));
-        const QStringList families = QFontDatabase::applicationFontFamilies(glowId);
-        if(!families.isEmpty())
-            cjkFamily = families.first();
+        // Source Han Sans CN, subset to GB2312 plus the strings in this repo and
+        // renamed to "Qimgv Han Sans" so it cannot collide with a copy installed
+        // system-wide. The Regular and Bold cuts share the family and differ only
+        // in style, so emphasis is a real weight match instead of a synthesised
+        // emboldening.
+        const int regularId = QFontDatabase::addApplicationFont(QStringLiteral(":/res/fonts/SourceHanSansCN-Regular.otf"));
+        QFontDatabase::addApplicationFont(QStringLiteral(":/res/fonts/SourceHanSansCN-Bold.otf"));
+        const QStringList cjkFamilies = regularId >= 0 ? QFontDatabase::applicationFontFamilies(regularId) : QStringList();
+        if(!cjkFamilies.isEmpty())
+            cjkFamily = cjkFamilies.first();
         fontsLoaded = true;
     }
 
     auto appliedTheme = theme.value();
-    // Qlementine ships Inter and never loads anything else, and Inter carries no
-    // CJK glyphs - so Latin came from Inter while Chinese fell back to whatever
-    // Windows picked. Point the theme's fonts at Roboto (bundled) with the CJK
-    // face as the fallback family.
-    QStringList families{QStringLiteral("Roboto")};
-    if(!cjkFamily.isEmpty())
-        families << cjkFamily;
-    families << QStringLiteral("Microsoft YaHei UI") << QStringLiteral("Microsoft YaHei");
+    // Latin comes from a system family and Chinese from the bundled Source Han
+    // Sans, through Qt's per-script application fallback. Naming a CJK (or an
+    // application) family in the QFont itself forces a full font-database
+    // population on the first metric query (~1.2 s with the ~1450 fonts installed
+    // here); the script fallback is resolved lazily instead, so the window comes
+    // up in ~0.6 s while Han text still renders in the bundled face.
+    QStringList families{QStringLiteral("Arial")};
+    if(!cjkFamily.isEmpty()) {
+        for (const auto script : {QChar::Script_Han, QChar::Script_Hiragana,
+                                  QChar::Script_Katakana, QChar::Script_Hangul}) {
+            QFontDatabase::setApplicationFallbackFontFamilies(script, {cjkFamily});
+        }
+    }
 
     // MD1 type scale: 14sp body, 12sp caption, 16/20/24 for headings, and Medium
     // for the places MD emphasises with weight rather than size.
-    const auto applyFont = [&](QFont &font, int pixelSize, QFont::Weight weight) {
+    const auto applyFont = [&](QFont &font, int pixelSize, QFont::Weight weight, bool bold = false) {
         font.setFamilies(families);
         font.setPixelSize(pixelSize);
-        font.setWeight(weight);
+        // Both families carry a real Bold: Arial Bold for Latin, Source Han
+        // Sans CN Bold for the Han runs, so nothing is synthesised.
+        font.setWeight(bold ? QFont::Bold : weight);
     };
     // Qlementine paints some text (menus, item rows) from this int rather than
     // from the QFont objects, so it has to move with the scale or those stay 12.
     appliedTheme.fontSize = 14;
     applyFont(appliedTheme.fontRegular, 14, QFont::Normal);
-    applyFont(appliedTheme.fontBold, 14, QFont::Medium);
+    applyFont(appliedTheme.fontBold, 14, QFont::Medium, true);
     applyFont(appliedTheme.fontCaption, 12, QFont::Normal);
-    applyFont(appliedTheme.fontH1, 24, QFont::Medium);
-    applyFont(appliedTheme.fontH2, 20, QFont::Medium);
-    applyFont(appliedTheme.fontH3, 16, QFont::Medium);
+    applyFont(appliedTheme.fontH1, 24, QFont::Medium, true);
+    applyFont(appliedTheme.fontH2, 20, QFont::Medium, true);
+    applyFont(appliedTheme.fontH3, 16, QFont::Medium, true);
     applyFont(appliedTheme.fontH4, 16, QFont::Normal);
-    applyFont(appliedTheme.fontH5, 14, QFont::Medium);
+    applyFont(appliedTheme.fontH5, 14, QFont::Medium, true);
     appliedTheme.fontMonospace.setFamilies({"Cascadia Mono", "Consolas", "Roboto Mono"});
 
     style->setTheme(appliedTheme);

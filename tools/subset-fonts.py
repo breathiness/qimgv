@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Subset the Glow Sans SC faces qimgv ships.
+"""Subset the Source Han Sans CN faces qimgv ships.
 
-The upstream release is a 67 MB zip holding every weight of one width family, so
-the two faces we need are cut down to the characters the UI can show: the GB2312
-repertoire plus every string in the sources and translation files.
+The upstream release holds a ~8 MB OTF per weight, so the two faces the UI needs
+are cut down to the characters it can show: the GB2312 repertoire plus every
+string in the sources and translation files.
 
 Usage:
     python tools/subset-fonts.py <dir-with-otf-files> [<output-dir>]
 
-Input files are matched by name: anything containing "Regular" or "Medium".
+Input files are matched by name: anything containing "Regular" or "Bold".
 Requires fonttools (pip install fonttools).
 """
 
@@ -18,7 +18,7 @@ import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_OUT = os.path.join(REPO, "qimgv", "res", "fonts")
-WANTED = {"Regular": "GlowSansSC-Regular.otf", "Medium": "GlowSansSC-Medium.otf"}
+WANTED = {"Regular": "SourceHanSansCN-Regular.otf", "Bold": "SourceHanSansCN-Bold.otf"}
 
 
 def gb2312_chars() -> set[str]:
