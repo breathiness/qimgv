@@ -45,13 +45,24 @@ QDataStream& operator>>(QDataStream& in, Script& v) {
     return in;
 }
 //------------------------------------------------------------------------------
-// The window icon is drawn from the vector logo at each size the platform asks
-// for, instead of scaling one bitmap: taskbar, title bar and the task switcher get
-// a crisp icon on high dpi screens too.
+// The window icon is assembled from the same art the platform icons use. Up to
+// 44 px the frames are purpose-drawn pixel art: rasterising the vector logo that
+// small turns the film perforations and the q mark into grey mush. Bigger sizes
+// keep coming from the vector logo, so the taskbar and the task switcher stay
+// crisp on high dpi screens.
 static QIcon makeWindowIcon() {
-    QSvgRenderer renderer(QStringLiteral(":/res/icons/common/logo/app/qimgv.svg"));
     QIcon icon;
-    for(int size : {16, 22, 24, 32, 48, 64, 128, 256}) {
+    // 44 px is stored as the 2x variant of 22 px, matching the file layout.
+    for(const char *path : {":/res/icons/common/logo/app/16.png",
+                            ":/res/icons/common/logo/app/22.png",
+                            ":/res/icons/common/logo/app/24.png",
+                            ":/res/icons/common/logo/app/32.png",
+                            ":/res/icons/common/logo/app/36.png",
+                            ":/res/icons/common/logo/app/22@2x.png"}) {
+        icon.addFile(QString::fromLatin1(path));
+    }
+    QSvgRenderer renderer(QStringLiteral(":/res/icons/common/logo/app/qimgv.svg"));
+    for(int size : {48, 64, 128, 256}) {
         QPixmap pixmap(size, size);
         pixmap.fill(Qt::transparent);
         QPainter painter(&pixmap);
