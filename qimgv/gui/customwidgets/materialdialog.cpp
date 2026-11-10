@@ -10,42 +10,24 @@
 
 #include "uistyle.h"
 
-#ifdef USE_QLEMENTINE
-#include <oclero/qlementine/utils/ImageUtils.hpp>
-#endif
-
 namespace {
-// No margin: this window is not reliably translucent, so anything painted
-// outside the card shows as a flat band instead of a shadow (the same problem
-// the context menu hit). The card is full-bleed with a 1px border instead.
-constexpr int kShadowMargin = 0;
+// The card floats on the desktop, so it gets the MD3 level-2 elevation. That
+// needs a margin inside the (frameless, translucent) window for the shadow; the
+// root layout gets the same margin, which keeps the card where a full-bleed one
+// would be.
+//
+// The margin follows from how Qlementine builds a shadow pixmap: it extends the
+// surface by 2 * ceil(blur) on every side before blurring. The floating elevation
+// uses ambient blur 8, so the layer reaches 16px past the card and, shifted down
+// by its 3px offset, 19px at the bottom; the key layer (blur 6, offset 2) needs
+// 14px. 20 is the smallest round margin that contains both, and it keeps the
+// window small enough for a 1280x800 screen.
+constexpr int kShadowMargin = 20;
 constexpr int kTitleBarHeight = 44;
-constexpr int kResizeBorder = 5;
-constexpr int kShadowQuantization = 16;
-
-QPixmap dialogShadow(const QSize &cardSize, qreal radius, const QColor &color) {
-    // Dragging the resize border changes the size on every mouse move, and each
-    // new size used to rebuild the blur (5-15ms for a dialog this size). The
-    // cache is keyed on a coarse grid instead: the shadow is centred on the card
-    // when drawn, so being up to kShadowQuantization/2 off is invisible.
-    const auto quantize = [](int value) {
-        return ((value + kShadowQuantization - 1) / kShadowQuantization) * kShadowQuantization;
-    };
-    const QSize shadowSize(quantize(cardSize.width()), quantize(cardSize.height()));
-
-    static QHash<QString, QPixmap> cache;
-    const QString key = QStringLiteral("%1x%2|%3")
-                            .arg(shadowSize.width()).arg(shadowSize.height()).arg(qRound(radius));
-    const auto cached = cache.constFind(key);
-    if(cached != cache.constEnd())
-        return cached.value();
-
-    QPixmap shadow = oclero::qlementine::getDropShadowPixmap(shadowSize, radius, kShadowMargin, color);
-    if(cache.size() > 4)
-        cache.clear();
-    cache.insert(key, shadow);
-    return shadow;
-}
+// The card edge sits kShadowMargin inside the window, so the shadow margin is
+// also the grab area for resizing: grabbing at the card border starts the resize
+// instead of doing nothing.
+constexpr int kResizeBorder = kShadowMargin;
 
 // The title bar only has to be draggable; letting the window manager do the move
 // keeps snapping and multi-monitor behaviour native.
@@ -129,6 +111,9 @@ void MaterialDialog::paintEvent(QPaintEvent *event) {
     if(card.width() <= 0 || card.height() <= 0)
         return;
 
+    // Level-2 elevation behind the card: the same two-layer shadow the style
+    // paints around its menus, so the dialog and the popups belong to one family.
+    UiStyle::paintElevation(&painter, card, pal.radius, UiStyle::kElevationFloating);
 
     painter.setPen(QPen(pal.surfaceLine, 1));
     painter.setBrush(pal.surface);

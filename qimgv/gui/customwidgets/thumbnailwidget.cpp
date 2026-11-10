@@ -1,5 +1,7 @@
 #include "thumbnailwidget.h"
 
+#include "uistyle.h"
+
 QString ThumbnailWidget::fileName() const {
     return thumbnail ? thumbnail->name() : QString();
 }
@@ -246,6 +248,16 @@ void ThumbnailWidget::drawHighlight(QPainter *painter) {
         auto hints = painter->renderHints();
         auto op = painter->opacity();
         painter->setRenderHint(QPainter::Antialiasing);
+        // Material themes lift the selected thumbnail: the picture gets the
+        // level-1 elevation so it floats above its cell. The shadow lives in the
+        // padding between the picture and the cell edge, because a graphics item
+        // must not paint outside its bounding rect. The classic theme keeps the
+        // flat accent wash and outline only.
+        if(UiStyle::materialTheme() && thumbnail && thumbnail->pixmap()
+           && thumbnail->pixmap().get()->width() > 0 && !drawRectCentered.isEmpty()) {
+            UiStyle::paintElevation(painter, QRectF(drawRectCentered).adjusted(0.5, 0.5, -0.5, -0.5),
+                                    UiStyle::controlRadius(), UiStyle::kElevationSurface);
+        }
         // MD1 selects with a 12% accent tint plus an accent outline, not a
         // solid fill - a filled cell competes with the thumbnail itself.
         painter->setOpacity(0.12f * op);

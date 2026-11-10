@@ -1,8 +1,13 @@
 #include "materialstyle.h"
+#include "uistyle.h"
 
+#include <QStyle>
 #include <QPainter>
 #include <QStyleOptionButton>
 #include <QStyleOptionMenuItem>
+#include <QStyleOptionToolButton>
+#include <QStyleOptionViewItem>
+#include <QTabBar>
 #include <QTreeView>
 #include <QStyleOptionSlider>
 #include <QPainterPath>
@@ -47,12 +52,20 @@ constexpr qreal kChevronHeight = 5.0;
 constexpr qreal kSelectorRadius = 2.0;
 constexpr qreal kSelectorBorder = 2.0;
 
-// MDUI's hover/pressed layers for a transparent button: 10% and 16.5% of the
-// text colour, white on dark themes.
-constexpr qreal kHoverAlpha = 0.10;
-constexpr qreal kPressedAlpha = 0.165;
-// MD1 focus is drawn as a scrim, not a ring.
-constexpr qreal kFocusAlpha = 0.12;
+// Material 3 state layer opacities. Hover, press and focus are a translucent wash
+// of the on-surface colour instead of the solid neutral colour Qlementine paints,
+// so one surface colour serves every state. MD3 itself uses 8/12/12; this round
+// asks for a stronger focus layer, hence 16%.
+// The steps are 20/31/41 of 255: on the dark surface (#121212) that is about
+// #25/#2e/#38, on a light one about #eb/#e0/#d6, so all three stay visible and
+// distinguishable from the opaque selection fill without a ring or outline.
+constexpr qreal kHoverAlpha = 0.08;
+constexpr qreal kPressedAlpha = 0.12;
+constexpr qreal kFocusAlpha = 0.16;
+
+// Material 3 elevation is defined in uistyle.h, because the surfaces qimgv paints
+// by hand (dialog card, undocked navigation bar, selected thumbnail) have to draw
+// exactly the same shadow as the style-painted menus.
 
 // MD1 elevation, 2/4/8dp. QStyle painting is clipped to the widget, so the
 // shadow is rendered into a pixmap the size of the button (the body is inset by
@@ -95,12 +108,39 @@ QPixmap shadowFor(const QSize &size, qreal radius, int dp) {
     return pixmap;
 }
 
-// Blends `color` towards the surface it sits on, which is what MDUI gets from
-// `opacity: .87` on a raised button.
-QColor withOpacity(const QColor &color, const QColor &surface, qreal opacity) {
-    return QColor::fromRgbF(color.redF() * opacity + surface.redF() * (1.0 - opacity),
-                            color.greenF() * opacity + surface.greenF() * (1.0 - opacity),
-                            color.blueF() * opacity + surface.blueF() * (1.0 - opacity));
+// The on-surface colour of the theme: white on a dark theme, black on a light
+// one. Every state layer is a wash of it, which is what keeps one colour family
+// across hover, focus and press.
+QColor onSurfaceColor(const oclero::qlementine::Theme &theme) {
+    return theme.backgroundColorMain1.lightnessF() < 0.5 ? QColor(255, 255, 255)
+                                                         : QColor(0, 0, 0);
+}
+
+// Material 3 state layer: a translucent wash of the content colour over whatever
+// the control painted underneath. Focus wins over hover, press wins over both, so
+// a focused control keeps its layer while the mouse is over it.
+void drawStateLayer(QPainter *painter, const QRectF &rect, qreal radius, const QColor &color,
+                    const QStyleOption *option) {
+    if(!(option->state & QStyle::State_Enabled))
+        return;
+    qreal alpha = 0.0;
+    if(option->state & QStyle::State_Sunken)
+        alpha = kPressedAlpha;
+    else if(option->state & QStyle::State_MouseOver)
+        alpha = kHoverAlpha;
+    if(option->state & QStyle::State_HasFocus)
+        alpha = qMax(alpha, kFocusAlpha);
+    if(alpha <= 0.0)
+        return;
+
+    QColor layer = color;
+    layer.setAlphaF(alpha);
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    painter->setPen(Qt::NoPen);
+    painter->setBrush(layer);
+    painter->drawRoundedRect(rect, radius, radius);
+    painter->restore();
 }
 }
 
@@ -275,14 +315,15 @@ QSize MaterialStyle::sizeFromContents(ContentsType type, const QStyleOption *opt
 }
 
 // MDUI's checkbox and radio: an 18dp shape with a 2dp border, the accent colour
-// when on, and a focus/hover halo drawn as a translucent circle behind it.
-void drawSelectorHalo(QPainter *painter, const QRectF &rect, const QColor &color, bool enabled) {
-    if(!enabled)
+// when on, and a translucent halo behind it for the state layer (hover, press,
+// focus - the same opacities the buttons use).
+void drawSelectorHalo(QPainter *painter, const QRectF &rect, const QColor &color, bool enabled, qreal alpha) {
+    if(!enabled || alpha <= 0.0)
         return;
     painter->save();
     painter->setPen(Qt::NoPen);
     QColor halo = color;
-    halo.setAlphaF(0.12);
+    halo.setAlphaF(alpha);
     painter->setBrush(halo);
     const qreal extra = 6.0;
     painter->drawEllipse(rect.center(), rect.width() / 2.0 + extra, rect.height() / 2.0 + extra);
@@ -409,6 +450,7 @@ void MaterialStyle::drawSelectorPrimitive(PrimitiveElement element, const QStyle
     const bool enabled = option->state & State_Enabled;
     const bool hovered = enabled && (option->state & State_MouseOver);
     const bool focused = enabled && (option->state & State_HasFocus);
+    const bool pressed = enabled && (option->state & State_Sunken);
     const bool on = option->state & State_On;
     const bool indeterminate = option->state & State_NoChange;
     const bool radio = element == PE_IndicatorRadioButton;
@@ -429,8 +471,17 @@ void MaterialStyle::drawSelectorPrimitive(PrimitiveElement element, const QStyle
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing, true);
 
-    if((hovered || focused) && !on)
-        drawSelectorHalo(painter, rect, onSurface, enabled);
+    // The halo is the checkbox's state layer: it replaces the plain hover tint of
+    // the other controls, so it uses the same three opacities.
+    qreal layerAlpha = 0.0;
+    if(pressed)
+        layerAlpha = kPressedAlpha;
+    else if(hovered)
+        layerAlpha = kHoverAlpha;
+    if(focused)
+        layerAlpha = qMax(layerAlpha, kFocusAlpha);
+    if(!on)
+        drawSelectorHalo(painter, rect, onSurface, enabled, layerAlpha);
 
     if(radio) {
         const QRectF outer = rect.adjusted(kSelectorBorder / 2.0, kSelectorBorder / 2.0,
@@ -468,6 +519,62 @@ void MaterialStyle::drawSelectorPrimitive(PrimitiveElement element, const QStyle
 
 void MaterialStyle::drawPrimitive(PrimitiveElement element, const QStyleOption *option,
                                   QPainter *painter, const QWidget *widget) const {
+    if(materialThemeActive() && element == PE_PanelMenu) {
+        // Qlementine gives a menu one wide shadow layer inside the margin its own
+        // layout reserves for it. Replacing the shadow in that same margin keeps
+        // the menu the same size and in the same place while giving it the MD3
+        // two-layer elevation: a tight layer along the edge, a soft one for depth.
+        const auto &theme = this->theme();
+        const int padding = pixelMetric(PM_MenuPanelWidth, option, widget);
+        const QRect frame = option->rect.marginsRemoved(QMargins(padding, padding, padding, padding));
+        if(frame.width() > 0 && frame.height() > 0) {
+            painter->save();
+            painter->setRenderHint(QPainter::Antialiasing, true);
+            UiStyle::paintElevation(painter, QRectF(frame), theme.borderRadius,
+                                   UiStyle::kElevationSurface);
+            const QRectF card = QRectF(frame).adjusted(0.5, 0.5, -0.5, -0.5);
+            painter->setPen(QPen(menuBorderColor(), theme.borderWidth));
+            painter->setBrush(menuBackgroundColor());
+            painter->drawRoundedRect(card, theme.borderRadius, theme.borderRadius);
+            painter->restore();
+            return;
+        }
+    }
+    if(materialThemeActive() && element == PE_PanelButtonTool) {
+        // Tool buttons are not covered by the push-button painter (title bar,
+        // dialog close button, toolbars, ...), so they get the state layer here.
+        // The rest and checked fills still come from Qlementine: only the solid
+        // hovered/pressed colour is replaced by the translucent layer.
+        if(const auto *tool = qstyleoption_cast<const QStyleOptionToolButton *>(option)) {
+            // QTabBar's scroll arrows have to stay opaque to hide the tabs
+            // scrolling underneath them.
+            if(widget && !qobject_cast<QTabBar *>(widget->parentWidget())) {
+                const auto &theme = this->theme();
+                QStyleOptionToolButton rest = *tool;
+                rest.state &= ~(State_MouseOver | State_Sunken | State_HasFocus);
+                QlementineStyle::drawPrimitive(element, &rest, painter, widget);
+                drawStateLayer(painter, QRectF(tool->rect), theme.borderRadius,
+                              onSurfaceColor(theme), tool);
+                return;
+            }
+        }
+    }
+    if(materialThemeActive() && element == PE_PanelItemViewItem) {
+        // Lists, trees, tables and combo popups: Qlementine paints a hovered row
+        // with a solid neutral colour, which next to the selection read as a
+        // second highlight. An unselected row now gets the MD3 state layer; a
+        // selected row keeps Qlementine's selection fill.
+        if(const auto *item = qstyleoption_cast<const QStyleOptionViewItem *>(option)) {
+            if(!(item->state & State_Selected)) {
+                const auto &theme = this->theme();
+                QStyleOptionViewItem rest = *item;
+                rest.state &= ~(State_MouseOver | State_Sunken | State_HasFocus);
+                QlementineStyle::drawPrimitive(element, &rest, painter, widget);
+                drawStateLayer(painter, QRectF(item->rect), 0.0, onSurfaceColor(theme), item);
+                return;
+            }
+        }
+    }
     if(materialThemeActive() && element == PE_PanelTipLabel) {
         // MD1 tooltips are a dark surface with white text, unlike Qlementine's
         // light one, which disappeared over light images.
@@ -546,6 +653,9 @@ void MaterialStyle::drawControl(ControlElement element, const QStyleOption *opti
 
     QColor fill = Qt::transparent;
     QColor label;
+    // Base colour of the state layer: the on-primary colour over a raised
+    // (primary filled) button, the on-surface colour over a flat one.
+    QColor stateLayerColor;
     if(raised) {
         if(!enabled) {
             // MD1: disabled raised buttons keep elevation 2 and become a 12%
@@ -559,26 +669,16 @@ void MaterialStyle::drawControl(ControlElement element, const QStyleOption *opti
             const int elevation = pressed ? 8 : hovered ? 4 : 2;
             painter->drawPixmap(button->rect.topLeft(), shadowFor(button->rect.size(), radius, elevation));
             fill = theme.primaryColor;
-            if(pressed)
-                fill = withOpacity(fill, theme.backgroundColorMain1, 0.76);
-            else if(hovered)
-                fill = withOpacity(fill, theme.backgroundColorMain1, 0.87);
             label = theme.primaryColorForeground;
+            stateLayerColor = theme.primaryColorForeground;
         }
     } else {
         label = enabled ? theme.secondaryColor : onSurface;
         if(!enabled)
             label.setAlphaF(dark ? 0.30 : 0.26);
-        if(enabled) {
-            fill = onSurface;
-            fill.setAlphaF(pressed ? kPressedAlpha : hovered ? kHoverAlpha : 0.0);
-        }
+        // A flat button is the surface: every state it has is the layer.
+        stateLayerColor = onSurface;
     }
-
-    // MD1 focus is a 12% scrim over the button, not the focus ring Qlementine
-    // draws from inside the label (which is why the label call below clears
-    // State_HasFocus).
-    const bool focused = enabled && (button->state & State_HasFocus);
 
     if(fill.alphaF() > 0.0) {
         painter->save();
@@ -588,16 +688,11 @@ void MaterialStyle::drawControl(ControlElement element, const QStyleOption *opti
         painter->drawRoundedRect(body, radius, radius);
         painter->restore();
     }
-    if(focused) {
-        QColor scrim = onSurface;
-        scrim.setAlphaF(kFocusAlpha);
-        painter->save();
-        painter->setRenderHint(QPainter::Antialiasing, true);
-        painter->setPen(Qt::NoPen);
-        painter->setBrush(scrim);
-        painter->drawRoundedRect(body, radius, radius);
-        painter->restore();
-    }
+    // Material 3 replaces the old per-state colours with one translucent layer:
+    // hover 8%, press 12%, focus 16% of the on-surface (or on-primary) colour.
+    // Qlementine's focus ring is suppressed by clearing State_HasFocus below.
+    if(stateLayerColor.isValid())
+        drawStateLayer(painter, body, radius, stateLayerColor, button);
 
     // The label is drawn by the base implementation, which reads the colour
     // from the option palette and the font from the painter. MD1 asks for an

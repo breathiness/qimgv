@@ -4,6 +4,7 @@
 
 class QWidget;
 class QPainter;
+class QRectF;
 class QIcon;
 class QString;
 
@@ -62,6 +63,42 @@ bool chromePalette(ChromePalette &palette);
 // MD1 fades disabled content instead of recolouring it: 38% of the on-surface
 // colour, over the surface it sits on. Used where a widget cannot recolour cheaply.
 constexpr qreal kDisabledContentOpacity = 0.38;
+
+// Material 3 elevation. A shadow is two layers: a tight "key" layer that reads as
+// the edge of the surface, and a wide "ambient" layer that gives the depth. The
+// style paints style-owned surfaces (menus) with these parameters; the surfaces
+// qimgv paints by hand (dialog card, undocked navigation bar, selected thumbnail)
+// call paintElevation() so every shadow in the window is the same one. A QStyle
+// cannot draw outside its own widget, which is why the hand-painted surfaces need
+// a margin and the style uses the margin a menu already reserves.
+struct ElevationShadow {
+    int keyBlur;
+    int keyOffsetY;
+    int ambientBlur;
+    int ambientOffsetY;
+    qreal alpha;
+};
+// Cards that rest just above the surface: menus, selected thumbnails.
+constexpr ElevationShadow kElevationSurface {3, 1, 6, 2, 0.10};
+// Surfaces that float over the content: dialogs, undocked navigation bar.
+constexpr ElevationShadow kElevationFloating {6, 2, 8, 3, 0.14};
+
+// Colour of one shadow layer: black at the elevation's opacity, so the light and
+// the dark Material themes use the same Material 3 numbers.
+QColor elevationColor(const ElevationShadow &elevation);
+
+// Paints the two shadow layers around `surface`. The margin required inside the
+// painter's device is not `ambientBlur`: Qlementine's blur helper extends the
+// surface by 2 * ceil(blur) on every side before blurring, so the ambient layer
+// reaches 2 * ceil(ambientBlur) past the edge and, shifted down by its offset,
+// 2 * ceil(ambientBlur) + ambientOffsetY at the bottom. For kElevationFloating
+// that is 16 + 3 = 19px, rounded up to the 20px margin dialogs and the undocked
+// navigation bar reserve. kElevationSurface needs 12 + 2 = 14px, which menus and
+// thumbnails do not have -- there the residual alpha at the clip is below
+// 0.3/255, i.e. invisible.
+// Returns false when Qlementine is not in use (the classic style keeps its look).
+bool paintElevation(QPainter *painter, const QRectF &surface, qreal radius,
+                    const ElevationShadow &elevation);
 
 // Maps a qimgv icon resource path (".../menuitem/back16.png") to the matching
 // name in the vector icon theme ("navigation/arrow-left"). Returns an empty

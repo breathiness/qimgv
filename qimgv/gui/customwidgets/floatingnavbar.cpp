@@ -25,6 +25,25 @@
 
 namespace {
 
+// Space the undocked card keeps around itself for the Material 3 elevation
+// shadow. It is added to the widget height while the bar floats and used to inset
+// the card; docked the bar is a strip flush with the bottom edge and has none.
+// Only the Material themes pay for it, the classic and the stock Qlementine
+// themes keep exactly the geometry they had.
+//
+// Same derivation as MaterialDialog: Qlementine's shadow pixmap reaches
+// 2 * ceil(blur) past the surface; the floating ambient layer (blur 8) plus its
+// 3px offset needs 19px at the bottom, the key layer 14px, so 20 contains both.
+constexpr int kShadowMargin = 20;
+
+int shadowMarginForTheme() {
+    return UiStyle::materialTheme() ? kShadowMargin : 0;
+}
+
+int floatingBarHeight(int barHeight) {
+    return barHeight + 2 * shadowMarginForTheme();
+}
+
 // Thin vertical line that groups the buttons of the bar. It is not a button: it
 // never reacts to the mouse, so a click there behaves like a click on the bar
 // itself.
@@ -331,6 +350,13 @@ QStringList FloatingNavBar::icons() const {
 void FloatingNavBar::refreshTheme() {
     applyTheme();
     rebuildButtons();
+    // Only the Material themes have the elevation margin, so a theme switch has to
+    // re-apply the margins and, while floating, the geometry that depends on them.
+    if(!docked) {
+        const int margin = shadowMarginForTheme();
+        layout->setContentsMargins(12 + margin, 6 + margin, 12 + margin, 6 + margin);
+        fitToContent();
+    }
     update();
 }
 
@@ -854,6 +880,9 @@ void FloatingNavBar::dockToBottom() {
         return;
     const bool wasDocked = docked;
     docked = true;
+    // Docked the bar is a full-width strip flush with the bottom edge: no shadow,
+    // so the margins go back to the plain button padding.
+    layout->setContentsMargins(12, 6, 12, 6);
     // auto mode rests fully out of sight; applyState()/the trigger strip brings
     // it back in
     const int y = (mMode == NAVBAR_AUTO) ? container->height()
@@ -874,19 +903,21 @@ void FloatingNavBar::fitToContent() {
     // keep the current centre, so a resize does not make it jump sideways
     const int x = qBound(0, pos().x() + (width() - w) / 2,
                          qMax(0, container->width() - w));
-    const int y = qBound(0, pos().y(), qMax(0, container->height() - barHeight));
-    if(geometry() != QRect(x, y, w, barHeight))
-        setGeometry(x, y, w, barHeight);
+    const int h = floatingBarHeight(barHeight);
+    const int y = qBound(0, pos().y(), qMax(0, container->height() - h));
+    if(geometry() != QRect(x, y, w, h))
+        setGeometry(x, y, w, h);
 }
 
 void FloatingNavBar::clampToParent() {
     QWidget *container = parentWidget();
     if(!container)
         return;
-    const int y = qBound(0, pos().y(), qMax(0, container->height() - barHeight));
+    const int h = docked ? barHeight : floatingBarHeight(barHeight);
+    const int y = qBound(0, pos().y(), qMax(0, container->height() - h));
     const int w = docked ? container->width() : qMin(width(), container->width());
     const int x = docked ? 0 : qBound(0, pos().x(), qMax(0, container->width() - w));
-    setGeometry(x, y, w, barHeight);
+    setGeometry(x, y, w, h);
 }
 
 void FloatingNavBar::onContainerResized(QSize size) {
@@ -926,8 +957,16 @@ void FloatingNavBar::paintEvent(QPaintEvent *event) {
     if(!docked) {
         // free-floating: the whole card, rounded, like the video controls
         const int radius = UiStyle::useQlementine() ? UiStyle::controlRadius() : 3;
-        const QRectF card = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+        // Material themes float the card above the image with the level-2
+        // elevation, drawn in the margin the widget keeps for it (the card is
+        // inset by the same amount, so the bar looks the same size it had
+        // docked). The classic theme has no margin and paints full-bleed.
+        const int margin = shadowMarginForTheme();
+        const QRectF card = QRectF(rect()).adjusted(margin + 0.5, margin + 0.5,
+                                                    -margin - 0.5, -margin - 0.5);
         painter.setRenderHint(QPainter::Antialiasing, true);
+        if(margin > 0)
+            UiStyle::paintElevation(&painter, card, radius, UiStyle::kElevationFloating);
         painter.setPen(QPen(line, 1.0));
         painter.setBrush(fill);
         painter.drawRoundedRect(card, radius, radius);
@@ -982,11 +1021,16 @@ void FloatingNavBar::mousePressEvent(QMouseEvent *event) {
             // drag starts where the user grabbed. This is also how the bar is
             // taken out of the bottom strip in auto mode: the strip no longer owns
             // it once it is undocked, so it stays where it is dropped instead of
-            // hiding again.
+            // hiding again. The card keeps the margin its elevation needs; the
+            // margins of the layout grow with it, so the buttons do not move.
+            const int margin = shadowMarginForTheme();
+            layout->setContentsMargins(12 + margin, 6 + margin, 12 + margin, 6 + margin);
+            const int h = barHeight + 2 * margin;
             const int w = qMin(sizeHint().width(), container->width());
             const QPoint grab = container->mapFromGlobal(eventGlobalPos(event));
             const int x = qBound(0, grab.x() - w / 2, qMax(0, container->width() - w));
-            setGeometry(x, pos().y(), w, barHeight);
+            const int y = qBound(0, pos().y() - margin, qMax(0, container->height() - h));
+            setGeometry(x, y, w, h);
         }
         dragOffset = eventGlobalPos(event) - pos();
         setCursor(Qt::ClosedHandCursor);
@@ -1006,7 +1050,7 @@ void FloatingNavBar::mouseMoveEvent(QMouseEvent *event) {
         int y = target.y();
         int x = target.x();
         if(container) {
-            y = qBound(0, y, qMax(0, container->height() - barHeight));
+            y = qBound(0, y, qMax(0, container->height() - floatingBarHeight(barHeight)));
             x = qBound(0, x, qMax(0, container->width() - width()));
         }
         move(x, y);
@@ -1034,7 +1078,7 @@ void FloatingNavBar::mouseReleaseEvent(QMouseEvent *event) {
         dragging = false;
         setCursor(Qt::ArrowCursor);
         QWidget *container = parentWidget();
-        if(container && (container->height() - (pos().y() + barHeight)) < 24)
+        if(container && (container->height() - (pos().y() + floatingBarHeight(barHeight))) < 24)
             dockToBottom();
         event->accept();
         return;

@@ -8,9 +8,14 @@
 #include <QString>
 #include <QIcon>
 #include <QFile>
+#include <QPixmap>
+#include <QPointF>
+#include <QRectF>
+#include <QSizeF>
 
 #ifdef USE_QLEMENTINE
 #include <oclero/qlementine/style/QlementineStyle.hpp>
+#include <oclero/qlementine/utils/ImageUtils.hpp>
 #endif
 
 namespace {
@@ -42,6 +47,66 @@ int controlRadius() {
         return qRound(style->theme().borderRadius);
 #endif
     return 7;
+}
+
+namespace {
+#ifdef USE_QLEMENTINE
+// One layer of an elevation shadow: a blurred rounded rectangle the size of the
+// surface it belongs to. Cached because dialogs, menus and the navigation bar
+// repaint on every hover step. Same call the context menu makes for its own
+// shadow, so the application has one blur implementation.
+QPixmap elevationLayer(const QSize &surface, qreal radius, int blur, qreal alpha) {
+    static QHash<QString, QPixmap> cache;
+    const QString key = QStringLiteral("%1x%2|%3|%4|%5")
+                            .arg(surface.width()).arg(surface.height())
+                            .arg(qRound(radius)).arg(blur).arg(qRound(alpha * 1000));
+    const auto cached = cache.constFind(key);
+    if(cached != cache.constEnd())
+        return cached.value();
+    QColor color(0, 0, 0);
+    color.setAlphaF(qBound(0.0, alpha, 1.0));
+    const QPixmap shadow = oclero::qlementine::getDropShadowPixmap(surface, radius, blur, color);
+    if(cache.size() > 32)
+        cache.clear();
+    cache.insert(key, shadow);
+    return shadow;
+}
+#endif
+}
+
+QColor elevationColor(const ElevationShadow &elevation) {
+    QColor color(0, 0, 0);
+    color.setAlphaF(qBound(0.0, elevation.alpha, 1.0));
+    return color;
+}
+
+bool paintElevation(QPainter *painter, const QRectF &surface, qreal radius,
+                    const ElevationShadow &elevation) {
+#ifdef USE_QLEMENTINE
+    if(!g_useQlementine || !painter || surface.width() <= 0 || surface.height() <= 0)
+        return false;
+    const QSize size = surface.size().toSize();
+    const auto drawLayer = [&](int blur, int offsetY) {
+        const QPixmap layer = elevationLayer(size, radius, blur, elevation.alpha);
+        if(layer.isNull())
+            return;
+        const QSizeF logical = QSizeF(layer.size()) / layer.devicePixelRatioF();
+        painter->drawPixmap(QPointF(surface.center().x() - logical.width() / 2.0,
+                                    surface.center().y() - logical.height() / 2.0 + offsetY), layer);
+    };
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    drawLayer(elevation.keyBlur, elevation.keyOffsetY);
+    drawLayer(elevation.ambientBlur, elevation.ambientOffsetY);
+    painter->restore();
+    return true;
+#else
+    Q_UNUSED(painter)
+    Q_UNUSED(surface)
+    Q_UNUSED(radius)
+    Q_UNUSED(elevation)
+    return false;
+#endif
 }
 
 bool paintBackground(QWidget *widget, QPainter &painter, bool card) {
