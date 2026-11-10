@@ -23,6 +23,7 @@ class SettingsDialog;
 }
 
 class NavBarSettingsPage;
+class FileAssocSettingsPage;
 class QCheckBox;
 class QComboBox;
 class QLabel;
@@ -50,6 +51,7 @@ private:
 
     // page created at runtime (not part of settingsdialog.ui)
     NavBarSettingsPage *navBarPage = nullptr;
+    FileAssocSettingsPage *fileAssocPage = nullptr;
     // "Viewer" page controls, also built at runtime
     QCheckBox *edgeClickCheckBox = nullptr;
     QCheckBox *edgeVisibleCheckBox = nullptr;

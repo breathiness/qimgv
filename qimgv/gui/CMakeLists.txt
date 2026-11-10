@@ -41,6 +41,7 @@ target_sources(qimgv PRIVATE
 
     dialogs/filereplacedialog.cpp
     dialogs/navbarsettingspage.cpp
+    dialogs/fileassocsettingspage.cpp
     dialogs/resizedialog.cpp
     dialogs/scripteditordialog.cpp
     dialogs/settingsdialog.cpp

@@ -60,6 +60,7 @@ add_executable(qimgv
     gui/customwidgets/materialdialog.cpp
     macosapplication.cpp
     resources.qrc
+    fileassociations.cpp
     qimgv.rc
     "${CMAKE_CURRENT_BINARY_DIR}/qimgv-version.rc"
     ${APPLE_ICON_PATH}
@@ -71,6 +72,19 @@ add_executable(qimgv
 # .ico is replaced.
 set_property(SOURCE qimgv.rc PROPERTY OBJECT_DEPENDS
              "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/common/logo/app/qimgv.ico")
+
+if(WIN32)
+    # Per-format icons (ids 2001..2042) are pulled in by qimgv.rc itself: two
+    # resource scripts would each number their RT_ICON entries from 1 and the
+    # duplicates collide at link time, which makes DefaultIcon = "<exe>",-<id>
+    # resolve to the wrong image. Keep them as dependencies so a changed .ico
+    # relinks the executable.
+    file(GLOB FORMAT_ICONS CONFIGURE_DEPENDS
+         "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/formats/*.ico")
+    set_property(SOURCE qimgv.rc PROPERTY OBJECT_DEPENDS
+                 "${CMAKE_CURRENT_SOURCE_DIR}/res/icons/common/logo/app/qimgv.ico;${FORMAT_ICONS}")
+    target_link_libraries(qimgv PRIVATE shell32 advapi32)
+endif()
 
 # Same idea for the version block: reconfigure whenever the project version or
 # the template changes, so a bump always reaches the executable.

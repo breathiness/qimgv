@@ -1518,6 +1518,11 @@ Left click: next mode - Right click: pick one</source>
         <source>About</source>
         <translation>关于</translation>
     </message>
+    <message>
+        <location filename="../../gui/customwidgets/ssidebar.cpp" line="14" />
+        <source>File associations</source>
+        <translation>文件关联</translation>
+    </message>
 </context>
 <context>
     <name>SaveConfirmOverlay</name>
@@ -3246,6 +3251,73 @@ li.checked::marker { content: "\2612"; }
         <message>
             <source>No pages</source>
             <translation>没有页面</translation>
+        </message>
+    </context>
+    <context>
+        <name>FileAssocSettingsPage</name>
+        <message>
+            <source>Register the formats qimgv can open so Explorer shows the icon of each format and offers qimgv in &quot;Open with&quot;. The default application for an extension is not changed - pick qimgv once in Windows' &quot;Default apps&quot;.</source>
+            <translation>注册 qimgv 支持的格式，让资源管理器为每个格式显示图标，并在「打开方式」里列出 qimgv。这里不会改动某个扩展名的默认程序——想在「默认应用」里把 qimgv 设为默认，选一次即可。</translation>
+        </message>
+        <message>
+            <source>Register for all users (needs administrator rights)</source>
+            <translation>为所有用户注册（需要管理员权限）</translation>
+        </message>
+        <message>
+            <source>Writing machine-wide associations requires running qimgv as administrator; without it the change will fail.</source>
+            <translation>写入机器级关联需要以管理员身份运行 qimgv，否则会失败。</translation>
+        </message>
+        <message>
+            <source>Images</source>
+            <translation>图像</translation>
+        </message>
+        <message>
+            <source>Video</source>
+            <translation>视频</translation>
+        </message>
+        <message>
+            <source>Documents</source>
+            <translation>文档</translation>
+        </message>
+        <message>
+            <source>3D models</source>
+            <translation>3D 模型</translation>
+        </message>
+        <message>
+            <source>Format</source>
+            <translation>格式</translation>
+        </message>
+        <message>
+            <source>Type</source>
+            <translation>类型</translation>
+        </message>
+        <message>
+            <source>Select all</source>
+            <translation>全选</translation>
+        </message>
+        <message>
+            <source>Restore defaults</source>
+            <translation>恢复默认</translation>
+        </message>
+        <message>
+            <source>File associations are only supported on Windows.</source>
+            <translation>文件关联只在 Windows 上支持。</translation>
+        </message>
+        <message>
+            <source>Nothing to change.</source>
+            <translation>没有需要修改的项。</translation>
+        </message>
+        <message>
+            <source>Failed - run qimgv as administrator for machine-wide associations.</source>
+            <translation>失败——机器级关联需要以管理员身份运行 qimgv。</translation>
+        </message>
+        <message>
+            <source>Failed to write the registry.</source>
+            <translation>写入注册表失败。</translation>
+        </message>
+        <message>
+            <source>Applied: %1 registered, %2 removed.</source>
+            <translation>已应用：注册 %1 个，移除 %2 个。</translation>
         </message>
     </context>
 </TS>

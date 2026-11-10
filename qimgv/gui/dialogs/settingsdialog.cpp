@@ -2,6 +2,7 @@
 #include "utils/actions.h"
 #include "ui_settingsdialog.h"
 #include "gui/dialogs/navbarsettingspage.h"
+#include "gui/dialogs/fileassocsettingspage.h"
 #include "uistyle.h"
 
 #include <QCheckBox>
@@ -363,6 +364,10 @@ void SettingsDialog::setupSidebar() {
     // position).
     navBarPage = new NavBarSettingsPage(ui->stackedWidget);
     ui->stackedWidget->insertWidget(4, navBarPage);
+    // Same idea for the file associations page: built in code, one slot after
+    // the navigation bar page, with the sidebar entry added in the same place.
+    fileAssocPage = new FileAssocSettingsPage(ui->stackedWidget);
+    ui->stackedWidget->insertWidget(5, fileAssocPage);
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::readSettings() {
@@ -499,6 +504,8 @@ void SettingsDialog::readSettings() {
     readScripts();
     if(navBarPage)
         navBarPage->readSettings();
+    if(fileAssocPage)
+        fileAssocPage->readSettings();
 }
 //------------------------------------------------------------------------------
 void SettingsDialog::saveSettings() {
@@ -616,6 +623,8 @@ void SettingsDialog::saveSettings() {
     saveShortcuts();
     if(navBarPage)
         navBarPage->saveSettings();
+    if(fileAssocPage)
+        fileAssocPage->saveSettings();
 
     scriptManager->saveScripts();
     actionManager->saveShortcuts();

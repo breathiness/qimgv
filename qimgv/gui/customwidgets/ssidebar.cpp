@@ -14,6 +14,7 @@ SSideBar::SSideBar(QWidget *parent) : QWidget{parent} {
     // its own icon: the navigation bar had the keyboard one, which read as a
     // second "Controls" entry
     addEntry(":res/icons/common/settings/navbar32.png",     tr("Navigation bar"));
+    addEntry(":res/icons/common/settings/scale32.png",      tr("File associations"));
     addEntry(":res/icons/common/settings/terminal32.png",   tr("Scripts"));
     addEntry(":res/icons/common/settings/advanced32.png",   tr("Advanced"));
     addEntry(":res/icons/common/settings/about32.png",      tr("About"));
