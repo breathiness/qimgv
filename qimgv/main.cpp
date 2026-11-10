@@ -54,15 +54,18 @@ static QIcon makeWindowIcon() {
     QIcon icon;
     // 44 px is stored as the 2x variant of 22 px, matching the file layout.
     for(const char *path : {":/res/icons/common/logo/app/16.png",
+                            ":/res/icons/common/logo/app/20.png",
                             ":/res/icons/common/logo/app/22.png",
                             ":/res/icons/common/logo/app/24.png",
+                            ":/res/icons/common/logo/app/30.png",
                             ":/res/icons/common/logo/app/32.png",
                             ":/res/icons/common/logo/app/36.png",
+                            ":/res/icons/common/logo/app/40.png",
                             ":/res/icons/common/logo/app/22@2x.png"}) {
         icon.addFile(QString::fromLatin1(path));
     }
     QSvgRenderer renderer(QStringLiteral(":/res/icons/common/logo/app/qimgv.svg"));
-    for(int size : {48, 64, 128, 256}) {
+    for(int size : {48, 60, 64, 80, 96, 120, 128, 160, 256}) {
         QPixmap pixmap(size, size);
         pixmap.fill(Qt::transparent);
         QPainter painter(&pixmap);

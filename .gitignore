@@ -28,3 +28,7 @@ release/
 *.user
 ui_settingsdialog.h
 Makefile
+
+# python bytecode from the icon generator
+__pycache__/
+*.pyc

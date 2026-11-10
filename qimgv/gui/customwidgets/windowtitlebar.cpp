@@ -15,7 +15,9 @@
 
 namespace {
 constexpr int kBarHeight = 44;
-constexpr int kIconSize = 18;
+// 20 px matches the smallest hand-drawn app PNG that is still legible at the
+// title bar height; the ladder below picks an exact device-pixel frame.
+constexpr int kIconSize = 20;
 constexpr int kLeftMargin = 14;
 constexpr int kIconGap = 10;
 constexpr int kButtonWidth = 34;
@@ -130,9 +132,19 @@ WindowTitleBar::WindowTitleBar(QWidget *parent) : QWidget(parent) {
     setCursor(Qt::ArrowCursor);
     setAccessibleName("WindowTitleBar");
 
-    mIcon = QIcon(QStringLiteral(":/res/icons/common/logo/app/qimgv.svg")).pixmap(
-        QSize(kIconSize, kIconSize) * qMax(1.0, devicePixelRatioF()));
-    mIcon.setDevicePixelRatio(qMax(1.0, devicePixelRatioF()));
+    // Draw a hand-drawn frame at its own size instead of rasterising the vector:
+    // at 125 % the request lands on 25 device pixels, and an SVG rendered at that
+    // size (then scaled into the 20 px slot) came out soft next to the pixel art
+    // the rest of the window icon uses.
+    const int device = qRound(kIconSize * qMax(1.0, devicePixelRatioF()));
+    static const int kFrames[] = {16, 20, 22, 24, 30, 32, 36, 40};
+    int frame = kFrames[0];
+    for(int size : kFrames) {
+        if(qAbs(size - device) < qAbs(frame - device))
+            frame = size;
+    }
+    mIcon = QPixmap(QStringLiteral(":/res/icons/common/logo/app/%1.png").arg(frame));
+    mIcon.setDevicePixelRatio(qreal(frame) / qreal(kIconSize));
 
     createButtons();
 }

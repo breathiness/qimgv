@@ -1,1 +1,7 @@
-IDI_ICON1               ICON    DISCARDABLE     "res/icons/common/logo/app/qimgv.ico"
+1                       ICON    DISCARDABLE     "res/icons/common/logo/app/qimgv.ico"
+
+// The per-format icons (ids 2001..2042) live in their own file, but windres
+// numbers RT_ICON entries from 1 per resource script: two scripts would collide
+// on those ids and the shell would resolve a format icon to the wrong image.
+// Including it keeps one numbering for the whole executable.
+#include "fileformats.rc"
