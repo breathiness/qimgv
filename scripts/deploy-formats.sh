@@ -16,7 +16,15 @@ set -uo pipefail
 
 TARGET="${1:-D:/qimgv-test}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
-BUILD="${QIMGV_BUILD:-$HERE/../build6}"
+
+# the most recent build directory that actually has an executable, so an old
+# "build6" default cannot break a deployment; QIMGV_BUILD always wins
+if [ -z "${QIMGV_BUILD:-}" ]; then
+    for candidate in build9 build8 build7 build6; do
+        [ -f "$HERE/../$candidate/qimgv/qimgv.exe" ] && { BUILD="$HERE/../$candidate"; break; }
+    done
+fi
+BUILD="${BUILD:-${QIMGV_BUILD:-$HERE/../build8}}"
 
 # shellcheck source=deploy-lib.sh
 . "$HERE/deploy-lib.sh"

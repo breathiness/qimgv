@@ -13,14 +13,22 @@ set -uo pipefail
 
 TARGET="${1:-D:/qimgv-test}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
-BUILD="${QIMGV_BUILD:-$HERE/../build6}"
+
+# the most recent build directory that actually has an executable, so an old
+# "build6" default cannot break a release; QIMGV_BUILD always wins
+if [ -z "${QIMGV_BUILD:-}" ]; then
+    for candidate in build9 build8 build7 build6; do
+        [ -f "$HERE/../$candidate/qimgv/qimgv.exe" ] && { BUILD="$HERE/../$candidate"; break; }
+    done
+fi
+BUILD="${BUILD:-${QIMGV_BUILD:-$HERE/../build8}}"
 
 # shellcheck source=deploy-lib.sh
 . "$HERE/deploy-lib.sh"
 
 EXE="$BUILD/qimgv/qimgv.exe"
 if [ ! -f "$EXE" ]; then
-    echo "no executable at $EXE - build first" >&2
+    echo "no executable at $EXE - build first, or set QIMGV_BUILD to the build directory" >&2
     exit 1
 fi
 
@@ -50,6 +58,12 @@ windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw 
 for plugin in qwebp qtiff qtga qicns qwbmp qmng qjp2 qpdf; do
     rm -f "$TARGET/imageformats/$plugin.dll"
 done
+
+# windeployqt also deploys the GLib networkinfo backend, which is a Unix plugin:
+# Windows uses qnetworklistmanager, and libgio/libgobject are not part of the
+# package, so this plugin could never load. Drop it instead of shipping a plugin
+# that fails on every start.
+rm -f "$TARGET/networkinformation/qglib.dll"
 
 echo "dependencies"
 deploy_closure_of "$TARGET" "$TARGET/qimgv.exe"

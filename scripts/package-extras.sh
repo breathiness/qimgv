@@ -147,6 +147,37 @@ build_formats() {
         cp -f "$built" "$STAGE_FORMATS/imageformats/" && echo "  $(basename "$built") (built)"
     done
 
+    echo "3D models"
+    # qimgv loads assimp itself at runtime (LoadLibraryW "libassimp-6.dll"), so
+    # the dll has to sit next to qimgv.exe, not in imageformats/. The prefix is
+    # taken from the build that is being packaged (ASSIMP_ROOT in its
+    # CMakeCache.txt), never from a hard-coded path; the ASSIMP_ROOT environment
+    # variable overrides it for a build tree that was configured elsewhere.
+    local assimp_prefix="${ASSIMP_ROOT:-}" candidate
+    if [ -z "$assimp_prefix" ] && [ -f "$BUILD/CMakeCache.txt" ]; then
+        assimp_prefix="$(sed -n 's/^ASSIMP_ROOT:PATH=//p' "$BUILD/CMakeCache.txt" | tr -d '\r' | head -1)"
+    fi
+    if [ -n "$assimp_prefix" ]; then
+        for candidate in "$assimp_prefix/bin/libassimp-6.dll" "$assimp_prefix/lib/libassimp-6.dll"; do
+            if [ -f "$candidate" ]; then
+                cp -f "$candidate" "$STAGE_FORMATS/" && echo "  libassimp-6.dll"
+                break
+            fi
+        done
+    fi
+    if [ ! -f "$STAGE_FORMATS/libassimp-6.dll" ]; then
+        # A build configured with assimp headers (USE_ASSIMP) has working 3D
+        # support, so a pack without the dll would advertise formats that cannot
+        # open: that is a release blocker, not a warning.
+        if [ -n "$(sed -n 's/^ASSIMP_INCLUDE_DIR:PATH=//p' "$BUILD/CMakeCache.txt" 2>/dev/null | tr -d '\r' | head -1)" ]; then
+            echo "error: this build has 3D support but libassimp-6.dll was not found;" >&2
+            echo "       refusing to ship a formats pack whose 3D formats cannot open." >&2
+            echo "       Set ASSIMP_ROOT to the prefix that has bin/libassimp-6.dll." >&2
+            exit 1
+        fi
+        echo "  note: build has no 3D support (ASSIMP_INCLUDE_DIR not set), skipping assimp" >&2
+    fi
+
     echo "pdf"
     if [ -f "$BUILD/pdf/pdfprovider.dll" ]; then
         cp -f "$BUILD/pdf/pdfprovider.dll" "$STAGE_FORMATS/pdf/" && echo "  pdf/pdfprovider.dll"
@@ -156,6 +187,9 @@ build_formats() {
 
     echo "dependencies (formats)"
     deploy_closure_of "$STAGE_FORMATS" "$STAGE_FORMATS"/imageformats/*.dll
+    # assimp is loaded by the executable itself, so whatever it imports belongs
+    # in the stage root next to qimgv.exe as well
+    deploy_closure_of "$STAGE_FORMATS" "$STAGE_FORMATS"/libassimp-6.dll
     deploy_closure_of "$STAGE_FORMATS/pdf" "$STAGE_FORMATS/pdf"/pdfprovider.dll
 
     cat > "$STAGE_FORMATS/README.txt" <<EOF
@@ -168,6 +202,8 @@ That is the whole installation; nothing needs to be registered.
   imageformats/   WebP, TIFF, TGA, ICNS, WBMP, MNG, JPEG 2000 and, when built,
                   HEIC/HEIF, AVIF, JPEG XL, camera raw, PSD, APNG
   pdf/            PDF documents, rendered through poppler
+  libassimp-6.dll 3D models (STL, OBJ, PLY, glTF/GLB, FBX, 3DS, 3MF, COLLADA),
+                  loaded by qimgv itself when one of those files is opened
 
 Everything here is optional. qimgv starts without it, and a missing folder only
 means the formats it provides are not listed; delete a folder to disable it again.
@@ -176,8 +212,8 @@ Video playback is a separate download (qimgv-video-$VERSION.zip), because the
 player library is much larger than all of these formats together.
 
 Licences: the extra Qt image plugins follow Qt's licence, poppler is
-GPL-2.0-or-later. qimgv itself is GPLv3; the full texts are unchanged by this
-archive.
+GPL-2.0-or-later, assimp is BSD-3-Clause. qimgv itself is GPLv3; the full texts
+are unchanged by this archive.
 EOF
 
     drop_already_present "$STAGE_FORMATS"
