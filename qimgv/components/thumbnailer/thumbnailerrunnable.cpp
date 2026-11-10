@@ -16,6 +16,39 @@
 #include <shobjidl.h>
 #endif
 
+namespace {
+
+// svg (and its gzipped twin) has no pixels of its own; asking Qt to render at the
+// tile size keeps the thumbnail sharp instead of upscaling a bitmap that was
+// rasterised at the drawing's own, usually tiny, size
+bool isVectorFormat(const QByteArray &format) {
+    const QByteArray lower = format.toLower();
+    return lower == "svg" || lower == "svgz";
+}
+
+// size to rasterise the vector at: it covers the tile in both directions, and the
+// plugin renders the drawing at exactly this size
+QSize vectorTileSize(QSize documentSize, int tile, bool squared) {
+    if(documentSize.isEmpty() || tile <= 0)
+        return documentSize;
+    const int reference = squared ? qMin(documentSize.width(), documentSize.height())
+                                  : qMax(documentSize.width(), documentSize.height());
+    if(reference <= 0)
+        return documentSize;
+    const double scale = double(tile) / reference;
+    const QSize requested(qMax(1, qRound(documentSize.width() * scale)),
+                          qMax(1, qRound(documentSize.height() * scale)));
+    // a drawing can claim any canvas; keep the rasterisation sane
+    const int cap = 4096;
+    if(qMax(requested.width(), requested.height()) <= cap)
+        return requested;
+    const double shrink = double(cap) / qMax(requested.width(), requested.height());
+    return QSize(qMax(1, qRound(requested.width() * shrink)),
+                 qMax(1, qRound(requested.height() * shrink)));
+}
+
+} // namespace
+
 ThumbnailerRunnable::ThumbnailerRunnable(ThumbnailCache* _cache, QString _path, int _size, bool _crop, bool _force) :
     path(_path),
     size(_size),
@@ -108,7 +141,10 @@ std::shared_ptr<Thumbnail> ThumbnailerRunnable::generate(ThumbnailCache* cache, 
             // one. A video frame is different - it cost a decode (and for clips
             // below the tile size, the only thing that ever gets cached is
             // exactly that small frame), so it is always kept.
+            // a vector was rendered at the tile size, so its thumbnail is not an
+            // upscaled copy even though the document itself is smaller than the tile
             const bool worthCaching = imgInfo.type() == VIDEO
+                                      || isVectorFormat(imgInfo.format().toUtf8())
                                       || originalSize.width() > size
                                       || originalSize.height() > size;
             if(worthCaching)
@@ -211,7 +247,10 @@ ThumbnailerRunnable::ThumbnailImage ThumbnailerRunnable::createThumbnail(const Q
     bool indexed = (reader->imageFormat() == QImage::Format_Indexed8);
     bool manualResize = indexed || !reader->supportsOption(QImageIOHandler::Size);
     if(!manualResize) { // resize during read via QImageReader (faster)
-        QSize scaledSize = reader->size().scaled(size, size, ARMode);
+        const bool vector = isVectorFormat(format);
+        // a bitmap is only ever scaled down here, a vector is rendered at the tile
+        QSize scaledSize = vector ? vectorTileSize(reader->size(), size, squared)
+                                  : reader->size().scaled(size, size, ARMode);
         reader->setScaledSize(scaledSize);
         if(squared) {
             QRect clip(0, 0, size, size);

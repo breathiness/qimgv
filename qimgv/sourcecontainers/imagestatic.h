@@ -56,6 +56,11 @@ public:
     // the one a multi page tiff has
     bool isComicFile() const;
 
+    // svg: the drawing is rasterised for the view instead of decoded. The first
+    // pass renders at the window's size and loadFull() re-renders at twice the
+    // size, so zooming keeps resampling down instead of magnifying a bitmap.
+    bool isSvgFile() const;
+
     // 3D models: rotate by a mouse delta and repaint. The interactive render is
     // small; finish3dRotation() repaints at full size when the drag ends.
     bool is3dFile() const;
@@ -87,6 +92,15 @@ private:
     void loadCad();
     // comic archive (CBZ): the pages are decoded one at a time
     void loadComic();
+    // svg: renders the preview pass and records the document's own size
+    void loadSvg();
+    // svg: doubles the rasterisation size, until the memory budget is reached
+    bool loadSvgDetailed();
+    // svg: size limit for the detailed passes
+    int svgRenderCap() const;
+    // svg: rasterises at the requested long side (device pixels); intrinsicSize
+    // receives the size the document claims for itself
+    std::shared_ptr<const QImage> renderSvg(int longSide, QSize *intrinsicSize) const;
     std::shared_ptr<const QImage> readComicPage(int page) const;
     // 3D models: rendered into a square image by the model renderer
     void load3d();
@@ -122,6 +136,10 @@ private:
     mutable std::shared_ptr<ZipArchive> mComicArchive;
     // 3D state: the parsed model is kept so rotating does not re-read the file
     mutable std::shared_ptr<Model3D> mModel3d;
+    // svg state: the document's own size (what the title shows) and how many
+    // pixels the current rasterisation holds
+    QSize mSvgIntrinsic;
+    int mSvgRenderLongSide = 0;
     float mModelYaw = 0.65f;
     float mModelPitch = 0.45f;
     mutable QMutex mImageLock;

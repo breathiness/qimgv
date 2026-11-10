@@ -4,6 +4,8 @@
 #include "utils/ziparchive.h"
 #include "pdf/pdfpagemodel.h"
 #include <QElapsedTimer>
+#include <QPainter>
+#include <QSvgRenderer>
 #include <time.h>
 
 // Two-pass loading policy: a preview pass only pays off for files that are big
@@ -85,6 +87,10 @@ void ImageStatic::load() {
         loadComic();
         return;
     }
+    if(isSvgFile()) {
+        loadSvg();
+        return;
+    }
     if(mDocInfo->mimeType().name() == "image/vnd.microsoft.icon") {
         loadICO();
         return;
@@ -119,6 +125,8 @@ void ImageStatic::load() {
 
 // decodes the rest of the image and swaps it in, keeping the same object
 bool ImageStatic::loadFull() {
+    if(isSvgFile())
+        return loadSvgDetailed();
     {
         QMutexLocker lock(&mImageLock);
         if(mFullLoaded || mFullLoading) // already done, or someone is on it
@@ -210,6 +218,125 @@ std::shared_ptr<const QImage> ImageStatic::renderCad(bool detailed, QSize *detai
     if(rendered.isNull())
         return nullptr;
     return std::make_shared<const QImage>(rendered);
+}
+
+bool ImageStatic::isSvgFile() const {
+    if(!mDocInfo)
+        return false;
+    const QString format = mDocInfo->format().toLower();
+    return format == QLatin1String("svg") || format == QLatin1String("svgz");
+}
+
+// A vector drawing has no pixels of its own: it is rasterised for the view. The
+// first pass aims at the window (a fit-to-window view never needs more than the
+// viewport in device pixels), and the detailed passes are requested by the viewer
+// once it zooms past what the current rendering holds - the same contract the CAD
+// renderer follows.
+void ImageStatic::loadSvg() {
+    const QSize hint = g_previewSizeHint.isValid() ? g_previewSizeHint : QSize(2560, 1440);
+    const int longSide = qBound(320, qMax(hint.width(), hint.height()), 3200);
+    QSize intrinsic;
+    std::shared_ptr<const QImage> preview = renderSvg(longSide, &intrinsic);
+    if(!preview || intrinsic.isEmpty() || preview->isNull()) {
+        // unreadable as vector: let the regular decoder report the problem
+        loadGeneric();
+        return;
+    }
+    {
+        QMutexLocker lock(&mImageLock);
+        image = preview;
+        mFullLoaded = false;
+    }
+    mSvgIntrinsic = intrinsic;
+    mSvgRenderLongSide = qMax(preview->width(), preview->height());
+    // the document's own size is what the title and the zoom percentages mean;
+    // the pixmap's device pixel ratio carries the extra pixels (see getPixmap())
+    mSourceSize = intrinsic;
+    mLoaded = true;
+}
+
+int ImageStatic::svgRenderCap() const {
+    // enough for a deep zoom, but the canvas stays inside the same memory budget
+    // the rest of the app honours
+    const qint64 budget = qint64(settings->memoryAllocationLimit()) * 1024 * 1024;
+    const double maxSide = std::sqrt(double(budget) / 16.0);
+    return int(qBound(2048.0, qMin(6000.0, maxSide), 6000.0));
+}
+
+bool ImageStatic::loadSvgDetailed() {
+    const int cap = svgRenderCap();
+    const int next = qMin(qMax(mSvgRenderLongSide * 2, 512), cap);
+    if(mSvgRenderLongSide <= 0 || next <= mSvgRenderLongSide) {
+        // already at the limit: nothing sharper can be produced
+        QMutexLocker lock(&mImageLock);
+        mFullLoaded = true;
+        return false;
+    }
+    std::shared_ptr<const QImage> bigger = renderSvg(next, nullptr);
+    if(!bigger || bigger->isNull())
+        return false;
+    QMutexLocker lock(&mImageLock);
+    image = bigger;
+    mSvgRenderLongSide = qMax(bigger->width(), bigger->height());
+    // stay "preview only" while there is headroom, so a further zoom asks again
+    mFullLoaded = (mSvgRenderLongSide >= cap);
+    return true;
+}
+
+// Rasterises the document at the requested long side. .svgz is a gzip stream that
+// QSvgRenderer cannot open by itself, so those go through the image plugin, which
+// unpacks it and also honours the scaled size.
+std::shared_ptr<const QImage> ImageStatic::renderSvg(int longSide, QSize *intrinsicSize) const {
+    QFile file(mPath);
+    if(!file.open(QFile::ReadOnly))
+        return nullptr;
+    const QByteArray magic = file.peek(2);
+    file.close();
+    const bool gzipped = magic.size() == 2
+                         && quint8(magic.at(0)) == 0x1f && quint8(magic.at(1)) == 0x8b;
+    if(gzipped) {
+        QImageReader reader(mPath, mDocInfo->format().toStdString().c_str());
+        if(!reader.canRead())
+            return nullptr;
+        const QSize full = reader.size();
+        if(full.isEmpty())
+            return nullptr;
+        if(intrinsicSize)
+            *intrinsicSize = full;
+        const double scale = double(longSide) / qMax(full.width(), full.height());
+        reader.setScaledSize(QSize(qMax(1, qRound(full.width() * scale)),
+                                   qMax(1, qRound(full.height() * scale))));
+        QImage decoded;
+        if(!reader.read(&decoded) || decoded.isNull())
+            return nullptr;
+        return std::make_shared<const QImage>(std::move(decoded));
+    }
+    QSvgRenderer renderer(mPath);
+    if(!renderer.isValid())
+        return nullptr;
+    QSize intrinsic = renderer.defaultSize();
+    if(intrinsic.isEmpty()) {
+        const QRectF box = renderer.viewBoxF();
+        if(!box.isEmpty())
+            intrinsic = box.size().toSize();
+    }
+    if(intrinsic.isEmpty())
+        return nullptr;
+    if(intrinsicSize)
+        *intrinsicSize = intrinsic;
+    const double scale = double(longSide) / qMax(intrinsic.width(), intrinsic.height());
+    const QSize target(qMax(1, qRound(intrinsic.width() * scale)),
+                       qMax(1, qRound(intrinsic.height() * scale)));
+    QImage rendered(target, QImage::Format_ARGB32_Premultiplied);
+    if(rendered.isNull())
+        return nullptr;
+    rendered.fill(Qt::transparent);
+    QPainter painter(&rendered);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+    renderer.render(&painter, QRectF(0, 0, target.width(), target.height()));
+    painter.end();
+    return std::make_shared<const QImage>(std::move(rendered));
 }
 
 // A pdf carries no pixels of its own: the pages are drawn by PdfView, which asks
@@ -618,7 +745,10 @@ std::unique_ptr<QPixmap> ImageStatic::getPixmap() {
             // know that it is looking at a downscaled copy
             if(isPreviewOnly() && !mSourceSize.isEmpty() && pix->width() > 0) {
                 const qreal ratio = (qreal) pix->width() / (qreal) mSourceSize.width();
-                if(ratio > 0.0 && ratio < 1.0)
+                // a preview holds fewer pixels than the source, an svg render holds
+                // more: in both cases the pixmap stands in for the source rectangle,
+                // so the scene keeps the geometry of the original
+                if(ratio > 0.0)
                     pix->setDevicePixelRatio(ratio);
             }
         }

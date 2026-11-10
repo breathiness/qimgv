@@ -1360,9 +1360,12 @@ void ImageViewerV2::doZoom(float newScale) {
 }
 
 // a preview is only good enough while one of its pixels covers at least one
-// screen pixel; past that point the real image has to be decoded
+// screen pixel; past that point the real image has to be decoded. The same test
+// covers an svg, whose rendering holds *more* pixels than the document claims
+// (factor above 1): another, larger rendering is wanted once the scene is
+// magnified past what the current one carries.
 void ImageViewerV2::maybeRequestFullResolution() {
-    if(!pixmap || imageDprFactor >= 1.0f)
+    if(!pixmap)
         return;
     if(pixmapItem.scale() > imageDprFactor)
         emit fullResolutionNeeded();
