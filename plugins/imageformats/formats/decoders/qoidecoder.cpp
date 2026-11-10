@@ -92,7 +92,11 @@ QImage read(const QString &path, const QSize &targetSize)
                 b = bytes[pos + 2];
                 a = bytes[pos + 3];
                 pos += 4;
-            } else if(op & 0xc0) {        // RUN (0xc0..0xfd)
+            } else if((op & 0xc0) == 0xc0) {   // RUN (0xc0..0xfd)
+                // Only the two top bits set means RUN. Testing just "op & 0xc0"
+                // also swallowed DIFF (0x40..0x7f) and LUMA (0x80..0xbf) into the
+                // run counter, so every picture that used them decoded as a
+                // repeat of its first pixels.
                 run = (op & 0x3f);
             } else if((op & 0xc0) == 0x00) {   // INDEX
                 const int index = op & 0x3f;

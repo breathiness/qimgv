@@ -1,7 +1,6 @@
 #include "heifdecoder.h"
 
 #include <QtGlobal>
-#include <QFile>
 #include <cstring>
 
 #ifdef USE_LIBHEIF
@@ -32,12 +31,22 @@ struct HeifHandle {
     ~HeifHandle() { if(handle) heif_image_handle_release(handle); }
 };
 
-bool openPrimary(const QString &path, HeifContext &ctx, HeifHandle &out)
+// libheif documents its file name argument as UTF-8 on every platform, which is
+// not what QFile::encodeName() produces on Windows: that is the local 8 bit code
+// page, so a HEIC in a non-ASCII folder (中文 名称.heic) failed to open with
+// "Unable to read image data". Qt paths are UTF-16, so hand libheif UTF-8.
+bool readFile(const QString &path, HeifContext &ctx)
 {
     if(!ctx.ctx)
         return false;
-    const QByteArray nativePath = QFile::encodeName(path);
-    if(heif_context_read_from_file(ctx.ctx, nativePath.constData(), nullptr).code != heif_error_Ok)
+    const QByteArray utf8Path = path.toUtf8();
+    return heif_context_read_from_file(ctx.ctx, utf8Path.constData(), nullptr).code
+           == heif_error_Ok;
+}
+
+bool openPrimary(const QString &path, HeifContext &ctx, HeifHandle &out)
+{
+    if(!readFile(path, ctx))
         return false;
     if(heif_context_get_primary_image_handle(ctx.ctx, &out.handle).code != heif_error_Ok)
         return false;
@@ -180,10 +189,7 @@ bool isAnimated(const QString &path)
 {
 #ifdef USE_LIBHEIF
     HeifContext ctx;
-    if(!ctx.ctx)
-        return false;
-    const QByteArray nativePath = QFile::encodeName(path);
-    if(heif_context_read_from_file(ctx.ctx, nativePath.constData(), nullptr).code != heif_error_Ok)
+    if(!readFile(path, ctx))
         return false;
     return heif_context_has_sequence(ctx.ctx) != 0;
 #else
@@ -200,10 +206,7 @@ bool readAnimation(const QString &path, Animation *animation)
     animation->numLoops = 1;
 #ifdef USE_LIBHEIF
     HeifContext ctx;
-    if(!ctx.ctx)
-        return false;
-    const QByteArray nativePath = QFile::encodeName(path);
-    if(heif_context_read_from_file(ctx.ctx, nativePath.constData(), nullptr).code != heif_error_Ok)
+    if(!readFile(path, ctx))
         return false;
     if(!heif_context_has_sequence(ctx.ctx))
         return false;

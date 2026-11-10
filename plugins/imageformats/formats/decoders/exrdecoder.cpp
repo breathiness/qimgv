@@ -1,7 +1,5 @@
 #include "exrdecoder.h"
 
-#include <QFile>
-
 #ifdef USE_OPENEXR
 #include <ImfRgbaFile.h>
 #include <ImathBox.h>
@@ -9,6 +7,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <string>
 #include <vector>
 #endif
 
@@ -35,6 +34,14 @@ inline void writePixel(uchar *dest, float r, float g, float b, float a)
     dest[3] = uchar(qBound(0, int(a * 255.0f + 0.5f), 255));
 }
 
+// OpenEXR documents its file name arguments as UTF-8 on every platform,
+// including Windows; QFile::encodeName() would hand over the local code page
+// there, so a non-ASCII path (中文 名称.exr) failed to open.
+std::string exrPath(const QString &path)
+{
+    return path.toUtf8().toStdString();
+}
+
 #endif // USE_OPENEXR
 
 } // namespace
@@ -59,7 +66,7 @@ QSize size(const QString &path)
 {
 #ifdef USE_OPENEXR
     try {
-        Imf::RgbaInputFile file(QFile::encodeName(path).toStdString().c_str());
+        Imf::RgbaInputFile file(exrPath(path).c_str());
         const Imath::Box2i window = file.dataWindow();
         const int width = window.max.x - window.min.x + 1;
         const int height = window.max.y - window.min.y + 1;
@@ -78,7 +85,7 @@ QImage read(const QString &path, const QSize &targetSize)
 {
 #ifdef USE_OPENEXR
     try {
-        Imf::RgbaInputFile file(QFile::encodeName(path).toStdString().c_str());
+        Imf::RgbaInputFile file(exrPath(path).c_str());
         const Imath::Box2i window = file.dataWindow();
         const int width = window.max.x - window.min.x + 1;
         const int height = window.max.y - window.min.y + 1;

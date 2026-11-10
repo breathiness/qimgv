@@ -221,7 +221,12 @@ QImage read(const QString &path, const QSize &targetSize)
                 dest[x * 4 + 0] = maskChannel(value, header.redMask);
                 dest[x * 4 + 1] = maskChannel(value, header.greenMask);
                 dest[x * 4 + 2] = maskChannel(value, header.blueMask);
-                dest[x * 4 + 3] = maskChannel(value, header.alphaMask);
+                // A 24 bit or X8R8G8B8 surface has no alpha mask. maskChannel()
+                // would return 0 for it and the whole image would be transparent,
+                // so an absent mask means opaque.
+                dest[x * 4 + 3] = header.alphaMask
+                                      ? maskChannel(value, header.alphaMask)
+                                      : 255;
             }
         }
     } else {

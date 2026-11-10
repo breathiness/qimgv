@@ -1,5 +1,6 @@
 #include "rawdecoder.h"
 
+#include <QFile>
 #include <QFileInfo>
 #include <cstring>
 
@@ -11,10 +12,16 @@ namespace {
 
 #ifdef USE_LIBRAW
 
-// libraw needs the file name in the local 8 bit encoding
-QByteArray nativePath(const QString &path)
+// libraw's narrow open_file() takes the local code page on Windows, so a photo
+// in a non-ASCII folder (相机 照片.cr2) would not be found. Windows builds have
+// the wide overload, which receives the UTF-16 name unchanged.
+bool openRawFile(LibRaw &raw, const QString &path)
 {
-    return QFile::encodeName(path);
+#ifdef Q_OS_WIN
+    return raw.open_file(reinterpret_cast<const wchar_t *>(path.utf16())) == LIBRAW_SUCCESS;
+#else
+    return raw.open_file(QFile::encodeName(path).constData()) == LIBRAW_SUCCESS;
+#endif
 }
 
 QImage fromProcessed(libraw_processed_image_t *processed)
@@ -69,7 +76,7 @@ QSize size(const QString &path)
 {
 #ifdef USE_LIBRAW
     LibRaw raw;
-    if(raw.open_file(nativePath(path).constData()) != LIBRAW_SUCCESS)
+    if(!openRawFile(raw, path))
         return QSize();
     // sizes.width/height describe the sensor image area, not what the develop
     // step returns: dcraw applies sizes.flip afterwards, and every flip with the
@@ -92,7 +99,7 @@ QImage read(const QString &path, const QSize &targetSize)
 {
 #ifdef USE_LIBRAW
     LibRaw raw;
-    if(raw.open_file(nativePath(path).constData()) != LIBRAW_SUCCESS)
+    if(!openRawFile(raw, path))
         return QImage();
 
     // half size development is roughly twice as fast; worth it when the screen
@@ -135,7 +142,7 @@ QImage readPreview(const QString &path)
 {
 #ifdef USE_LIBRAW
     LibRaw raw;
-    if(raw.open_file(nativePath(path).constData()) != LIBRAW_SUCCESS)
+    if(!openRawFile(raw, path))
         return QImage();
     if(raw.unpack_thumb() != LIBRAW_SUCCESS)
         return QImage();
@@ -145,9 +152,18 @@ QImage readPreview(const QString &path)
     // cameras store this as JPEG, a few formats use a plain bitmap
     if(thumb.tformat == LIBRAW_THUMBNAIL_JPEG)
         return QImage::fromData(reinterpret_cast<const uchar *>(thumb.thumb), int(thumb.tlength));
-    if(thumb.tformat == LIBRAW_THUMBNAIL_BITMAP)
-        return QImage(reinterpret_cast<const uchar *>(thumb.thumb), thumb.twidth, thumb.theight,
-                      QImage::Format_RGB888);
+    if(thumb.tformat == LIBRAW_THUMBNAIL_BITMAP) {
+        if(thumb.twidth <= 0 || thumb.theight <= 0)
+            return QImage();
+        // The thumbnail buffer belongs to the LibRaw object above: a QImage that
+        // references it would point at freed memory once this function returns,
+        // so the pixels are copied, with an explicit stride because rows of an
+        // RGB bitmap are not necessarily 4 byte aligned.
+        return QImage(reinterpret_cast<const uchar *>(thumb.thumb), int(thumb.twidth),
+                      int(thumb.theight), int(thumb.twidth) * 3,
+                      QImage::Format_RGB888)
+            .copy();
+    }
     return QImage();
 #else
     Q_UNUSED(path)

@@ -4,6 +4,7 @@
 #include <QByteArray>
 #include <QtGlobal>
 #include <cstring>
+#include <limits>
 #include <vector>
 
 #ifdef USE_ZLIB
@@ -88,6 +89,18 @@ public:
         return true;
     }
 
+    // PSB stores the layer and mask information length as 64 bit
+    bool readU64(quint64 &value)
+    {
+        unsigned char buffer[8];
+        if(mFile.read(reinterpret_cast<char *>(buffer), 8) != 8)
+            return false;
+        value = 0;
+        for(int i = 0; i < 8; i++)
+            value = (value << 8) | quint64(buffer[i]);
+        return true;
+    }
+
     bool skip(qint64 bytes)
     {
         if(bytes < 0)
@@ -151,7 +164,8 @@ bool unpackBitsRow(const uchar *src, int srcLength, uchar *dst, int dstLength)
 #ifdef USE_ZLIB
 bool inflateBuffer(const QByteArray &input, QByteArray &output, qint64 expected)
 {
-    if(input.isEmpty() || expected <= 0)
+    // QByteArray counts in int: anything larger cannot be allocated here
+    if(input.isEmpty() || expected <= 0 || expected > qint64(std::numeric_limits<int>::max()))
         return false;
     output.resize(int(expected));
     uLongf destLen = uLongf(expected);
@@ -286,18 +300,41 @@ QImage read(const QString &path, const QSize &targetSize)
         return QImage();
 
     // layer and mask information
-    quint32 layerLength = 0;
-    if(!reader.readU32(layerLength) || !reader.skip(layerLength))
-        return QImage();
+    quint64 layerLength = 0;
+    if(header.version == 2) {
+        // A PSB (version 2) always stores this length as 8 bytes, even when the
+        // section is empty; reading only 4 bytes shifts the compression field and
+        // breaks every PSB that has layers.
+        if(!reader.readU64(layerLength) || !reader.skip(qint64(layerLength)))
+            return QImage();
+    } else {
+        quint32 layerLength32 = 0;
+        if(!reader.readU32(layerLength32) || !reader.skip(layerLength32))
+            return QImage();
+    }
 
     quint16 compression = 0;
     if(!reader.readU16(compression))
         return QImage();
 
     const int bytesPerSample = header.depth / 8;
-    const int pixelCount = header.width * header.height;
-    const int planeSize = pixelCount * bytesPerSample;
     const int channels = header.channels;
+    // The size fields come from the file: do the pixel maths in 64 bit so a
+    // crafted 50000x50000 header cannot wrap around into a small allocation that
+    // the decode loops then overrun.
+    const qint64 pixelCount64 = qint64(header.width) * qint64(header.height);
+    if(pixelCount64 <= 0
+       || pixelCount64 > qint64(std::numeric_limits<int>::max()) / bytesPerSample)
+        return QImage();
+    const int pixelCount = int(pixelCount64);
+    const int planeSize = pixelCount * bytesPerSample;
+
+    // the colour modes need at least their base channels; a truncated header
+    // would otherwise leave a null plane pointer in the compose loop
+    const int baseChannels = header.mode == ModeRGB ? 3
+                             : (header.mode == ModeCMYK ? 4 : 1);
+    if(channels < baseChannels)
+        return QImage();
 
     // sanity: a channel plane must fit in memory
     if(qint64(planeSize) * channels > 4LL * 1024 * 1024 * 1024)
