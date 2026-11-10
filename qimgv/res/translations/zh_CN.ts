@@ -409,6 +409,11 @@
         <source>Wrong password.</source>
         <translation>密码错误。</translation>
     </message>
+    <message>
+        <location filename="../../core.cpp" line="1606" />
+        <source>PDF support is not installed. Unzip the extras pack into the qimgv folder (the pdf folder is missing).</source>
+        <translation>未安装 PDF 支持。请把扩展包解压到 qimgv 目录（缺少 pdf 文件夹）。</translation>
+    </message>
 </context>
 <context>
     <name>CropPanel</name>
@@ -860,6 +865,11 @@ Left click: next mode - Right click: pick one</source>
         <source>EXIF Tags</source>
         <translation>EXIF标签</translation>
     </message>
+    <message>
+        <location filename="../../gui/overlays/imageinfooverlay.cpp" line="65" />
+        <source>&lt;no metadata found&gt;</source>
+        <translation>&lt;未找到元数据&gt;</translation>
+    </message>
 </context>
 <context>
     <name>KeySequenceEdit</name>
@@ -867,6 +877,24 @@ Left click: next mode - Right click: pick one</source>
         <location filename="../../gui/customwidgets/keysequenceedit.cpp" line="4" />
         <source>[Enter sequence]</source>
         <translation>[输入序列]</translation>
+    </message>
+    <message>
+        <location filename="../../gui/customwidgets/keysequenceedit.cpp" line="5" />
+        <source>Click here, then press the key or mouse button to use</source>
+        <translation>点击此处，然后按下要使用的按键或鼠标键</translation>
+    </message>
+    <message>
+        <location filename="../../gui/customwidgets/keysequenceedit.cpp" line="34" />
+        <source>[Press a key or a mouse button]</source>
+        <translation>[请按下一个键或鼠标键]</translation>
+    </message>
+</context>
+<context>
+    <name>MaterialDialog</name>
+    <message>
+        <location filename="../../gui/customwidgets/materialdialog.cpp" line="105" />
+        <source>Close</source>
+        <translation>关闭</translation>
     </message>
 </context>
 <context>
@@ -995,14 +1023,6 @@ Left click: next mode - Right click: pick one</source>
         <translation>拖动行首的抓手可调整顺序；点击输入框后按下希望该按钮执行的快捷键；左侧下拉框用于选择该按钮的图标。分组分隔条会在两组按钮之间画一条竖线。右侧的“移除”会删掉这一行。</translation>
     </message>
     <message>
-        <source>Automatic</source>
-        <translation>自动</translation>
-    </message>
-    <message>
-        <source>Choose a file...</source>
-        <translation>从文件选择…</translation>
-    </message>
-    <message>
         <source>Icon of this button</source>
         <translation>该按钮的图标</translation>
     </message>
@@ -1121,37 +1141,37 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/printdialog.ui" line="271" />
         <source>Page orientation:</source>
-        <translation>页面风格:</translation>
+        <translation>页面方向：</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/printdialog.ui" line="297" />
         <source>Portrait</source>
-        <translation>肖像</translation>
+        <translation>纵向</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/printdialog.ui" line="307" />
         <source>Landscape</source>
-        <translation>风景</translation>
+        <translation>横向</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/printdialog.ui" line="348" />
         <source>Color mode:</source>
-        <translation>颜色:</translation>
+        <translation>色彩模式：</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/printdialog.ui" line="374" />
         <source>Grayscale</source>
-        <translation>黑白</translation>
+        <translation>灰度</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/printdialog.ui" line="384" />
         <source>Color</source>
-        <translation>参数</translation>
+        <translation>彩色</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/printdialog.ui" line="409" />
         <source>Fit to page</source>
-        <translation>符合页面</translation>
+        <translation>适应页面</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/printdialog.ui" line="434" />
@@ -1171,7 +1191,7 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/printdialog.cpp" line="70" />
         <source>Choose pdf location</source>
-        <translation>选择pdf文件所在位置</translation>
+        <translation>选择 PDF 保存位置</translation>
     </message>
 </context>
 <context>
@@ -1299,6 +1319,16 @@ Left click: next mode - Right click: pick one</source>
         <source>Other error.</source>
         <translation>其它错误.</translation>
     </message>
+    <message>
+        <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="102" />
+        <source>Automatic</source>
+        <translation>自动</translation>
+    </message>
+    <message>
+        <location filename="../../gui/dialogs/navbarsettingspage.cpp" line="106" />
+        <source>Choose a file...</source>
+        <translation>从文件选择…</translation>
+    </message>
 </context>
 <context>
     <name>RenameOverlay</name>
@@ -1359,17 +1389,17 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/resizedialog.ui" line="330" />
         <source>Nearest</source>
-        <translation>Nearest</translation>
+        <translation>最近邻</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/resizedialog.ui" line="335" />
         <source>Bilinear</source>
-        <translation>Bilinear</translation>
+        <translation>双线性</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/resizedialog.ui" line="340" />
         <source>Bicubic</source>
-        <translation>Bicubic</translation>
+        <translation>双三次</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/resizedialog.ui" line="345" />
@@ -1379,7 +1409,7 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/resizedialog.ui" line="358" />
         <source>Common sizes:</source>
-        <translation>正常尺寸:</translation>
+        <translation>常用尺寸：</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/resizedialog.ui" line="392" />
@@ -1444,7 +1474,7 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/resizedialog.ui" line="470" />
         <source>Fit to desktop</source>
-        <translation>适合桌面</translation>
+        <translation>适应桌面</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/resizedialog.ui" line="489" />
@@ -1636,7 +1666,7 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="3694" />
         <source>Controls</source>
-        <translation>控制中心</translation>
+        <translation>控制</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="4122" />
@@ -1666,12 +1696,12 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="626" />
         <source>Auto-hide cursor</source>
-        <translation>自动隐藏鼠标</translation>
+        <translation>自动隐藏光标</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="1994" />
         <source>Image fit:</source>
-        <translation>图像匹配:</translation>
+        <translation>图像适应方式：</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2011" />
@@ -1707,7 +1737,7 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2078" />
         <source>Focus in 1:1 mode:</source>
-        <translation>以1:1模式聚焦:</translation>
+        <translation>1:1 模式聚焦位置：</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="864" />
@@ -1793,7 +1823,7 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="1476" />
         <source>Default sorting mode:</source>
-        <translation>标准排序模式:</translation>
+        <translation>默认排序方式：</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="1734" />
@@ -1838,12 +1868,12 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="689" />
         <source>Zoom indicator:</source>
-        <translation>放大指示器:</translation>
+        <translation>缩放指示器：</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="1410" />
         <source>Loop folder</source>
-        <translation>循环播放文件夹</translation>
+        <translation>循环文件夹</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="1417" />
@@ -2004,7 +2034,7 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2883" />
         <source>Dark</source>
-        <translation>深黑</translation>
+        <translation>深色</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2888" />
@@ -2014,7 +2044,7 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2893" />
         <source>Light</source>
-        <translation>光亮</translation>
+        <translation>浅色</translation>
     </message>
     <message>
         <source>Theme:</source>
@@ -2062,7 +2092,7 @@ Left click: next mode - Right click: pick one</source>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="3433" />
         <location filename="../../gui/dialogs/settingsdialog.cpp" line="68" />
         <source>Overlay text</source>
-        <translation>覆盖文本</translation>
+        <translation>叠加文本</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="3153" />
@@ -2099,7 +2129,7 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="3642" />
         <source>Background blur (KDE)</source>
-        <translation>背景防蓝光 (KDE)</translation>
+        <translation>背景模糊 (KDE)</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="3564" />
@@ -2119,7 +2149,7 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2701" />
         <source>When unchecked, nearest neighbor algorithm will be used for upscaling.</source>
-        <translation>取消选中时, 使用nearest neighbo算法进行放大.</translation>
+        <translation>取消勾选时，放大将使用最近邻算法。</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2704" />
@@ -2134,27 +2164,27 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2622" />
         <source>Scaling filter:</source>
-        <translation>缩放过滤器:</translation>
+        <translation>缩放滤镜：</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2654" />
         <source>Nearest neighbor</source>
-        <translation>Nearest neighbor</translation>
+        <translation>最近邻</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2659" />
         <source>Bilinear</source>
-        <translation>Bilinear</translation>
+        <translation>双线性</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2344" />
         <source>Zoom options</source>
-        <translation>放大功能</translation>
+        <translation>缩放选项</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2386" />
         <source>Zoom step:</source>
-        <translation>缩放倍数:</translation>
+        <translation>缩放步长：</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="2454" />
@@ -2197,12 +2227,12 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="3804" />
         <source>Reset to defaults</source>
-        <translation>重置为标准</translation>
+        <translation>恢复默认</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="3838" />
         <source>Action</source>
-        <translation>行为</translation>
+        <translation>动作</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="3843" />
@@ -2244,7 +2274,7 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="4354" />
         <source>Preload the next/previous image. Results in a much faster image switching (at the expense of wasting more RAM).</source>
-        <translation>预加载下一个/上一个图像.更快的图像切换 (以浪费内存为代价).</translation>
+        <translation>预加载上一张/下一张图片，切换会快得多（代价是占用更多内存）。</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="4357" />
@@ -2274,7 +2304,7 @@ Left click: next mode - Right click: pick one</source>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="4395" />
         <source>Thumbnailer thread count:</source>
-        <translation>创建略缩图的线程数:</translation>
+        <translation>缩略图线程数：</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.ui" line="1050" />
@@ -2468,7 +2498,7 @@ li.checked::marker { content: "\2612"; }
     <message>
         <location filename="../../gui/dialogs/settingsdialog.cpp" line="59" />
         <source>Accent color</source>
-        <translation>重点色</translation>
+        <translation>点缀色</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/settingsdialog.cpp" line="60" />
@@ -2529,6 +2559,21 @@ li.checked::marker { content: "\2612"; }
         <source>Only visible pixels are decoded up front</source>
         <translation>仅先解码可见像素</translation>
     </message>
+    <message>
+        <location filename="../../gui/dialogs/settingsdialog.cpp" line="256" />
+        <source>Qlementine</source>
+        <translation>Qlementine</translation>
+    </message>
+    <message>
+        <location filename="../../gui/dialogs/settingsdialog.cpp" line="292" />
+        <source>Material</source>
+        <translation>Material 浅色</translation>
+    </message>
+    <message>
+        <location filename="../../gui/dialogs/settingsdialog.cpp" line="293" />
+        <source>Material Dark</source>
+        <translation>Material 深色</translation>
+    </message>
 </context>
 <context>
     <name>ShortcutCreatorDialog</name>
@@ -2540,7 +2585,7 @@ li.checked::marker { content: "\2612"; }
     <message>
         <location filename="../../gui/dialogs/shortcutcreatordialog.ui" line="34" />
         <source>Action:</source>
-        <translation>行为:</translation>
+        <translation>动作:</translation>
     </message>
     <message>
         <location filename="../../gui/dialogs/shortcutcreatordialog.ui" line="73" />
@@ -2561,6 +2606,29 @@ li.checked::marker { content: "\2612"; }
         <location filename="../../gui/dialogs/shortcutcreatordialog.cpp" line="0" />
         <source>This shortcut is already used for: %1. Replace?</source>
         <translation>该快捷键已用于：%1，要替换吗？</translation>
+    </message>
+</context>
+<context>
+    <name>WindowTitleBar</name>
+    <message>
+        <location filename="../../gui/customwidgets/windowtitlebar.cpp" line="167" />
+        <source>Minimize</source>
+        <translation>最小化</translation>
+    </message>
+    <message>
+        <location filename="../../gui/customwidgets/windowtitlebar.cpp" line="170" />
+        <source>Maximize</source>
+        <translation>最大化</translation>
+    </message>
+    <message>
+        <location filename="../../gui/customwidgets/windowtitlebar.cpp" line="173" />
+        <source>Close</source>
+        <translation>关闭</translation>
+    </message>
+    <message>
+        <location filename="../../gui/customwidgets/windowtitlebar.cpp" line="195" />
+        <source>Restore</source>
+        <translation>还原</translation>
     </message>
 </context>
 <context>
@@ -3102,13 +3170,6 @@ li.checked::marker { content: "\2612"; }
         <message>
             <source>32-bit RGBA</source>
             <translation>32 位 RGBA</translation>
-        </message>
-    </context>
-    <context>
-        <name>ImageInfoOverlay</name>
-        <message>
-            <source>&lt;no metadata found&gt;</source>
-            <translation>&lt;未找到元数据&gt;</translation>
         </message>
     </context>
     <context>
