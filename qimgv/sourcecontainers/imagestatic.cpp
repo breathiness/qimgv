@@ -20,6 +20,8 @@ static const int PREVIEW_MAX_DIVISOR = 8;
 // upscaled on screen and would immediately ask for the full resolution image
 static QSize g_previewSizeHint(2560, 1440);
 
+
+
 void ImageStatic::setPreviewSizeHint(QSize devicePixels) {
     if(!devicePixels.isEmpty())
         g_previewSizeHint = devicePixels;
@@ -264,18 +266,35 @@ int ImageStatic::svgRenderCap() const {
 }
 
 bool ImageStatic::loadSvgDetailed() {
+    // loadFull() holds this lock for raster formats; a vector render is just as
+    // expensive to start twice. The viewer asks again on every zoom step while a
+    // render is still in flight, and two renders would replace the same state in
+    // an unpredictable order, so only one may run at a time.
+    int current;
+    {
+        QMutexLocker lock(&mImageLock);
+        if(mFullLoading)
+            return false;
+        mFullLoading = true;
+        current = mSvgRenderLongSide;
+    }
     const int cap = svgRenderCap();
-    const int next = qMin(qMax(mSvgRenderLongSide * 2, 512), cap);
-    if(mSvgRenderLongSide <= 0 || next <= mSvgRenderLongSide) {
+    const int next = qMin(qMax(current * 2, 512), cap);
+    if(current <= 0 || next <= current) {
         // already at the limit: nothing sharper can be produced
         QMutexLocker lock(&mImageLock);
+        mFullLoading = false;
         mFullLoaded = true;
         return false;
     }
     std::shared_ptr<const QImage> bigger = renderSvg(next, nullptr);
-    if(!bigger || bigger->isNull())
+    if(!bigger || bigger->isNull()) {
+        QMutexLocker lock(&mImageLock);
+        mFullLoading = false;
         return false;
+    }
     QMutexLocker lock(&mImageLock);
+    mFullLoading = false;
     image = bigger;
     mSvgRenderLongSide = qMax(bigger->width(), bigger->height());
     // stay "preview only" while there is headroom, so a further zoom asks again

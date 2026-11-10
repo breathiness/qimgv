@@ -1,4 +1,7 @@
 #include "imageviewerv2.h"
+#include "sourcecontainers/imagestatic.h"
+
+
 
 ImageViewerV2::ImageViewerV2(QWidget *parent) : QGraphicsView(parent),
     pixmap(nullptr),
@@ -782,6 +785,22 @@ void ImageViewerV2::showEvent(QShowEvent *event) {
     QGraphicsView::showEvent(event);
     // ensure we are properly resized
     qApp->processEvents();
+    // The image can be loaded and fitted before the window is on screen, when the
+    // viewport still has its placeholder size. Redo the fit once the real viewport
+    // exists; a free zoom is a deliberate position and is kept. The deferred pass
+    // is needed because QGraphicsView applies its own queued recentring after the
+    // first resize, which would otherwise clobber the position computed here.
+    if(!mDidFirstShow) {
+        mDidFirstShow = true;
+        if(imageFitMode != FIT_FREE) {
+            QTimer::singleShot(0, this, [this]() {
+                updateMinScale();
+                applyFitMode();
+                requestScaling();
+                update();
+            });
+        }
+    }
     // reapply fitmode to fix viewport position
     if(imageFitMode == FIT_ORIGINAL)
         applyFitMode();
@@ -789,6 +808,7 @@ void ImageViewerV2::showEvent(QShowEvent *event) {
 
 void ImageViewerV2::drawBackground(QPainter *painter, const QRectF &rect) {
     QGraphicsView::drawBackground(painter, rect);
+
     if(!isDisplaying() || !transparencyGrid || !pixmap->hasAlphaChannel())
         return;
     painter->drawTiledPixmap(pixmapItem.sceneBoundingRect(), *checkboard);
@@ -1024,6 +1044,14 @@ void ImageViewerV2::setFitWindowStretch() {
 
 void ImageViewerV2::resizeEvent(QResizeEvent *event) {
     QGraphicsView::resizeEvent(event);
+    // A later load asks the loader for a preview at least as large as the view, so
+    // the hint must follow the viewport. The window reports its own resize before
+    // the layout has given the viewer its new size, so the value it writes can be
+    // one layout pass old - a maximized startup then kept asking for previews far
+    // smaller than the window and the image looked blurred until the full decode
+    // replaced it. Report the real viewport once it exists.
+    if(isVisible() && !viewport()->size().isEmpty())
+        ImageStatic::setPreviewSizeHint(viewport()->size() * qMax(qreal(1.0), devicePixelRatioF()));
     // reset this so we won't generate unnecessary drag'n'drop event
     mousePressPos = mapFromGlobal(cursor().pos());
     // Qt emits some unnecessary resizeEvents on startup

@@ -188,6 +188,9 @@ private:
     ImageFitMode imageFitMode, imageFitModeDefault;
     ImageFocusPoint focusIn1to1;
     ScalingFilter mScalingFilter;
+    // the first image is often decoded before the window is on screen, so the fit
+    // measured there was applied to a placeholder viewport and has to be redone
+    bool mDidFirstShow = false;
 
     QPixmap *checkboard;
 

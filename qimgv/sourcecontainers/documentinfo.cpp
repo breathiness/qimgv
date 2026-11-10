@@ -178,17 +178,33 @@ void DocumentInfo::detectFormat() {
     loadExifOrientation();
 }
 
-inline
-// dumb apng detector
+// The PNG chunk stream is walked up to the first IDAT: acTL (the animation
+// control chunk) only makes an APNG when it appears before the image data. The
+// old version scanned the first 120 bytes as text, so a file with a large
+// tEXt/iCCP chunk early in the file was shown as a still image.
 bool DocumentInfo::detectAPNG() {
     QFile f(fileInfo.filePath());
-    if(f.open(QFile::ReadOnly)) {
-        QDataStream in(&f);
-        const int len = 120;
-        QByteArray qbuf("\0", len);
-        if (in.readRawData(qbuf.data(), len) > 0) {
-            return qbuf.contains("acTL");
-        }
+    if(!f.open(QFile::ReadOnly))
+        return false;
+    if(f.read(8).size() != 8)   // PNG signature
+        return false;
+    qint64 scanned = 0;
+    while(scanned < 1024 * 1024) {
+        const QByteArray header = f.read(8);   // 4 byte length + 4 byte type
+        if(header.size() != 8)
+            return false;
+        const quint32 length = (quint32(quint8(header.at(0))) << 24)
+                               | (quint32(quint8(header.at(1))) << 16)
+                               | (quint32(quint8(header.at(2))) << 8)
+                               | quint32(quint8(header.at(3)));
+        const QByteArray type = header.mid(4, 4);
+        if(type == QByteArrayLiteral("acTL"))
+            return true;
+        if(type == QByteArrayLiteral("IDAT") || type == QByteArrayLiteral("IEND"))
+            return false;
+        if(!f.seek(f.pos() + length + 4))   // chunk data + CRC
+            return false;
+        scanned += 8 + length + 4;
     }
     return false;
 }
